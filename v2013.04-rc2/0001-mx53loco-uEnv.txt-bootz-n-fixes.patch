@@ -5,11 +5,11 @@ Subject: [PATCH] mx53loco: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx53loco.h |   23 +++++++++++++++++------
- 1 file changed, 17 insertions(+), 6 deletions(-)
+ include/configs/mx53loco.h |   76 +++++++++++++++-----------------------------
+ 1 file changed, 25 insertions(+), 51 deletions(-)
 
 diff --git a/include/configs/mx53loco.h b/include/configs/mx53loco.h
-index a4b610f..d667cd3 100644
+index a4b610f..59ff4de 100644
 --- a/include/configs/mx53loco.h
 +++ b/include/configs/mx53loco.h
 @@ -53,6 +53,11 @@
@@ -24,15 +24,13 @@ index a4b610f..d667cd3 100644
  #define CONFIG_GENERIC_MMC
  #define CONFIG_CMD_FAT
  #define CONFIG_CMD_EXT2
-@@ -118,21 +123,25 @@
- 
+@@ -119,72 +124,41 @@
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	"script=boot.scr\0" \
-+	"bootenv=uEnv.txt\0" \
  	"uimage=uImage\0" \
- 	"fdt_file=imx53-qsb.dtb\0" \
+-	"fdt_file=imx53-qsb.dtb\0" \
++	"fdt_file=/dtbs/imx53-qsb.dtb\0" \
  	"fdt_addr=0x71000000\0" \
-+	"dtb_file=imx53-qsb.dtb\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
  	"mmcdev=0\0" \
@@ -43,29 +41,82 @@ index a4b610f..d667cd3 100644
  	"mmcargs=setenv bootargs console=ttymxc0,${baudrate} root=${mmcroot}\0" \
  	"loadbootscript=" \
 -		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-+		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv};\0" \
++		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt;\0" \
 +	"importbootenv=echo Importing environment from mmc ...; " \
 +		"env import -t ${loadaddr} ${filesize}\0" \
  	"bootscript=echo Running bootscript from mmc ...; " \
  		"source\0" \
 -	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
 -	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-+	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
++	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
- 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-@@ -177,7 +186,9 @@
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if run loadfdt; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootm; " \
+-		"fi;\0" \
+-	"netargs=setenv bootargs console=ttymxc0,${baudrate} " \
+-		"root=/dev/nfs " \
+-		"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
+-	"netboot=echo Booting from net ...; " \
+-		"run netargs; " \
+-		"if test ${ip_dyn} = yes; then " \
+-			"setenv get_cmd dhcp; " \
+-		"else " \
+-			"setenv get_cmd tftp; " \
+-		"fi; " \
+-		"${get_cmd} ${uimage}; " \
+-		"if test ${boot_fdt} = yes ||  test ${boot_fdt} = try; then " \
+-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
+-				"else " \
+-					"echo ERROR: Cannot load the DT; " \
+-					"exit; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootm; " \
+-		"fi;\0"
++		"bootz ${loadaddr} - ${fdt_addr}\0"
+ 
  #define CONFIG_BOOTCOMMAND \
  	"mmc dev ${mmcdev}; if mmc rescan; then " \
  		"if run loadbootscript; then " \
 -			"run bootscript; " \
+-		"else " \
+-			"if run loaduimage; then " \
+-				"run mmcboot; " \
+-			"else run netboot; " \
+-			"fi; " \
 +			"echo Loaded environment from ${bootenv}; " \
 +			"run importbootenv; " \
-+			"run loaduimage; " \
- 		"else " \
- 			"if run loaduimage; then " \
- 				"run mmcboot; " \
+ 		"fi; " \
+-	"else run netboot; fi"
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"if run loaduimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ #define CONFIG_ARP_TIMEOUT	200UL
+ 
 -- 
 1.7.10.4
 
