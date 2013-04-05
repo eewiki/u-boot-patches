@@ -21,11 +21,11 @@ loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/at91sam9x5ek.h |   56 ++++++++++++++++++++++++++++++++--------
- 1 file changed, 45 insertions(+), 11 deletions(-)
+ include/configs/at91sam9x5ek.h |   60 ++++++++++++++++++++++++++++++++--------
+ 1 file changed, 48 insertions(+), 12 deletions(-)
 
 diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
-index ee6e3fc..0d9f3ed 100644
+index ee6e3fc..37d8e27 100644
 --- a/include/configs/at91sam9x5ek.h
 +++ b/include/configs/at91sam9x5ek.h
 @@ -153,6 +153,14 @@
@@ -43,7 +43,7 @@ index ee6e3fc..0d9f3ed 100644
  #endif
  
  /* FAT */
-@@ -226,18 +234,43 @@
+@@ -226,18 +234,46 @@
  #endif
  
  #ifdef CONFIG_SYS_USE_MMC
@@ -60,12 +60,11 @@ index ee6e3fc..0d9f3ed 100644
 -	"512k(dtb),6M(kernel)ro,-(rootfs) "				\
 -	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs rw"
 +#define CONFIG_EXTRA_ENV_SETTINGS \
-+	"bootenv=uEnv.txt\0" \
-+	"bootfile=zImage\0" \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
 +	"loadaddr=0x22000000\0" \
 +	"fdtaddr=0x27FF0000\0" \
-+	"bootdir=/dtbs\0" \
-+	"fdtfile=at91sam9g25ek.dtb\0" \
++	"fdtfile=/dtbs/at91sam9g25ek.dtb\0" \
 +	"console=ttyS0,115200n8\0" \
 +	"optargs=\0" \
 +	"mmcdev=0\0" \
@@ -76,20 +75,24 @@ index ee6e3fc..0d9f3ed 100644
 +		"${optargs} " \
 +		"root=${mmcroot} " \
 +		"rootfstype=${mmcrootfstype}\0" \
-+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
 +	"importbootenv=echo Importing environment from mmc ...; " \
 +		"env import -t ${loadaddr} ${filesize}\0" \
-+	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootfile}\0" \
-+	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtfile}\0" \
 +	"mmcboot=echo Booting from mmc ...; " \
 +		"run mmcargs; " \
 +		"bootz ${loadaddr} - ${fdtaddr}\0"
 +
 +#define CONFIG_BOOTCOMMAND \
-+	"if mmc rescan ${mmcdev}; then " \
++	"if mmc rescan; then " \
 +		"echo SD/MMC found on device ${mmcdev};" \
 +		"if run loadbootenv; then " \
 +			"run importbootenv;" \
++		"fi;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
 +		"fi;" \
 +		"if run loadzimage; then " \
 +			"run loadfdt;" \
