@@ -62,8 +62,8 @@ index b5da1d3..df21740 100644
 +		"bootz ${loadaddr} - ${dtbaddr}\0" \
 +
 +#define CONFIG_BOOTCOMMAND \
-+	"if mmc rescan ${mmcdev}; then " \
-+		"echo SD/MMC found on device ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device;" \
 +		"if run loadbootenv; then " \
 +			"echo Loaded environment from ${bootenv};" \
 +			"run importbootenv;" \
