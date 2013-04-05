@@ -1,0 +1,39 @@
+From 6a4ad6fea3ad516f1417875beec1349943239775 Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Tue, 12 Mar 2013 14:15:30 +0800
+Subject: [PATCH 2/4] NET: macb: support sama5d3x devices
+
+Add macb support for sama5d3x devices
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ drivers/net/macb.c |    6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/macb.c b/drivers/net/macb.c
+index 8bacbda..9e7fbc6 100644
+--- a/drivers/net/macb.c
++++ b/drivers/net/macb.c
+@@ -469,7 +469,8 @@ static int macb_init(struct eth_device *netdev, bd_t *bd)
+ #if	defined(CONFIG_AT91CAP9) || defined(CONFIG_AT91SAM9260) || \
+ 	defined(CONFIG_AT91SAM9263) || defined(CONFIG_AT91SAM9G20) || \
+ 	defined(CONFIG_AT91SAM9G45) || defined(CONFIG_AT91SAM9M10G45) || \
+-	defined(CONFIG_AT91SAM9XE) || defined(CONFIG_AT91SAM9X5)
++	defined(CONFIG_AT91SAM9XE) || defined(CONFIG_AT91SAM9X5) || \
++	defined(CONFIG_SAMA5D3)
+ 	macb_writel(macb, USRIO, MACB_BIT(RMII) | MACB_BIT(CLKEN));
+ #else
+ 	macb_writel(macb, USRIO, 0);
+@@ -478,7 +479,8 @@ static int macb_init(struct eth_device *netdev, bd_t *bd)
+ #if	defined(CONFIG_AT91CAP9) || defined(CONFIG_AT91SAM9260) || \
+ 	defined(CONFIG_AT91SAM9263) || defined(CONFIG_AT91SAM9G20) || \
+ 	defined(CONFIG_AT91SAM9G45) || defined(CONFIG_AT91SAM9M10G45) || \
+-	defined(CONFIG_AT91SAM9XE) || defined(CONFIG_AT91SAM9X5)
++	defined(CONFIG_AT91SAM9XE) || defined(CONFIG_AT91SAM9X5) || \
++	defined(CONFIG_SAMA5D3)
+ 	macb_writel(macb, USRIO, MACB_BIT(CLKEN));
+ #else
+ 	macb_writel(macb, USRIO, MACB_BIT(MII));
+-- 
+1.7.10.4
+

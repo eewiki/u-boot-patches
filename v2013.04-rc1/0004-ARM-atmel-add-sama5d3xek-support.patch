@@ -1,0 +1,1770 @@
+From 12915cc7b9b0aa1834948fdcfd7db0f52209c3d2 Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Tue, 12 Mar 2013 14:15:32 +0800
+Subject: [PATCH 4/4] ARM: atmel: add sama5d3xek support
+
+Add sama5d3xek support with following feature
+  - boot from NAND flash, PMECC support, 4bit ECC @ 512 bytes sector
+  - boot from SPI flash support
+  - boot from SD card support
+  - LCD support
+  - EMAC support
+  - USB support (OHCI)
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ MAINTAINERS                                  |    1 +
+ arch/arm/cpu/armv7/at91/Makefile             |   52 +++++
+ arch/arm/cpu/armv7/at91/clock.c              |  127 ++++++++++++
+ arch/arm/cpu/armv7/at91/cpu.c                |   90 +++++++++
+ arch/arm/cpu/armv7/at91/reset.c              |   47 +++++
+ arch/arm/cpu/armv7/at91/sama5d3_devices.c    |  196 ++++++++++++++++++
+ arch/arm/cpu/armv7/at91/timer.c              |  139 +++++++++++++
+ arch/arm/include/asm/arch-at91/at91_common.h |    1 +
+ arch/arm/include/asm/arch-at91/at91_dbu.h    |    4 +
+ arch/arm/include/asm/arch-at91/at91_pmc.h    |   23 +++
+ arch/arm/include/asm/arch-at91/clk.h         |    1 +
+ arch/arm/include/asm/arch-at91/hardware.h    |    2 +
+ arch/arm/include/asm/arch-at91/sama5d3.h     |  212 ++++++++++++++++++++
+ arch/arm/include/asm/arch-at91/sama5d3_smc.h |   79 ++++++++
+ board/atmel/sama5d3xek/Makefile              |   51 +++++
+ board/atmel/sama5d3xek/sama5d3xek.c          |  277 ++++++++++++++++++++++++++
+ boards.cfg                                   |    3 +
+ include/configs/sama5d3xek.h                 |  255 ++++++++++++++++++++++++
+ 18 files changed, 1560 insertions(+)
+ create mode 100644 arch/arm/cpu/armv7/at91/Makefile
+ create mode 100644 arch/arm/cpu/armv7/at91/clock.c
+ create mode 100644 arch/arm/cpu/armv7/at91/cpu.c
+ create mode 100644 arch/arm/cpu/armv7/at91/reset.c
+ create mode 100644 arch/arm/cpu/armv7/at91/sama5d3_devices.c
+ create mode 100644 arch/arm/cpu/armv7/at91/timer.c
+ create mode 100644 arch/arm/include/asm/arch-at91/sama5d3.h
+ create mode 100644 arch/arm/include/asm/arch-at91/sama5d3_smc.h
+ create mode 100644 board/atmel/sama5d3xek/Makefile
+ create mode 100644 board/atmel/sama5d3xek/sama5d3xek.c
+ create mode 100644 include/configs/sama5d3xek.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 8603085..1cb4468 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -909,6 +909,7 @@ Matt Sealey <matt@genesi-usa.com>
+ 
+ Bo Shen <voice.shen@atmel.com>
+ 	at91sam9x5ek		ARM926EJS (AT91SAM9G15,G25,G35,X25,X35 SoC)
++	sama5d3xek		ARMV7 (SAMA5D31, D33, D34, D35 SoC)
+ 
+ Michal Simek <monstr@monstr.eu>
+ 
+diff --git a/arch/arm/cpu/armv7/at91/Makefile b/arch/arm/cpu/armv7/at91/Makefile
+new file mode 100644
+index 0000000..040c67d
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/Makefile
+@@ -0,0 +1,52 @@
++#
++# (C) Copyright 2000-2008
++# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
++#
++# (C) Copyright 2013
++# Bo Shen <voice.shen@atmel.com>
++#
++# See file CREDITS for list of people who contributed to this
++# project.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation; either version 2 of
++# the License, or (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++# MA 02111-1307 USA
++#
++
++include $(TOPDIR)/config.mk
++
++LIB	= $(obj)lib$(SOC).o
++
++COBJS-$(CONFIG_SAMA5D3)	+= sama5d3_devices.o
++COBJS-y += clock.o
++COBJS-y += cpu.o
++COBJS-y += reset.o
++COBJS-y += timer.o
++
++SRCS    := $(SOBJS-y:.o=.S) $(COBJS-y:.o=.c)
++OBJS    := $(addprefix $(obj),$(SOBJS-y) $(COBJS-y))
++
++all:	$(obj).depend $(LIB)
++
++$(LIB):	$(OBJS)
++	$(call cmd_link_o_target, $(OBJS))
++
++#########################################################################
++
++# defines $(obj).depend target
++include $(SRCTREE)/rules.mk
++
++sinclude $(obj).depend
++
++#########################################################################
+diff --git a/arch/arm/cpu/armv7/at91/clock.c b/arch/arm/cpu/armv7/at91/clock.c
+new file mode 100644
+index 0000000..552c118
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/clock.c
+@@ -0,0 +1,127 @@
++/*
++ * [origin: Linux kernel linux/arch/arm/mach-at91/clock.c]
++ *
++ * Copyright (C) 2005 David Brownell
++ * Copyright (C) 2005 Ivan Kokshaysky
++ * Copyright (C) 2009 Jean-Christophe PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
++ * Copyright (C) 2013 Bo Shen <voice.shen@atmel.com>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/hardware.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/clk.h>
++
++#if !defined(CONFIG_AT91FAMILY)
++# error You need to define CONFIG_AT91FAMILY in your board config!
++#endif
++
++DECLARE_GLOBAL_DATA_PTR;
++
++static unsigned long at91_css_to_rate(unsigned long css)
++{
++	switch (css) {
++	case AT91_PMC_MCKR_CSS_SLOW:
++		return CONFIG_SYS_AT91_SLOW_CLOCK;
++	case AT91_PMC_MCKR_CSS_MAIN:
++		return gd->arch.main_clk_rate_hz;
++	case AT91_PMC_MCKR_CSS_PLLA:
++		return gd->arch.plla_rate_hz;
++	case AT91_PMC_MCKR_CSS_PLLB:
++		return gd->arch.pllb_rate_hz;
++	}
++
++	return 0;
++}
++
++static u32 at91_pll_rate(u32 freq, u32 reg)
++{
++	unsigned mul, div;
++
++	div = reg & 0xff;
++	mul = (reg >> 18) & 0x7f;
++	if (div && mul) {
++		freq /= div;
++		freq *= mul + 1;
++	} else {
++		freq = 0;
++	}
++
++	return freq;
++}
++
++int at91_clock_init(unsigned long main_clock)
++{
++	unsigned freq, mckr;
++	at91_pmc_t *pmc = (at91_pmc_t *) ATMEL_BASE_PMC;
++#ifndef CONFIG_SYS_AT91_MAIN_CLOCK
++	unsigned tmp;
++	/*
++	 * When the bootloader initialized the main oscillator correctly,
++	 * there's no problem using the cycle counter.  But if it didn't,
++	 * or when using oscillator bypass mode, we must be told the speed
++	 * of the main clock.
++	 */
++	if (!main_clock) {
++		do {
++			tmp = readl(&pmc->mcfr);
++		} while (!(tmp & AT91_PMC_MCFR_MAINRDY));
++		tmp &= AT91_PMC_MCFR_MAINF_MASK;
++		main_clock = tmp * (CONFIG_SYS_AT91_SLOW_CLOCK / 16);
++	}
++#endif
++	gd->arch.main_clk_rate_hz = main_clock;
++
++	/* report if PLLA is more than mildly overclocked */
++	gd->arch.plla_rate_hz = at91_pll_rate(main_clock, readl(&pmc->pllar));
++
++	/*
++	 * MCK and CPU derive from one of those primary clocks.
++	 * For now, assume this parentage won't change.
++	 */
++	mckr = readl(&pmc->mckr);
++
++	/* plla divisor by 2 */
++	if (mckr & (1 << 12))
++		gd->arch.plla_rate_hz >>= 1;
++
++	gd->arch.mck_rate_hz = at91_css_to_rate(mckr & AT91_PMC_MCKR_CSS_MASK);
++	freq = gd->arch.mck_rate_hz;
++
++	/* prescale */
++	freq >>= mckr & AT91_PMC_MCKR_PRES_MASK;
++
++	switch (mckr & AT91_PMC_MCKR_MDIV_MASK) {
++	case AT91_PMC_MCKR_MDIV_2:
++		gd->arch.mck_rate_hz = freq / 2;
++		break;
++	case AT91_PMC_MCKR_MDIV_3:
++		gd->arch.mck_rate_hz = freq / 3;
++		break;
++	case AT91_PMC_MCKR_MDIV_4:
++		gd->arch.mck_rate_hz = freq / 4;
++		break;
++	default:
++		break;
++	}
++
++	gd->arch.cpu_clk_rate_hz = freq;
++
++	return 0;
++}
++
++void at91_periph_clk_enable(int id)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *) ATMEL_BASE_PMC;
++
++	if (id > 31)
++		writel(1 << (id - 32), &pmc->pcer1);
++	else
++		writel(1 << id, &pmc->pcer);
++}
+diff --git a/arch/arm/cpu/armv7/at91/cpu.c b/arch/arm/cpu/armv7/at91/cpu.c
+new file mode 100644
+index 0000000..ab2b4f1
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/cpu.c
+@@ -0,0 +1,90 @@
++/*
++ * (C) Copyright 2010
++ * Reinhard Meyer, reinhard.meyer@emk-elektronik.de
++ * (C) Copyright 2009
++ * Jean-Christophe PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
++ * (C) Copyright 2013
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/hardware.h>
++#include <asm/arch/at91_dbu.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/at91_pit.h>
++#include <asm/arch/at91_gpbr.h>
++#include <asm/arch/clk.h>
++
++#ifndef CONFIG_SYS_AT91_MAIN_CLOCK
++#define CONFIG_SYS_AT91_MAIN_CLOCK 0
++#endif
++
++int arch_cpu_init(void)
++{
++	return at91_clock_init(CONFIG_SYS_AT91_MAIN_CLOCK);
++}
++
++void arch_preboot_os(void)
++{
++	ulong cpiv;
++	at91_pit_t *pit = (at91_pit_t *) ATMEL_BASE_PIT;
++
++	cpiv = AT91_PIT_MR_PIV_MASK(readl(&pit->piir));
++
++	/*
++	 * Disable PITC
++	 * Add 0x1000 to current counter to stop it faster
++	 * without waiting for wrapping back to 0
++	 */
++	writel(cpiv + 0x1000, &pit->mr);
++}
++
++#if defined(CONFIG_DISPLAY_CPUINFO)
++int print_cpuinfo(void)
++{
++	char buf[32];
++
++	printf("CPU: %s\n", get_cpu_name());
++	printf("Crystal frequency: %8s MHz\n",
++					strmhz(buf, get_main_clk_rate()));
++	printf("CPU clock        : %8s MHz\n",
++					strmhz(buf, get_cpu_clk_rate()));
++	printf("Master clock     : %8s MHz\n",
++					strmhz(buf, get_mck_clk_rate()));
++
++	return 0;
++}
++#endif
++
++void enable_caches(void)
++{
++}
++
++unsigned int get_chip_id(void)
++{
++	return readl(ATMEL_BASE_DBGU + AT91_DBU_CIDR) & ~AT91_DBU_CIDR_MASK;
++}
++
++unsigned int get_extension_chip_id(void)
++{
++	return readl(ATMEL_BASE_DBGU + AT91_DBU_EXID);
++}
+diff --git a/arch/arm/cpu/armv7/at91/reset.c b/arch/arm/cpu/armv7/at91/reset.c
+new file mode 100644
+index 0000000..788f0f1
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/reset.c
+@@ -0,0 +1,47 @@
++/*
++ * (C) Copyright 2007-2008
++ * Stelian Pop <stelian@popies.net>
++ * Lead Tech Design <www.leadtechdesign.com>
++ *
++ * (C) Copyright 2013
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/hardware.h>
++#include <asm/arch/at91_rstc.h>
++
++/* Reset the cpu by telling the reset controller to do so */
++void reset_cpu(ulong ignored)
++{
++	at91_rstc_t *rstc = (at91_rstc_t *) ATMEL_BASE_RSTC;
++
++	writel(AT91_RSTC_KEY
++		| AT91_RSTC_CR_PROCRST	/* Processor Reset */
++		| AT91_RSTC_CR_PERRST	/* Peripheral Reset */
++#ifdef CONFIG_AT91RESET_EXTRST
++		| AT91_RSTC_CR_EXTRST	/* External Reset (assert nRST pin) */
++#endif
++		, &rstc->cr);
++	/* never reached */
++	do { } while (1);
++}
+diff --git a/arch/arm/cpu/armv7/at91/sama5d3_devices.c b/arch/arm/cpu/armv7/at91/sama5d3_devices.c
+new file mode 100644
+index 0000000..acf8b43
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/sama5d3_devices.c
+@@ -0,0 +1,196 @@
++/*
++ * Copyright (C) 2012-2013 Atmel Corporation
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <asm/arch/sama5d3.h>
++#include <asm/arch/at91_common.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/clk.h>
++#include <asm/arch/gpio.h>
++#include <asm/io.h>
++
++unsigned int has_emac()
++{
++	return cpu_is_sama5d31() || cpu_is_sama5d35();
++}
++
++unsigned int has_gmac()
++{
++	return !cpu_is_sama5d31();
++}
++
++unsigned int has_lcdc()
++{
++	return !cpu_is_sama5d35();
++}
++
++char *get_cpu_name()
++{
++	unsigned int extension_id = get_extension_chip_id();
++
++	if (cpu_is_sama5d3())
++		switch (extension_id) {
++		case ARCH_EXID_SAMA5D31:
++			return "SAMA5D31";
++		case ARCH_EXID_SAMA5D33:
++			return "SAMA5D33";
++		case ARCH_EXID_SAMA5D34:
++			return "SAMA5D34";
++		case ARCH_EXID_SAMA5D35:
++			return "SAMA5D35";
++		default:
++			return "Unknown CPU type";
++		}
++	else
++		return "Unknown CPU type";
++}
++
++void at91_serial0_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTD, 18, 1);	/* TXD0 */
++	at91_set_a_periph(AT91_PIO_PORTD, 17, 0);	/* RXD0 */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_USART0);
++}
++
++void at91_serial1_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTB, 29, 1);	/* TXD1 */
++	at91_set_a_periph(AT91_PIO_PORTB, 28, 0);	/* RXD1 */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_USART1);
++}
++
++void at91_serial2_hw_init(void)
++{
++	at91_set_b_periph(AT91_PIO_PORTE, 26, 1);	/* TXD2 */
++	at91_set_b_periph(AT91_PIO_PORTE, 25, 0);	/* RXD2 */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_USART2);
++}
++
++void at91_seriald_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTB, 31, 1);	/* DTXD */
++	at91_set_a_periph(AT91_PIO_PORTB, 30, 0);	/* DRXD */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_SYS);
++}
++
++#if defined(CONFIG_ATMEL_SPI)
++void at91_spi0_hw_init(unsigned long cs_mask)
++{
++	at91_set_a_periph(AT91_PIO_PORTD, 10, 0);       /* SPI0_MISO */
++	at91_set_a_periph(AT91_PIO_PORTD, 11, 0);       /* SPI0_MOSI */
++	at91_set_a_periph(AT91_PIO_PORTD, 12, 0);       /* SPI0_SPCK */
++
++	if (cs_mask & (1 << 0))
++		at91_set_pio_output(AT91_PIO_PORTD, 13, 1);
++	if (cs_mask & (1 << 1))
++		at91_set_pio_output(AT91_PIO_PORTD, 14, 1);
++	if (cs_mask & (1 << 2))
++		at91_set_pio_output(AT91_PIO_PORTD, 15, 1);
++	if (cs_mask & (1 << 3))
++		at91_set_pio_output(AT91_PIO_PORTD, 16, 1);
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_SPI0);
++}
++#endif
++
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++void at91_mci_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTD, 0, 0);	/* MCI0 CMD */
++	at91_set_a_periph(AT91_PIO_PORTD, 1, 0);	/* MCI0 DA0 */
++	at91_set_a_periph(AT91_PIO_PORTD, 2, 0);	/* MCI0 DA1 */
++	at91_set_a_periph(AT91_PIO_PORTD, 3, 0);        /* MCI0 DA2 */
++	at91_set_a_periph(AT91_PIO_PORTD, 4, 0);        /* MCI0 DA3 */
++#ifdef CONFIG_ATMEL_MCI_8BIT
++	at91_set_a_periph(AT91_PIO_PORTD, 5, 0);        /* MCI0 DA4 */
++	at91_set_a_periph(AT91_PIO_PORTD, 6, 0);        /* MCI0 DA5 */
++	at91_set_a_periph(AT91_PIO_PORTD, 7, 0);        /* MCI0 DA6 */
++	at91_set_a_periph(AT91_PIO_PORTD, 8, 0);        /* MCI0 DA7 */
++#endif
++	at91_set_a_periph(AT91_PIO_PORTD, 9, 0);        /* MCI0 CLK */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_MCI0);
++}
++#endif
++
++#ifdef CONFIG_MACB
++void at91_macb_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTC, 7, 0);	/* ETXCK_EREFCK */
++	at91_set_a_periph(AT91_PIO_PORTC, 5, 0);	/* ERXDV */
++	at91_set_a_periph(AT91_PIO_PORTC, 2, 0);	/* ERX0 */
++	at91_set_a_periph(AT91_PIO_PORTC, 3, 0);	/* ERX1 */
++	at91_set_a_periph(AT91_PIO_PORTC, 6, 0);	/* ERXER */
++	at91_set_a_periph(AT91_PIO_PORTC, 4, 0);	/* ETXEN */
++	at91_set_a_periph(AT91_PIO_PORTC, 0, 0);	/* ETX0 */
++	at91_set_a_periph(AT91_PIO_PORTC, 1, 0);	/* ETX1 */
++	at91_set_a_periph(AT91_PIO_PORTC, 9, 0);	/* EMDIO */
++	at91_set_a_periph(AT91_PIO_PORTC, 8, 0);	/* EMDC */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_EMAC);
++}
++#endif
++
++#ifdef CONFIG_LCD
++void at91_lcd_hw_init(void)
++{
++	at91_set_a_periph(AT91_PIO_PORTA, 24, 0);	/* LCDPWM */
++	at91_set_a_periph(AT91_PIO_PORTA, 25, 0);	/* LCDDISP */
++	at91_set_a_periph(AT91_PIO_PORTA, 26, 0);	/* LCDVSYNC */
++	at91_set_a_periph(AT91_PIO_PORTA, 27, 0);	/* LCDHSYNC */
++	at91_set_a_periph(AT91_PIO_PORTA, 28, 0);	/* LCDDOTCK */
++	at91_set_a_periph(AT91_PIO_PORTA, 29, 0);	/* LCDDEN */
++
++	/* The lower 16-bit of LCD only available on Port A */
++	at91_set_a_periph(AT91_PIO_PORTA,  0, 0);	/* LCDD0 */
++	at91_set_a_periph(AT91_PIO_PORTA,  1, 0);	/* LCDD1 */
++	at91_set_a_periph(AT91_PIO_PORTA,  2, 0);	/* LCDD2 */
++	at91_set_a_periph(AT91_PIO_PORTA,  3, 0);	/* LCDD3 */
++	at91_set_a_periph(AT91_PIO_PORTA,  4, 0);	/* LCDD4 */
++	at91_set_a_periph(AT91_PIO_PORTA,  5, 0);	/* LCDD5 */
++	at91_set_a_periph(AT91_PIO_PORTA,  6, 0);	/* LCDD6 */
++	at91_set_a_periph(AT91_PIO_PORTA,  7, 0);	/* LCDD7 */
++	at91_set_a_periph(AT91_PIO_PORTA,  8, 0);	/* LCDD8 */
++	at91_set_a_periph(AT91_PIO_PORTA,  9, 0);	/* LCDD9 */
++	at91_set_a_periph(AT91_PIO_PORTA, 10, 0);	/* LCDD10 */
++	at91_set_a_periph(AT91_PIO_PORTA, 11, 0);	/* LCDD11 */
++	at91_set_a_periph(AT91_PIO_PORTA, 12, 0);	/* LCDD12 */
++	at91_set_a_periph(AT91_PIO_PORTA, 13, 0);	/* LCDD13 */
++	at91_set_a_periph(AT91_PIO_PORTA, 14, 0);	/* LCDD14 */
++	at91_set_a_periph(AT91_PIO_PORTA, 15, 0);	/* LCDD15 */
++
++	/* Enable clock */
++	at91_periph_clk_enable(ATMEL_ID_LCDC);
++}
++#endif
+diff --git a/arch/arm/cpu/armv7/at91/timer.c b/arch/arm/cpu/armv7/at91/timer.c
+new file mode 100644
+index 0000000..b3a450f
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/timer.c
+@@ -0,0 +1,139 @@
++/*
++ * (C) Copyright 2007-2008
++ * Stelian Pop <stelian@popies.net>
++ * Lead Tech Design <www.leadtechdesign.com>
++ *
++ * (C) Copyright 2013
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/hardware.h>
++#include <asm/arch/at91_pit.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/clk.h>
++#include <div64.h>
++
++#if !defined(CONFIG_AT91FAMILY)
++# error You need to define CONFIG_AT91FAMILY in your board config!
++#endif
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/*
++ * We're using the SAMA5D3x PITC in 32 bit mode, by
++ * setting the 20 bit counter period to its maximum (0xfffff).
++ * (See the relevant data sheets to understand that this really works)
++ *
++ * We do also mimic the typical powerpc way of incrementing
++ * two 32 bit registers called tbl and tbu.
++ *
++ * Those registers increment at 1/16 the main clock rate.
++ */
++
++#define TIMER_LOAD_VAL	0xfffff
++
++static inline unsigned long long tick_to_time(unsigned long long tick)
++{
++	tick *= CONFIG_SYS_HZ;
++	do_div(tick, gd->arch.timer_rate_hz);
++
++	return tick;
++}
++
++static inline unsigned long long usec_to_tick(unsigned long long usec)
++{
++	usec *= gd->arch.timer_rate_hz;
++	do_div(usec, 1000000);
++
++	return usec;
++}
++
++/*
++ * Use the PITC in full 32 bit incrementing mode
++ */
++int timer_init(void)
++{
++	at91_pit_t *pit = (at91_pit_t *)ATMEL_BASE_PIT;
++
++	/* Enable PITC Clock */
++	at91_periph_clk_enable(ATMEL_ID_SYS);
++
++	/* Enable PITC */
++	writel(TIMER_LOAD_VAL | AT91_PIT_MR_EN , &pit->mr);
++
++	gd->arch.timer_rate_hz = gd->arch.mck_rate_hz / 16;
++	gd->arch.tbu = 0;
++	gd->arch.tbl = 0;
++
++	return 0;
++}
++
++/*
++ * Get the current 64 bit timer tick count
++ */
++unsigned long long get_ticks(void)
++{
++	at91_pit_t *pit = (at91_pit_t *)ATMEL_BASE_PIT;
++
++	ulong now = readl(&pit->piir);
++
++	/* increment tbu if tbl has rolled over */
++	if (now < gd->arch.tbl)
++		gd->arch.tbu++;
++	gd->arch.tbl = now;
++	return (((unsigned long long)gd->arch.tbu) << 32) | gd->arch.tbl;
++}
++
++void __udelay(unsigned long usec)
++{
++	unsigned long long start;
++	ulong tmo;
++
++	start = get_ticks();		/* get current timestamp */
++	tmo = usec_to_tick(usec);	/* convert usecs to ticks */
++	while ((get_ticks() - start) < tmo)
++		;			/* loop till time has passed */
++}
++
++/*
++ * get_timer(base) can be used to check for timeouts or
++ * to measure elasped time relative to an event:
++ *
++ * ulong start_time = get_timer(0) sets start_time to the current
++ * time value.
++ * get_timer(start_time) returns the time elapsed since then.
++ *
++ * The time is used in CONFIG_SYS_HZ units!
++ */
++ulong get_timer(ulong base)
++{
++	return tick_to_time(get_ticks()) - base;
++}
++
++/*
++ * Return the number of timer ticks per second.
++ */
++ulong get_tbclk(void)
++{
++	return gd->arch.timer_rate_hz;
++}
+diff --git a/arch/arm/include/asm/arch-at91/at91_common.h b/arch/arm/include/asm/arch-at91/at91_common.h
+index 8282f46..2c03eff 100644
+--- a/arch/arm/include/asm/arch-at91/at91_common.h
++++ b/arch/arm/include/asm/arch-at91/at91_common.h
+@@ -26,6 +26,7 @@
+ #define AT91_COMMON_H
+ 
+ void at91_can_hw_init(void);
++void at91_lcd_hw_init(void);
+ void at91_macb_hw_init(void);
+ void at91_mci_hw_init(void);
+ void at91_serial0_hw_init(void);
+diff --git a/arch/arm/include/asm/arch-at91/at91_dbu.h b/arch/arm/include/asm/arch-at91/at91_dbu.h
+index 3429293..9a640a5 100644
+--- a/arch/arm/include/asm/arch-at91/at91_dbu.h
++++ b/arch/arm/include/asm/arch-at91/at91_dbu.h
+@@ -38,4 +38,8 @@ typedef struct at91_dbu {
+ #define AT91_DBU_CID_ARCH_9xx		0x01900000
+ #define AT91_DBU_CID_ARCH_9XExx	0x02900000
+ 
++#define AT91_DBU_CIDR_MASK		0x1f
++#define AT91_DBU_CIDR			0x40
++#define AT91_DBU_EXID			0x44
++
+ #endif
+diff --git a/arch/arm/include/asm/arch-at91/at91_pmc.h b/arch/arm/include/asm/arch-at91/at91_pmc.h
+index 086cb9b..1b5a763 100644
+--- a/arch/arm/include/asm/arch-at91/at91_pmc.h
++++ b/arch/arm/include/asm/arch-at91/at91_pmc.h
+@@ -55,7 +55,16 @@ typedef struct at91_pmc {
+ 	u32	reserved5[21];
+ 	u32	wpmr;		/* 0xE4 Write Protect Mode Register (CAP0) */
+ 	u32	wpsr;		/* 0xE8 Write Protect Status Register (CAP0) */
++#ifdef CONFIG_SAMA5D3
++	u32	reserved6[8];
++	u32	pcer1;		/* 0x100 Periperial Clock Enable Register 1 */
++	u32	pcdr1;		/* 0x104 Periperial Clock Disable Register 1 */
++	u32	pcsr1;		/* 0x108 Periperial Clock Status Register 1 */
++	u32	pcr;		/* 0x10c Periperial Control Register 1 */
++	u32	ocr;		/* 0x110 Oscillator Calibration Register 1 */
++#else
+ 	u32	reserved8[5];
++#endif
+ } at91_pmc_t;
+ 
+ #endif	/* end not assembly */
+@@ -82,6 +91,16 @@ typedef struct at91_pmc {
+ #define AT91_PMC_MCKR_CSS_PLLB		0x00000003
+ #define AT91_PMC_MCKR_CSS_MASK		0x00000003
+ 
++#ifdef CONFIG_SAMA5D3
++#define AT91_PMC_MCKR_PRES_1		0x00000000
++#define AT91_PMC_MCKR_PRES_2		0x00000010
++#define AT91_PMC_MCKR_PRES_4		0x00000020
++#define AT91_PMC_MCKR_PRES_8		0x00000030
++#define AT91_PMC_MCKR_PRES_16		0x00000040
++#define AT91_PMC_MCKR_PRES_32		0x00000050
++#define AT91_PMC_MCKR_PRES_64		0x00000060
++#define AT91_PMC_MCKR_PRES_MASK		0x00000070
++#else
+ #define AT91_PMC_MCKR_PRES_1		0x00000000
+ #define AT91_PMC_MCKR_PRES_2		0x00000004
+ #define AT91_PMC_MCKR_PRES_4		0x00000008
+@@ -90,6 +109,7 @@ typedef struct at91_pmc {
+ #define AT91_PMC_MCKR_PRES_32		0x00000014
+ #define AT91_PMC_MCKR_PRES_64		0x00000018
+ #define AT91_PMC_MCKR_PRES_MASK		0x0000001C
++#endif
+ 
+ #ifdef CONFIG_AT91RM9200
+ #define AT91_PMC_MCKR_MDIV_1		0x00000000
+@@ -100,6 +120,9 @@ typedef struct at91_pmc {
+ #else
+ #define AT91_PMC_MCKR_MDIV_1		0x00000000
+ #define AT91_PMC_MCKR_MDIV_2		0x00000100
++#ifdef CONFIG_SAMA5D3
++#define AT91_PMC_MCKR_MDIV_3		0x00000300
++#endif
+ #define AT91_PMC_MCKR_MDIV_4		0x00000200
+ #define AT91_PMC_MCKR_MDIV_MASK		0x00000300
+ #endif
+diff --git a/arch/arm/include/asm/arch-at91/clk.h b/arch/arm/include/asm/arch-at91/clk.h
+index d4852a3..04b0f83 100644
+--- a/arch/arm/include/asm/arch-at91/clk.h
++++ b/arch/arm/include/asm/arch-at91/clk.h
+@@ -95,4 +95,5 @@ static inline unsigned long get_mci_clk_rate(void)
+ }
+ 
+ int at91_clock_init(unsigned long main_clock);
++void at91_periph_clk_enable(int id);
+ #endif /* __ASM_ARM_ARCH_CLK_H__ */
+diff --git a/arch/arm/include/asm/arch-at91/hardware.h b/arch/arm/include/asm/arch-at91/hardware.h
+index 4c4ee70..87dd20b 100644
+--- a/arch/arm/include/asm/arch-at91/hardware.h
++++ b/arch/arm/include/asm/arch-at91/hardware.h
+@@ -43,6 +43,8 @@
+ # include <asm/arch/at91cap9.h>
+ #elif defined(CONFIG_AT91X40)
+ # include <asm/arch/at91x40.h>
++#elif defined(CONFIG_SAMA5D3)
++# include <asm/arch/sama5d3.h>
+ #else
+ # error "Unsupported AT91 processor"
+ #endif
+diff --git a/arch/arm/include/asm/arch-at91/sama5d3.h b/arch/arm/include/asm/arch-at91/sama5d3.h
+new file mode 100644
+index 0000000..fe877e3
+--- /dev/null
++++ b/arch/arm/include/asm/arch-at91/sama5d3.h
+@@ -0,0 +1,212 @@
++/*
++ * Chip-specific header file for the SAMA5D3 family
++ *
++ * (C) 2012 - 2013 Atmel Corporation.
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * Definitions for the SoC:
++ * SAMA5D3
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#ifndef SAMA5D3_H
++#define SAMA5D3_H
++
++/*
++ * defines to be used in other places
++ */
++#define CONFIG_ARMV7		/* ARM A5 Core */
++#define CONFIG_AT91FAMILY	/* it's a member of AT91 */
++
++/*
++ * Peripheral identifiers/interrupts.
++ */
++#define ATMEL_ID_FIQ	0	/* Advanced Interrupt Controller (FIQ) */
++#define ATMEL_ID_SYS	1	/* System Controller Interrupt */
++#define ATMEL_ID_DBGU	2	/* Debug Unit Interrupt */
++#define ATMEL_ID_PIT	3	/* Periodic Interval Timer Interrupt */
++#define ATMEL_ID_WDT	4	/* Watchdog timer Interrupt */
++#define ATMEL_ID_SMC	5	/* Multi-bit ECC Interrupt */
++#define ATMEL_ID_PIOA	6	/* Parallel I/O Controller A */
++#define ATMEL_ID_PIOB	7	/* Parallel I/O Controller B */
++#define ATMEL_ID_PIOC	8	/* Parallel I/O Controller C */
++#define ATMEL_ID_PIOD	9	/* Parallel I/O Controller D */
++#define ATMEL_ID_PIOE	10	/* Parallel I/O Controller E */
++#define ATMEL_ID_SMD	11	/* SMD Soft Modem */
++#define ATMEL_ID_USART0	12	/* USART 0 */
++#define ATMEL_ID_USART1	13	/* USART 1 */
++#define ATMEL_ID_USART2	14	/* USART 2 */
++#define ATMEL_ID_USART3	15	/* USART 3 */
++#define ATMEL_ID_UART0	16
++#define ATMEL_ID_UART1	17
++#define ATMEL_ID_TWI0	18	/* Two-Wire Interface 0 */
++#define ATMEL_ID_TWI1	19	/* Two-Wire Interface 1 */
++#define ATMEL_ID_TWI2	20	/* Two-Wire Interface 2 */
++#define ATMEL_ID_MCI0	21	/* High Speed Multimedia Card Interface 0 */
++#define ATMEL_ID_MCI1	22	/*  */
++#define ATMEL_ID_MCI2	23	/*  */
++#define ATMEL_ID_SPI0	24	/* Serial Peripheral Interface 0 */
++#define ATMEL_ID_SPI1	25	/* Serial Peripheral Interface 1 */
++#define ATMEL_ID_TC0	26	/* */
++#define ATMEL_ID_TC1	27	/* */
++#define ATMEL_ID_PWMC	28	/* Pulse Width Modulation Controller */
++#define ATMEL_ID_TSC	29	/* Touch Screen ADC Controller */
++#define ATMEL_ID_DMA0	30	/* DMA Controller */
++#define ATMEL_ID_DMA1	31	/* DMA Controller */
++#define ATMEL_ID_UHPHS	32	/* USB Host High Speed */
++#define ATMEL_ID_UDPHS	33	/* USB Device High Speed */
++#define ATMEL_ID_GMAC	34
++#define ATMEL_ID_EMAC	35	/* Ethernet MAC */
++#define ATMEL_ID_LCDC	36	/* LCD Controller */
++#define ATMEL_ID_ISI	37	/* Image Sensor Interface */
++#define ATMEL_ID_SSC0	38	/* Synchronous Serial Controller 0 */
++#define ATMEL_ID_SSC1	39	/* Synchronous Serial Controller 1 */
++#define ATMEL_ID_CAN0	40
++#define ATMEL_ID_CAN1	41
++#define ATMEL_ID_SHA	42
++#define ATMEL_ID_AES	43
++#define ATMEL_ID_TDES	44
++#define ATMEL_ID_TRNG	45
++#define ATMEL_ID_ARM	46
++#define ATMEL_ID_IRQ0	47	/* Advanced Interrupt Controller */
++#define ATMEL_ID_FUSE	48
++#define ATMEL_ID_MPDDRC	49
++
++/* sama5d3 series chip id definitions */
++#define ARCH_ID_SAMA5D3	0x8a5c07c0
++#define ARCH_EXID_SAMA5D31	0x00444300
++#define ARCH_EXID_SAMA5D33	0x00414300
++#define ARCH_EXID_SAMA5D34	0x00414301
++#define ARCH_EXID_SAMA5D35	0x00584300
++
++#define cpu_is_sama5d3()	(get_chip_id() == ARCH_ID_SAMA5D3)
++#define cpu_is_sama5d31()	(cpu_is_sama5d3() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D31))
++#define cpu_is_sama5d33()	(cpu_is_sama5d3() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D33))
++#define cpu_is_sama5d34()	(cpu_is_sama5d3() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D34))
++#define cpu_is_sama5d35()	(cpu_is_sama5d3() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D35))
++
++/*
++ * User Peripherals physical base addresses.
++ */
++#define ATMEL_BASE_MCI0		0xf0000000
++#define ATMEL_BASE_SPI0		0xf0004000
++#define ATMEL_BASE_SSC0		0xf000C000
++#define ATMEL_BASE_TC2		0xf0010000
++#define ATMEL_BASE_TWI0		0xf0014000
++#define ATMEL_BASE_TWI1		0xf0018000
++#define ATMEL_BASE_USART0	0xf001c000
++#define ATMEL_BASE_USART1	0xf0020000
++#define ATMEL_BASE_UART0	0xf0024000
++#define ATMEL_BASE_GMAC		0xf0028000
++#define ATMEL_BASE_PWMC		0xf002c000
++#define ATMEL_BASE_LCDC		0xf0030000
++#define ATMEL_BASE_ISI		0xf0034000
++#define ATMEL_BASE_SFR		0xf0038000
++/* Reserved: 0xf003c000 - 0xf8000000 */
++#define ATMEL_BASE_MCI1		0xf8000000
++#define ATMEL_BASE_MCI2		0xf8004000
++#define ATMEL_BASE_SPI1		0xf8008000
++#define ATMEL_BASE_SSC1		0xf800c000
++#define ATMEL_BASE_CAN1		0xf8010000
++#define ATMEL_BASE_TC3		0xf8014000
++#define ATMEL_BASE_TSADC	0xf8018000
++#define ATMEL_BASE_TWI2		0xf801c000
++#define ATMEL_BASE_USART2	0xf8020000
++#define ATMEL_BASE_USART3	0xf8024000
++#define ATMEL_BASE_UART1	0xf8028000
++#define ATMEL_BASE_EMAC		0xf802c000
++#define ATMEL_BASE_UDHPS	0xf8030000
++#define ATMEL_BASE_SHA		0xf8034000
++#define ATMEL_BASE_AES		0xf8038000
++#define ATMEL_BASE_TDES		0xf803c000
++#define ATMEL_BASE_TRNG		0xf8040000
++/* Reserved:	0xf804400 - 0xffffc00 */
++
++/*
++ * System Peripherals physical base addresses.
++ */
++#define ATMEL_BASE_SYS		0xffffc000
++#define ATMEL_BASE_SMC		0xffffc000
++#define ATMEL_BASE_PMECC	(ATMEL_BASE_SMC + 0x070)
++#define ATMEL_BASE_PMERRLOC	(ATMEL_BASE_SMC + 0x500)
++#define ATMEL_BASE_FUSE		0xffffe400
++#define ATMEL_BASE_DMAC0	0xffffe600
++#define ATMEL_BASE_DMAC1	0xffffe800
++#define ATMEL_BASE_MPDDRC	0xffffea00
++#define ATMEL_BASE_MATRIX	0xffffec00
++#define ATMEL_BASE_DBGU		0xffffee00
++#define ATMEL_BASE_AIC		0xfffff000
++#define ATMEL_BASE_PIOA		0xfffff200
++#define ATMEL_BASE_PIOB		0xfffff400
++#define ATMEL_BASE_PIOC		0xfffff600
++#define ATMEL_BASE_PIOD		0xfffff800
++#define ATMEL_BASE_PIOE		0xfffffa00
++#define ATMEL_BASE_PMC		0xfffffc00
++#define ATMEL_BASE_RSTC		0xfffffe00
++#define ATMEL_BASE_SHDWN	0xfffffe10
++#define ATMEL_BASE_PIT		0xfffffe30
++#define ATMEL_BASE_WDT		0xfffffe40
++#define ATMEL_BASE_SCKCR	0xfffffe50
++#define ATMEL_BASE_GPBR		0xfffffe60
++#define ATMEL_BASE_RTC		0xfffffeb0
++/* Reserved:	0xfffffee0 - 0xffffffff */
++
++/*
++ * Internal Memory.
++ */
++#define ATMEL_BASE_ROM		0x00100000	/* Internal ROM base address */
++#define ATMEL_BASE_SRAM		0x00200000	/* Internal ROM base address */
++#define ATMEL_BASE_SRAM0	0x00300000	/* Internal SRAM base address */
++#define ATMEL_BASE_SRAM1	0x00310000	/* Internal SRAM base address */
++#define ATMEL_BASE_SMD		0x00400000	/* Internal ROM base address */
++#define ATMEL_BASE_UDPHS_FIFO	0x00500000	/* USB Device HS controller */
++#define ATMEL_BASE_OHCI		0x00600000	/* USB Host controller (OHCI) */
++#define ATMEL_BASE_EHCI		0x00700000	/* USB Host controller (EHCI) */
++#define ATMEL_BASE_AXI		0x00800000	/* Video Decoder Controller */
++#define ATMEL_BASE_DAP		0x00900000	/* Video Decoder Controller */
++
++/*
++ * External memory
++ */
++#define ATMEL_BASE_CS0		0x10000000
++#define ATMEL_BASE_DDRCS	0x20000000
++#define ATMEL_BASE_CS1		0x40000000
++#define ATMEL_BASE_CS2		0x50000000
++#define ATMEL_BASE_CS3		0x60000000
++
++/*
++ * Other misc defines
++ */
++#define ATMEL_PIO_PORTS		5
++#define CPU_HAS_PIO3
++#define PIO_SCDR_DIV		0x3fff
++
++/*
++ * PMECC table in ROM
++ */
++#define ATMEL_PMECC_INDEX_OFFSET_512	0x10000
++#define ATMEL_PMECC_INDEX_OFFSET_1024	0x18000
++#define ATMEL_PMECC_ALPHA_OFFSET_512	0x10000
++#define ATMEL_PMECC_ALPHA_OFFSET_1024	0x18000
++
++/*
++ * SAMA5D3 specific prototypes
++ */
++#ifndef __ASSEMBLY__
++unsigned int get_chip_id(void);
++unsigned int get_extension_chip_id(void);
++unsigned int has_emac(void);
++unsigned int has_gmac(void);
++unsigned int has_lcdc(void);
++char *get_cpu_name(void);
++#endif
++
++#endif
+diff --git a/arch/arm/include/asm/arch-at91/sama5d3_smc.h b/arch/arm/include/asm/arch-at91/sama5d3_smc.h
+new file mode 100644
+index 0000000..eb53eba
+--- /dev/null
++++ b/arch/arm/include/asm/arch-at91/sama5d3_smc.h
+@@ -0,0 +1,79 @@
++/*
++ * Copyright (C) 2012 Atmel Corporation.
++ *
++ * Static Memory Controllers (SMC) - System peripherals registers.
++ * Based on SAMA5D3 datasheet.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#ifndef SAMA5D3_SMC_H
++#define SAMA5D3_SMC_H
++
++#ifdef __ASSEMBLY__
++#define AT91_ASM_SMC_SETUP0	(ATMEL_BASE_SMC + 0x600)
++#define AT91_ASM_SMC_PULSE0	(ATMEL_BASE_SMC + 0x604)
++#define AT91_ASM_SMC_CYCLE0	(ATMEL_BASE_SMC + 0x608)
++#define AT91_ASM_SMC_MODE0	(ATMEL_BASE_SMC + 0x60C)
++#else
++struct at91_cs {
++	u32	reserved[96];
++	u32	setup;		/* 0x600 SMC Setup Register */
++	u32	pulse;		/* 0x604 SMC Pulse Register */
++	u32	cycle;		/* 0x608 SMC Cycle Register */
++	u32	timings;	/* 0x60C SMC Cycle Register */
++	u32	mode;		/* 0x610 SMC Mode Register */
++};
++
++struct at91_smc {
++	struct at91_cs cs[4];
++};
++#endif /*  __ASSEMBLY__ */
++
++#define AT91_SMC_SETUP_NWE(x)		(x & 0x3f)
++#define AT91_SMC_SETUP_NCS_WR(x)	((x & 0x3f) << 8)
++#define AT91_SMC_SETUP_NRD(x)		((x & 0x3f) << 16)
++#define AT91_SMC_SETUP_NCS_RD(x)	((x & 0x3f) << 24)
++
++#define AT91_SMC_PULSE_NWE(x)		(x & 0x3f)
++#define AT91_SMC_PULSE_NCS_WR(x)	((x & 0x3f) << 8)
++#define AT91_SMC_PULSE_NRD(x)		((x & 0x3f) << 16)
++#define AT91_SMC_PULSE_NCS_RD(x)	((x & 0x3f) << 24)
++
++#define AT91_SMC_CYCLE_NWE(x)		(x & 0x1ff)
++#define AT91_SMC_CYCLE_NRD(x)		((x & 0x1ff) << 16)
++
++#define AT91_SMC_TIMINGS_TCLR(x)	(x & 0xf)
++#define AT91_SMC_TIMINGS_TADL(x)	((x & 0xf) << 4)
++#define AT91_SMC_TIMINGS_TAR(x)		((x & 0xf) << 8)
++#define AT91_SMC_TIMINGS_OCMS(x)	((x & 0x1) << 12)
++#define AT91_SMC_TIMINGS_TRR(x)		((x & 0xf) << 16)
++#define AT91_SMC_TIMINGS_TWB(x)		((x & 0xf) << 24)
++#define AT91_SMC_TIMINGS_RBNSEL(x)	((x & 0xf) << 28)
++#define AT91_SMC_TIMINGS_NFSEL(x)	((x & 0x1) << 31)
++
++#define AT91_SMC_MODE_RM_NCS		0x00000000
++#define AT91_SMC_MODE_RM_NRD		0x00000001
++#define AT91_SMC_MODE_WM_NCS		0x00000000
++#define AT91_SMC_MODE_WM_NWE		0x00000002
++
++#define AT91_SMC_MODE_EXNW_DISABLE	0x00000000
++#define AT91_SMC_MODE_EXNW_FROZEN	0x00000020
++#define AT91_SMC_MODE_EXNW_READY	0x00000030
++
++#define AT91_SMC_MODE_BAT		0x00000100
++#define AT91_SMC_MODE_DBW_8		0x00000000
++#define AT91_SMC_MODE_DBW_16		0x00001000
++#define AT91_SMC_MODE_DBW_32		0x00002000
++#define AT91_SMC_MODE_TDF_CYCLE(x)	((x & 0xf) << 16)
++#define AT91_SMC_MODE_TDF		0x00100000
++#define AT91_SMC_MODE_PMEN		0x01000000
++#define AT91_SMC_MODE_PS_4		0x00000000
++#define AT91_SMC_MODE_PS_8		0x10000000
++#define AT91_SMC_MODE_PS_16		0x20000000
++#define AT91_SMC_MODE_PS_32		0x30000000
++
++#endif
+diff --git a/board/atmel/sama5d3xek/Makefile b/board/atmel/sama5d3xek/Makefile
+new file mode 100644
+index 0000000..45d24d2
+--- /dev/null
++++ b/board/atmel/sama5d3xek/Makefile
+@@ -0,0 +1,51 @@
++#
++# (C) Copyright 2003-2008
++# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
++#
++# (C) Copyright 2008
++# Stelian Pop <stelian@popies.net>
++# Lead Tech Design <www.leadtechdesign.com>
++#
++# (C) Copyright 2013
++# Bo Shen <voice.shen@atmel.com>
++#
++# See file CREDITS for list of people who contributed to this
++# project.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation; either version 2 of
++# the License, or (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++# MA 02111-1307 USA
++#
++
++include $(TOPDIR)/config.mk
++
++LIB	= $(obj)lib$(BOARD).o
++
++COBJS-y += sama5d3xek.o
++
++SRCS	:= $(SOBJS:.o=.S) $(COBJS-y:.o=.c)
++OBJS	:= $(addprefix $(obj),$(COBJS-y))
++SOBJS	:= $(addprefix $(obj),$(SOBJS))
++
++$(LIB):	$(obj).depend $(OBJS) $(SOBJS)
++	$(call cmd_link_o_target, $(OBJS) $(SOBJS))
++
++#########################################################################
++
++# defines $(obj).depend target
++include $(SRCTREE)/rules.mk
++
++sinclude $(obj).depend
++
++#########################################################################
+diff --git a/board/atmel/sama5d3xek/sama5d3xek.c b/board/atmel/sama5d3xek/sama5d3xek.c
+new file mode 100644
+index 0000000..41659e9
+--- /dev/null
++++ b/board/atmel/sama5d3xek/sama5d3xek.c
+@@ -0,0 +1,277 @@
++/*
++ * Copyright (C) 2012 - 2013 Atmel Corporation
++ * Bo Shen <voice.shen@atmel.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <mmc.h>
++#include <asm/io.h>
++#include <asm/arch/sama5d3_smc.h>
++#include <asm/arch/at91_common.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/at91_rstc.h>
++#include <asm/arch/gpio.h>
++#include <asm/arch/clk.h>
++#include <lcd.h>
++#include <atmel_lcdc.h>
++#include <atmel_mci.h>
++#include <net.h>
++#include <netdev.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* ------------------------------------------------------------------------- */
++/*
++ * Miscelaneous platform dependent initialisations
++ */
++
++#ifdef CONFIG_NAND_ATMEL
++void sama5d3xek_nand_hw_init(void)
++{
++	struct at91_smc *smc = (struct at91_smc *)ATMEL_BASE_SMC;
++
++	at91_periph_clk_enable(ATMEL_ID_SMC);
++
++	/* Configure SMC CS3 for NAND/SmartMedia */
++	writel(AT91_SMC_SETUP_NWE(2) | AT91_SMC_SETUP_NCS_WR(1) |
++	       AT91_SMC_SETUP_NRD(2) | AT91_SMC_SETUP_NCS_RD(1),
++	       &smc->cs[3].setup);
++	writel(AT91_SMC_PULSE_NWE(3) | AT91_SMC_PULSE_NCS_WR(5) |
++	       AT91_SMC_PULSE_NRD(3) | AT91_SMC_PULSE_NCS_RD(5),
++	       &smc->cs[3].pulse);
++	writel(AT91_SMC_CYCLE_NWE(8) | AT91_SMC_CYCLE_NRD(8),
++	       &smc->cs[3].cycle);
++	writel(AT91_SMC_TIMINGS_TCLR(3) | AT91_SMC_TIMINGS_TADL(10) |
++	       AT91_SMC_TIMINGS_TAR(3)  | AT91_SMC_TIMINGS_TRR(4)   |
++	       AT91_SMC_TIMINGS_TWB(5)  | AT91_SMC_TIMINGS_RBNSEL(3)|
++	       AT91_SMC_TIMINGS_NFSEL(1), &smc->cs[3].timings);
++	writel(AT91_SMC_MODE_RM_NRD | AT91_SMC_MODE_WM_NWE |
++	       AT91_SMC_MODE_EXNW_DISABLE |
++#ifdef CONFIG_SYS_NAND_DBW_16
++	       AT91_SMC_MODE_DBW_16 |
++#else /* CONFIG_SYS_NAND_DBW_8 */
++	       AT91_SMC_MODE_DBW_8 |
++#endif
++	       AT91_SMC_MODE_TDF_CYCLE(3),
++	       &smc->cs[3].mode);
++}
++#endif
++
++#ifdef CONFIG_CMD_USB
++static void sama5d3xek_usb_hw_init(void)
++{
++	at91_set_pio_output(AT91_PIO_PORTD, 25, 0);
++	at91_set_pio_output(AT91_PIO_PORTD, 26, 0);
++	at91_set_pio_output(AT91_PIO_PORTD, 27, 0);
++}
++#endif
++
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++static void sama5d3xek_mci_hw_init(void)
++{
++	at91_mci_hw_init();
++
++	at91_set_pio_output(AT91_PIO_PORTB, 10, 0);	/* MCI0 Power */
++}
++#endif
++
++#ifdef CONFIG_LCD
++vidinfo_t panel_info = {
++	.vl_col = 800,
++	.vl_row = 480,
++	.vl_clk = 24000000,
++	.vl_sync = ATMEL_LCDC_INVLINE_NORMAL | ATMEL_LCDC_INVFRAME_NORMAL,
++	.vl_bpix = LCD_BPP,
++	.vl_tft = 1,
++	.vl_hsync_len = 128,
++	.vl_left_margin = 64,
++	.vl_right_margin = 64,
++	.vl_vsync_len = 2,
++	.vl_upper_margin = 22,
++	.vl_lower_margin = 21,
++	.mmio = ATMEL_BASE_LCDC,
++};
++
++void lcd_enable(void)
++{
++}
++
++void lcd_disable(void)
++{
++}
++
++static void sama5d3xek_lcd_hw_init(void)
++{
++	gd->fb_base = CONFIG_SAMA5D3_LCD_BASE;
++
++	/* The higher 8 bit of LCD is board related */
++	at91_set_c_periph(AT91_PIO_PORTC, 14, 0);	/* LCDD16 */
++	at91_set_c_periph(AT91_PIO_PORTC, 13, 0);	/* LCDD17 */
++	at91_set_c_periph(AT91_PIO_PORTC, 12, 0);	/* LCDD18 */
++	at91_set_c_periph(AT91_PIO_PORTC, 11, 0);	/* LCDD19 */
++	at91_set_c_periph(AT91_PIO_PORTC, 10, 0);	/* LCDD20 */
++	at91_set_c_periph(AT91_PIO_PORTC, 15, 0);	/* LCDD21 */
++	at91_set_c_periph(AT91_PIO_PORTE, 27, 0);	/* LCDD22 */
++	at91_set_c_periph(AT91_PIO_PORTE, 28, 0);	/* LCDD23 */
++
++	/* Configure lower 16 bit of LCD and enable clock */
++	at91_lcd_hw_init();
++}
++
++#ifdef CONFIG_LCD_INFO
++#include <nand.h>
++#include <version.h>
++
++void lcd_show_board_info(void)
++{
++	ulong dram_size, nand_size;
++	int i;
++	char temp[32];
++
++	lcd_printf("%s\n", U_BOOT_VERSION);
++	lcd_printf("(C) 2013 ATMEL Corp\n");
++	lcd_printf("at91@atmel.com\n");
++	lcd_printf("%s CPU at %s MHz\n",
++		get_cpu_name(),
++		strmhz(temp, get_cpu_clk_rate()));
++
++	dram_size = 0;
++	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++)
++		dram_size += gd->bd->bi_dram[i].size;
++
++	nand_size = 0;
++#ifdef CONFIG_NAND_ATMEL
++	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++)
++		nand_size += nand_info[i].size;
++#endif
++	lcd_printf("  %ld MB SDRAM, %ld MB NAND\n",
++		dram_size >> 20,
++		nand_size >> 20);
++}
++#endif /* CONFIG_LCD_INFO */
++#endif /* CONFIG_LCD */
++
++int board_early_init_f(void)
++{
++	at91_seriald_hw_init();
++
++	return 0;
++}
++
++int board_init(void)
++{
++	/* adress of boot parameters */
++	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
++
++#ifdef CONFIG_NAND_ATMEL
++	sama5d3xek_nand_hw_init();
++#endif
++#ifdef CONFIG_CMD_USB
++	sama5d3xek_usb_hw_init();
++#endif
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++	sama5d3xek_mci_hw_init();
++#endif
++#ifdef CONFIG_ATMEL_SPI
++	at91_spi0_hw_init(1 << 0);
++#endif
++#ifdef CONFIG_MACB
++	if (has_emac())
++		at91_macb_hw_init();
++#endif
++#ifdef CONFIG_LCD
++	if (has_lcdc())
++		sama5d3xek_lcd_hw_init();
++#endif
++	return 0;
++}
++
++int dram_init(void)
++{
++	gd->ram_size = get_ram_size((void *) CONFIG_SYS_SDRAM_BASE,
++				    CONFIG_SYS_SDRAM_SIZE);
++	return 0;
++}
++
++int board_eth_init(bd_t *bis)
++{
++	int rc = 0;
++
++#ifdef CONFIG_MACB
++	if (has_emac())
++		rc = macb_eth_initialize(0, (void *)ATMEL_BASE_EMAC, 0x00);
++#endif
++
++	return rc;
++}
++
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++int board_mmc_init(bd_t *bis)
++{
++	int rc = 0;
++
++	rc = atmel_mci_init((void *)ATMEL_BASE_MCI0);
++
++	return rc;
++}
++#endif
++
++/* SPI chip select control */
++#ifdef CONFIG_ATMEL_SPI
++#include <spi.h>
++
++int spi_cs_is_valid(unsigned int bus, unsigned int cs)
++{
++	return bus == 0 && cs < 4;
++}
++
++void spi_cs_activate(struct spi_slave *slave)
++{
++	switch (slave->cs) {
++	case 0:
++		at91_set_pio_output(AT91_PIO_PORTD, 13, 0);
++	case 1:
++		at91_set_pio_output(AT91_PIO_PORTD, 14, 0);
++	case 2:
++		at91_set_pio_output(AT91_PIO_PORTD, 15, 0);
++	case 3:
++		at91_set_pio_output(AT91_PIO_PORTD, 16, 0);
++	default:
++		break;
++	}
++}
++
++void spi_cs_deactivate(struct spi_slave *slave)
++{
++	switch (slave->cs) {
++	case 0:
++		at91_set_pio_output(AT91_PIO_PORTD, 13, 1);
++	case 1:
++		at91_set_pio_output(AT91_PIO_PORTD, 14, 1);
++	case 2:
++		at91_set_pio_output(AT91_PIO_PORTD, 15, 1);
++	case 3:
++		at91_set_pio_output(AT91_PIO_PORTD, 16, 1);
++	default:
++		break;
++	}
++}
++#endif /* CONFIG_ATMEL_SPI */
+diff --git a/boards.cfg b/boards.cfg
+index 136ea0a..efae355 100644
+--- a/boards.cfg
++++ b/boards.cfg
+@@ -239,6 +239,9 @@ am335x_evm_uart3             arm         armv7       am335x              ti
+ am335x_evm_uart4             arm         armv7       am335x              ti             am33xx      am335x_evm:SERIAL5,CONS_INDEX=5
+ am335x_evm_uart5             arm         armv7       am335x              ti             am33xx      am335x_evm:SERIAL6,CONS_INDEX=6
+ pcm051                       arm         armv7       pcm051              phytec         am33xx      pcm051
++sama5d3xek_nandflash         arm         armv7       sama5d3xek          atmel          at91        sama5d3xek:SAMA5D3,SYS_USE_NANDFLASH
++sama5d3xek_sdcard            arm         armv7       sama5d3xek          atmel          at91        sama5d3xek:SAMA5D3,SYS_USE_MMC
++sama5d3xek_spiflash          arm         armv7       sama5d3xek          atmel          at91        sama5d3xek:SAMA5D3,SYS_USE_SERIALFLASH
+ highbank                     arm         armv7       highbank            -              highbank
+ mx51_efikamx                 arm         armv7       mx51_efikamx        genesi         mx5		mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKAMX,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_mx.cfg
+ mx51_efikasb                 arm         armv7       mx51_efikamx        genesi         mx5		mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKASB,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_sb.cfg
+diff --git a/include/configs/sama5d3xek.h b/include/configs/sama5d3xek.h
+new file mode 100644
+index 0000000..b5da1d3
+--- /dev/null
++++ b/include/configs/sama5d3xek.h
+@@ -0,0 +1,255 @@
++/*
++ * Configuation settings for the SAMA5D3xEK board.
++ *
++ * Copyright (C) 2012 - 2013 Atmel
++ *
++ * based on at91sam9m10g45ek.h by:
++ * Stelian Pop <stelian@popies.net>
++ * Lead Tech Design <www.leadtechdesign.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++#include <asm/hardware.h>
++
++#define CONFIG_SYS_TEXT_BASE		0x26f00000
++
++/* ARM asynchronous clock */
++#define CONFIG_SYS_AT91_SLOW_CLOCK      32768
++#define CONFIG_SYS_AT91_MAIN_CLOCK      12000000 /* from 12 MHz crystal */
++#define CONFIG_SYS_HZ		        1000
++
++#define CONFIG_AT91FAMILY
++#define CONFIG_ARCH_CPU_INIT
++
++#define CONFIG_SKIP_LOWLEVEL_INIT
++#define CONFIG_BOARD_EARLY_INIT_F
++#define CONFIG_DISPLAY_CPUINFO
++
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_OF_LIBFDT		/* Device Tree support */
++
++/* general purpose I/O */
++#define CONFIG_AT91_GPIO
++
++/* serial console */
++#define CONFIG_ATMEL_USART
++#define CONFIG_USART_BASE		ATMEL_BASE_DBGU
++#define	CONFIG_USART_ID			ATMEL_ID_DBGU
++
++/*
++ * This needs to be defined for the OHCI code to work but it is defined as
++ * ATMEL_ID_UHPHS in the CPU specific header files.
++ */
++#define ATMEL_ID_UHP			ATMEL_ID_UHPHS
++
++/*
++ * Specify the clock enable bit in the PMC_SCER register.
++ */
++#define ATMEL_PMC_UHP			AT91SAM926x_PMC_UHP
++
++/* LCD */
++#define CONFIG_LCD
++#define LCD_BPP				LCD_COLOR16
++#define LCD_OUTPUT_BPP                  24
++#define CONFIG_LCD_LOGO
++#undef LCD_TEST_PATTERN
++#define CONFIG_LCD_INFO
++#define CONFIG_LCD_INFO_BELOW_LOGO
++#define CONFIG_SYS_WHITE_ON_BLACK
++#define CONFIG_ATMEL_HLCD
++#define CONFIG_ATMEL_LCD_RGB565
++#define CONFIG_SYS_CONSOLE_IS_IN_ENV
++
++/* board specific(not enough SRAM) */
++#define CONFIG_SAMA5D3_LCD_BASE		0x23E00000
++
++#define CONFIG_BOOTDELAY		3
++
++/*
++ * BOOTP options
++ */
++#define CONFIG_BOOTP_BOOTFILESIZE
++#define CONFIG_BOOTP_BOOTPATH
++#define CONFIG_BOOTP_GATEWAY
++#define CONFIG_BOOTP_HOSTNAME
++
++/* No NOR flash */
++#define CONFIG_SYS_NO_FLASH
++
++/*
++ * Command line configuration.
++ */
++#include <config_cmd_default.h>
++#undef CONFIG_CMD_FPGA
++#undef CONFIG_CMD_IMI
++#undef CONFIG_CMD_LOADS
++#define CONFIG_CMD_PING
++#define CONFIG_CMD_DHCP
++
++/* SDRAM */
++#define CONFIG_NR_DRAM_BANKS		1
++#define CONFIG_SYS_SDRAM_BASE           ATMEL_BASE_DDRCS
++#define CONFIG_SYS_SDRAM_SIZE		0x20000000
++
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_SDRAM_BASE + 4 * 1024 - GENERATED_GBL_DATA_SIZE)
++
++/* SerialFlash */
++#define CONFIG_CMD_SF
++
++#ifdef CONFIG_CMD_SF
++#define CONFIG_ATMEL_SPI
++#define CONFIG_SPI_FLASH
++#define CONFIG_SPI_FLASH_ATMEL
++#define CONFIG_SF_DEFAULT_SPEED		30000000
++#endif
++
++/* NAND flash */
++#define CONFIG_CMD_NAND
++
++#ifdef CONFIG_CMD_NAND
++#define CONFIG_NAND_MAX_CHIPS		1
++#define CONFIG_NAND_ATMEL
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_NAND_BASE		ATMEL_BASE_CS3
++#define CONFIG_SYS_NAND_DBW_8
++/* our ALE is AD21 */
++#define CONFIG_SYS_NAND_MASK_ALE	(1 << 21)
++/* our CLE is AD22 */
++#define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
++#define CONFIG_SYS_NAND_ONFI_DETECTION
++/* PMECC & PMERRLOC */
++#define CONFIG_ATMEL_NAND_HWECC
++#define CONFIG_ATMEL_NAND_HW_PMECC
++#define CONFIG_PMECC_CAP		4
++#define CONFIG_PMECC_SECTOR_SIZE	512
++#define CONFIG_PMECC_INDEX_TABLE_OFFSET	ATMEL_PMECC_INDEX_OFFSET_512
++#define CONFIG_CMD_NAND_TRIMFFS
++#endif
++
++/* Ethernet Hardware */
++#define CONFIG_MACB
++#define CONFIG_RMII
++#define CONFIG_NET_MULTI
++#define CONFIG_NET_RETRY_COUNT		20
++#define CONFIG_MACB_SEARCH_PHY
++
++/* MMC */
++#define CONFIG_CMD_MMC
++
++#ifdef CONFIG_CMD_MMC
++#define CONFIG_MMC
++#define CONFIG_GENERIC_MMC
++#define CONFIG_GENERIC_ATMEL_MCI
++#define ATMEL_BASE_MMCI			ATMEL_BASE_MCI0
++#endif
++
++/* USB */
++#define CONFIG_CMD_USB
++
++#ifdef CONFIG_CMD_USB
++#define CONFIG_USB_ATMEL
++#define CONFIG_USB_OHCI_NEW
++#define CONFIG_SYS_USB_OHCI_CPU_INIT
++#define CONFIG_SYS_USB_OHCI_REGS_BASE		ATMEL_BASE_OHCI
++#define CONFIG_SYS_USB_OHCI_SLOT_NAME		"sama5d3"
++#define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	3
++#define CONFIG_DOS_PARTITION
++#define CONFIG_USB_STORAGE
++#endif
++
++#if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
++#define CONFIG_CMD_FAT
++#endif
++
++#define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
++
++#define CONFIG_SYS_MEMTEST_START		CONFIG_SYS_SDRAM_BASE
++#define CONFIG_SYS_MEMTEST_END			0x3e000000
++
++#ifdef CONFIG_SYS_USE_SERIALFLASH
++/* bootstrap + u-boot + env + linux in serial flash */
++#define CONFIG_ENV_IS_IN_SPI_FLASH
++#define CONFIG_SYS_MONITOR_BASE (0x10000000 + 0x8400)
++#define CONFIG_ENV_OFFSET       0x5000
++#define CONFIG_ENV_ADDR         (0x10000000 + CONFIG_ENV_OFFSET)
++#define CONFIG_ENV_SIZE         0x3000
++#define CONFIG_ENV_SECT_SIZE    0x1000
++#define CONFIG_BOOTCOMMAND      "sf probe 0; " \
++				"sf read 0x22000000 0x42000 0x300000; " \
++				"bootm 0x22000000"
++#elif CONFIG_SYS_USE_NANDFLASH
++/* bootstrap + u-boot + env in nandflash */
++#define CONFIG_ENV_IS_IN_NAND
++#define CONFIG_ENV_OFFSET		0xc0000
++#define CONFIG_ENV_OFFSET_REDUND	0x100000
++#define CONFIG_ENV_SIZE			0x20000
++#define CONFIG_BOOTCOMMAND	"nand read 0x21000000 0x180000 0x80000;" \
++				"nand read 0x22000000 0x200000 0x600000;" \
++				"bootm 0x22000000 - 0x21000000"
++#elif CONFIG_SYS_USE_MMC
++/* bootstrap + u-boot + env in sd card */
++#define CONFIG_ENV_IS_IN_MMC
++#define CONFIG_ENV_OFFSET		0x2000
++#define CONFIG_ENV_OFFSET_REDUND	0x4000
++#define CONFIG_ENV_SIZE			0x2000
++#define CONFIG_BOOTCOMMAND	"mmcinfo;fatload mmc 0:1 0x21000000 dtb;" \
++				"fatload mmc 0:1 0x22000000 uImage;" \
++				"bootm 0x22000000 - 0x21000000"
++#define CONFIG_SYS_MMC_ENV_DEV 0
++#else
++#define CONIG_ENV_IS_NOWHERE
++#endif
++
++#ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_BOOTARGS							\
++	"console=ttyS0,115200 earlyprintk "				\
++	"root=/dev/mmcblk0p2 "						\
++	"rw rootfstype=ext2 rootwait"
++#else
++#define CONFIG_BOOTARGS							\
++	"console=ttyS0,115200 earlyprintk "				\
++	"mtdparts=atmel_nand:256k(bootstrap)ro,512k(uboot)ro,"		\
++	"256K(env),256k(evn_redundent),256k(spare),"			\
++	"512k(dtb),6M(kernel)ro,-(rootfs) "				\
++	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs"
++#endif
++
++#define CONFIG_BAUDRATE			115200
++
++#define CONFIG_SYS_PROMPT		"U-Boot> "
++#define CONFIG_SYS_CBSIZE		256
++#define CONFIG_SYS_MAXARGS		16
++#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
++					sizeof(CONFIG_SYS_PROMPT) + 16)
++#define CONFIG_SYS_LONGHELP
++#define CONFIG_CMDLINE_EDITING
++#define CONFIG_AUTO_COMPLETE
++#define CONFIG_SYS_HUSH_PARSER
++
++/*
++ * Size of malloc() pool
++ */
++#define CONFIG_SYS_MALLOC_LEN		(1024 * 1024)
++
++#endif
+-- 
+1.7.10.4
+

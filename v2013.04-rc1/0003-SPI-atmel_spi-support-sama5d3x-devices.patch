@@ -1,0 +1,29 @@
+From d31e5a3357c08a51fcb42362fe5f5dd2c9077a2b Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Tue, 12 Mar 2013 14:15:31 +0800
+Subject: [PATCH 3/4] SPI: atmel_spi: support sama5d3x devices
+
+Add WDRBT bit support for sama5d3x devices
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ drivers/spi/atmel_spi.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/spi/atmel_spi.c b/drivers/spi/atmel_spi.c
+index ce7d460..5e97225 100644
+--- a/drivers/spi/atmel_spi.c
++++ b/drivers/spi/atmel_spi.c
+@@ -92,7 +92,8 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
+ 	as->slave.cs = cs;
+ 	as->regs = regs;
+ 	as->mr = ATMEL_SPI_MR_MSTR | ATMEL_SPI_MR_MODFDIS
+-#if defined(CONFIG_AT91SAM9X5) || defined(CONFIG_AT91SAM9M10G45)
++#if defined(CONFIG_AT91SAM9X5) || defined(CONFIG_AT91SAM9M10G45) || \
++	defined(CONFIG_SAMA5D3)
+ 			| ATMEL_SPI_MR_WDRBT
+ #endif
+ 			| ATMEL_SPI_MR_PCS(~(1 << cs) & 0xf);
+-- 
+1.7.10.4
+
