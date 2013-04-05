@@ -1,0 +1,82 @@
+From 18db6d25d451b8d4ec0a3021cf70bde9242433c7 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 15 Mar 2013 10:56:06 -0500
+Subject: [PATCH] sama5d3xek: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/sama5d3xek.h |   44 +++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 41 insertions(+), 3 deletions(-)
+
+diff --git a/include/configs/sama5d3xek.h b/include/configs/sama5d3xek.h
+index b5da1d3..df21740 100644
+--- a/include/configs/sama5d3xek.h
++++ b/include/configs/sama5d3xek.h
+@@ -159,6 +159,10 @@
+ 
+ #ifdef CONFIG_CMD_MMC
+ #define CONFIG_MMC
++#define CONFIG_FS_FAT
++#define CONFIG_CMD_FS_GENERIC			/* Generic load commands */
++#define CONFIG_CMD_BOOTZ			/* bootz zImage support */
++#define CONFIG_SUPPORT_RAW_INITRD		/* bootz raw initrd support */
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_GENERIC_ATMEL_MCI
+ #define ATMEL_BASE_MMCI			ATMEL_BASE_MCI0
+@@ -213,9 +217,6 @@
+ #define CONFIG_ENV_OFFSET		0x2000
+ #define CONFIG_ENV_OFFSET_REDUND	0x4000
+ #define CONFIG_ENV_SIZE			0x2000
+-#define CONFIG_BOOTCOMMAND	"mmcinfo;fatload mmc 0:1 0x21000000 dtb;" \
+-				"fatload mmc 0:1 0x22000000 uImage;" \
+-				"bootm 0x22000000 - 0x21000000"
+ #define CONFIG_SYS_MMC_ENV_DEV 0
+ #else
+ #define CONIG_ENV_IS_NOWHERE
+@@ -235,6 +236,43 @@
+ 	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs"
+ #endif
+ 
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"dtbaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"dtb_file=sama5d34ek.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"mmcdev=0\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++	"bootenv=uEnv.txt\0" \
++	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"importbootenv=echo Importing environment from mmc ...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadzimage=load mmc ${mmcdev} ${loadaddr} ${bootfile}\0" \
++	"loaddtb=load mmc ${mmcdev} ${dtbaddr} /dtbs/${dtb_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${dtbaddr}\0" \
++
++#define CONFIG_BOOTCOMMAND \
++	"if mmc rescan ${mmcdev}; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"echo Loaded environment from ${bootenv};" \
++			"run importbootenv;" \
++		"fi;" \
++		"if run loadzimage; then " \
++			"run loaddtb;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;" \
++
+ #define CONFIG_BAUDRATE			115200
+ 
+ #define CONFIG_SYS_PROMPT		"U-Boot> "
+-- 
+1.7.10.4
+

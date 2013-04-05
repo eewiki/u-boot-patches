@@ -1,0 +1,63 @@
+From 6b5f65e6a1e20a2d50bc16fbc6e62fb93a057d9b Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Tue, 12 Mar 2013 14:15:29 +0800
+Subject: [PATCH 1/4] USB: ohci-at91: support sama5d3x devices
+
+Add OHCI support for sama5d3x devices
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ drivers/usb/host/ohci-at91.c |   14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/host/ohci-at91.c b/drivers/usb/host/ohci-at91.c
+index efd711d..086cd0f 100644
+--- a/drivers/usb/host/ohci-at91.c
++++ b/drivers/usb/host/ohci-at91.c
+@@ -42,7 +42,7 @@ int usb_cpu_init(void)
+ 	while ((readl(&pmc->sr) & AT91_PMC_LOCKB) != AT91_PMC_LOCKB)
+ 		;
+ #elif defined(CONFIG_AT91SAM9G45) || defined(CONFIG_AT91SAM9M10G45) || \
+-	defined(CONFIG_AT91SAM9X5)
++	defined(CONFIG_AT91SAM9X5) || defined(CONFIG_SAMA5D3)
+ 	/* Enable UPLL */
+ 	writel(readl(&pmc->uckr) | AT91_PMC_UPLLEN | AT91_PMC_BIASEN,
+ 		&pmc->uckr);
+@@ -54,7 +54,12 @@ int usb_cpu_init(void)
+ #endif
+ 
+ 	/* Enable USB host clock. */
++#ifdef CONFIG_SAMA5D3
++	writel(1 << (ATMEL_ID_UHP - 32), &pmc->pcer1);
++#else
+ 	writel(1 << ATMEL_ID_UHP, &pmc->pcer);
++#endif
++
+ #ifdef CONFIG_AT91SAM9261
+ 	writel(ATMEL_PMC_UHP | AT91_PMC_HCK0, &pmc->scer);
+ #else
+@@ -69,7 +74,12 @@ int usb_cpu_stop(void)
+ 	at91_pmc_t *pmc	= (at91_pmc_t *)ATMEL_BASE_PMC;
+ 
+ 	/* Disable USB host clock. */
++#ifdef CONFIG_SAMA5D3
++	writel(1 << (ATMEL_ID_UHP - 32), &pmc->pcdr1);
++#else
+ 	writel(1 << ATMEL_ID_UHP, &pmc->pcdr);
++#endif
++
+ #ifdef CONFIG_AT91SAM9261
+ 	writel(ATMEL_PMC_UHP | AT91_PMC_HCK0, &pmc->scdr);
+ #else
+@@ -83,7 +93,7 @@ int usb_cpu_stop(void)
+ 	while ((readl(&pmc->sr) & AT91_PMC_LOCKB) != 0)
+ 		;
+ #elif defined(CONFIG_AT91SAM9G45) || defined(CONFIG_AT91SAM9M10G45) || \
+-	defined(CONFIG_AT91SAM9X5)
++	defined(CONFIG_AT91SAM9X5) || defined(CONFIG_SAMA5D3)
+ 	/* Disable UPLL */
+ 	writel(readl(&pmc->uckr) & (~AT91_PMC_UPLLEN), &pmc->uckr);
+ 	while ((readl(&pmc->sr) & AT91_PMC_LOCKU) == AT91_PMC_LOCKU)
+-- 
+1.7.10.4
+
