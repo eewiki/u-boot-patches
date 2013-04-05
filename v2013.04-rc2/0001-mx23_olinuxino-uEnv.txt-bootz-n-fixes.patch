@@ -1,0 +1,102 @@
+From caf7b18b999cd1f1a4cb96aa87918e263c908141 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 15 Mar 2013 10:52:21 -0500
+Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/mx23_olinuxino.h |   44 ++++++++++++++++++--------------------
+ 1 file changed, 21 insertions(+), 23 deletions(-)
+
+diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
+index 03893d7..0079daf 100644
+--- a/include/configs/mx23_olinuxino.h
++++ b/include/configs/mx23_olinuxino.h
+@@ -64,6 +64,15 @@
+ #define	CONFIG_CMD_NET
+ #define	CONFIG_CMD_USB
+ 
++#define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
++
+ /*
+  * Memory configurations
+  */
+@@ -207,26 +216,16 @@
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+ 		"root=${mmcroot}\0" \
+ 	"loadbootscript="  \
+-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
++		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} /boot/uEnv.txt ;\0" \
++	"importbootenv=echo Importing environment from mmc ...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; "	\
+ 		"source\0" \
+-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} /boot/zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /boot/dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if run loadfdt; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootm; " \
+-		"fi;\0" \
++		"bootz ${loadaddr} - ${fdt_addr};\0" \
+ 	"netargs=setenv bootargs console=${console_mainline},${baudrate} " \
+ 		"root=/dev/nfs " \
+ 		"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
+@@ -256,13 +255,12 @@
+ #define CONFIG_BOOTCOMMAND \
+ 	"mmc dev ${mmcdev}; if mmc rescan; then " \
+ 		"if run loadbootscript; then " \
+-			"run bootscript; " \
+-		"else " \
+-			"if run loaduimage; then " \
+-				"run mmcboot; " \
+-			"else run netboot; " \
+-			"fi; " \
++			"echo Loaded environment from uEnv.txt; " \
++			"run importbootenv; " \
++		"fi; " \
++		"if run loaduimage; then " \
++			"run loadfdt; run mmcboot; " \
+ 		"fi; " \
+-	"else run netboot; fi"
++	"fi;"
+ 
+ #endif /* __MX23_OLINUXINO_CONFIG_H__ */
+-- 
+1.7.10.4
+
