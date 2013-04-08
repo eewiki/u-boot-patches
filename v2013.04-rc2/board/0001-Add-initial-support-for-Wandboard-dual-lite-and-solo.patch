@@ -1,0 +1,559 @@
+From acf74f92bb6e9a0060f7a8cf22ac64d44052429c Mon Sep 17 00:00:00 2001
+From: Fabio Estevam <fabio.estevam@freescale.com>
+Date: Fri, 15 Mar 2013 17:43:48 -0300
+Subject: [PATCH] Add initial support for Wandboard dual lite and solo.
+
+Wandboard is a development board that has two variants: one version based
+on mx6 dual lite and another one based on mx6 solo.
+
+For more details about Wandboard, please refer to: http://www.wandboard.org/
+
+Signed-off-by: Fabio Estevam <fabio.estevam@freescale.com>
+---
+ MAINTAINERS                                |    1 +
+ arch/arm/include/asm/arch-mx6/mx6dl_pins.h |    3 +
+ board/wandboard/Makefile                   |   29 ++++
+ board/wandboard/README                     |   40 ++++++
+ board/wandboard/wandboard.c                |  181 ++++++++++++++++++++++++
+ boards.cfg                                 |    2 +
+ include/configs/wandboard.h                |  211 ++++++++++++++++++++++++++++
+ 7 files changed, 467 insertions(+)
+ create mode 100644 board/wandboard/Makefile
+ create mode 100644 board/wandboard/README
+ create mode 100644 board/wandboard/wandboard.c
+ create mode 100644 include/configs/wandboard.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index e948121..1200a9e 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -663,6 +663,7 @@ Fabio Estevam <fabio.estevam@freescale.com>
+ 	mx53smd		i.MX53
+ 	mx6qsabresd	i.MX6Q
+ 	mx6qsabreauto	i.MX6Q
++	wandboard	i.MX6DL/S
+ 
+ Daniel Gorsulowski <daniel.gorsulowski@esd.eu>
+ 
+diff --git a/arch/arm/include/asm/arch-mx6/mx6dl_pins.h b/arch/arm/include/asm/arch-mx6/mx6dl_pins.h
+index 9494e41..9846f1b 100644
+--- a/arch/arm/include/asm/arch-mx6/mx6dl_pins.h
++++ b/arch/arm/include/asm/arch-mx6/mx6dl_pins.h
+@@ -50,6 +50,8 @@
+ #define NO_MUX_I                0
+ #define NO_PAD_I                0
+ enum {
++	MX6_PAD_CSI0_DAT10__UART1_TXD		= IOMUX_PAD(0x0360, 0x004C, 3, 0x0000, 0, 0),
++	MX6_PAD_CSI0_DAT11__UART1_RXD		= IOMUX_PAD(0x0364, 0x0050, 3, 0x08FC, 1, 0),
+ 	MX6_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK = IOMUX_PAD(0x03B0, 0x009C, 0, 0x0000, 0, PAD_CTL_DSE_120ohm),
+ 	MX6_PAD_DI0_PIN15__IPU1_DI0_PIN15	= IOMUX_PAD(0x03B4, 0x00A0, 0, 0x0000, 0, PAD_CTL_DSE_120ohm),
+ 	MX6_PAD_DI0_PIN2__IPU1_DI0_PIN2	= IOMUX_PAD(0x03B8, 0x00A4, 0, 0x0000, 0, PAD_CTL_DSE_120ohm),
+@@ -90,6 +92,7 @@ enum {
+ 	MX6_PAD_EIM_D27__UART2_RXD		= IOMUX_PAD(0x0540, 0x0170, 4, 0x0904, 1, 0),
+ 	MX6_PAD_EIM_D28__I2C1_SDA		= IOMUX_PAD(0x0544, 0x0174, 1 | IOMUX_CONFIG_SION, 0x086C, 1, 0),
+ 	MX6_PAD_EIM_D28__GPIO_3_28		= IOMUX_PAD(0x0544, 0x0174, 5, 0x0000, 0, 0),
++	MX6_PAD_EIM_D29__GPIO_3_29		= IOMUX_PAD(0x0548, 0x0178, 5, 0x0000, 0, 0),
+ 	MX6_PAD_ENET_MDC__ENET_MDC		= IOMUX_PAD(0x05B8, 0x01E8, 1, 0x0000, 0,  0),
+ 	MX6_PAD_ENET_MDIO__ENET_MDIO		= IOMUX_PAD(0x05BC, 0x01EC, 1, 0x0810, 0, 0),
+ 	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK	= IOMUX_PAD(0x05C0, 0x01F0, 1, 0x0000, 0, 0),
+diff --git a/board/wandboard/Makefile b/board/wandboard/Makefile
+new file mode 100644
+index 0000000..014ea6c
+--- /dev/null
++++ b/board/wandboard/Makefile
+@@ -0,0 +1,29 @@
++#
++# (C) Copyright 2013 Freescale Semiconductor, Inc.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License as
++# published by the Free Software Foundation; either version 2 of
++# the License, or (at your option) any later version.
++#
++
++include $(TOPDIR)/config.mk
++
++LIB    = $(obj)lib$(BOARD).o
++
++COBJS  := wandboard.o
++
++SRCS   := $(COBJS:.o=.c)
++OBJS   := $(addprefix $(obj),$(COBJS))
++
++$(LIB):        $(obj).depend $(OBJS)
++	$(call cmd_link_o_target, $(OBJS))
++
++#########################################################################
++
++# defines $(obj).depend target
++include $(SRCTREE)/rules.mk
++
++sinclude $(obj).depend
++
++#########################################################################
+diff --git a/board/wandboard/README b/board/wandboard/README
+new file mode 100644
+index 0000000..e0b0b33
+--- /dev/null
++++ b/board/wandboard/README
+@@ -0,0 +1,40 @@
++U-Boot for Wandboard
++--------------------
++
++This file contains information for the port of U-Boot to the Wandboard.
++
++Wandboard is a development board that has two variants: one version based
++on mx6 dual lite and another one based on mx6 solo.
++
++For more details about Wandboard, please refer to:
++http://www.wandboard.org/
++
++Building U-boot for Wandboard
++-----------------------------
++
++To build U-Boot for the Wandboard Dual Lite version:
++
++$ make wanboard_dl_config
++$ make
++
++To build U-Boot for the Wandboard Solo version:
++
++$ make wanboard_solo_config
++$ make
++
++Flashing U-boot into the SD card
++--------------------------------
++
++- After the 'make' command completes, the generated 'u-boot.imx' binary must be
++flashed into the SD card;
++
++$ sudo dd if=u-boot.imx of=/dev/mmcblk0 bs=512 seek=2; sync
++
++(Note - the SD card node may vary, so adjust this as needed).
++
++- Insert the SD card into the slot located in the bottom of the board (same side
++as the mx6 processor)
++
++- Connect the serial cable to the host PC
++
++- Power up the board and U-boot messages will appear in the serial console.
+diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
+new file mode 100644
+index 0000000..d95189f
+--- /dev/null
++++ b/board/wandboard/wandboard.c
+@@ -0,0 +1,181 @@
++/*
++ * Copyright (C) 2013 Freescale Semiconductor, Inc.
++ *
++ * Author: Fabio Estevam <fabio.estevam@freescale.com>
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ */
++
++#include <asm/arch/clock.h>
++#include <asm/arch/iomux.h>
++#include <asm/arch/imx-regs.h>
++#include <asm/arch/mx6-pins.h>
++#include <asm/arch/sys_proto.h>
++#include <asm/gpio.h>
++#include <asm/imx-common/iomux-v3.h>
++#include <asm/io.h>
++#include <asm/sizes.h>
++#include <common.h>
++#include <fsl_esdhc.h>
++#include <mmc.h>
++#include <miiphy.h>
++#include <netdev.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define UART_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |		\
++	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |		\
++	PAD_CTL_DSE_40ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
++
++#define USDHC_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |		\
++	PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |		\
++	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
++
++#define ENET_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |		\
++	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED   |		\
++	PAD_CTL_DSE_40ohm   | PAD_CTL_HYS)
++
++#define ETH_PHY_RESET		IMX_GPIO_NR(3, 29)
++
++int dram_init(void)
++{
++	gd->ram_size = CONFIG_DDR_MB * SZ_1M;
++
++	return 0;
++}
++
++static iomux_v3_cfg_t const uart1_pads[] = {
++	MX6_PAD_CSI0_DAT10__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
++	MX6_PAD_CSI0_DAT11__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
++};
++
++static iomux_v3_cfg_t const usdhc3_pads[] = {
++	MX6_PAD_SD3_CLK__USDHC3_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	MX6_PAD_SD3_CMD__USDHC3_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	MX6_PAD_SD3_DAT0__USDHC3_DAT0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	MX6_PAD_SD3_DAT1__USDHC3_DAT1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	MX6_PAD_SD3_DAT2__USDHC3_DAT2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	MX6_PAD_SD3_DAT3__USDHC3_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++};
++
++static iomux_v3_cfg_t const enet_pads[] = {
++	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TXC__ENET_RGMII_TXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TD0__ENET_RGMII_TD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TD1__ENET_RGMII_TD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TD2__ENET_RGMII_TD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TD3__ENET_RGMII_TD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RXC__ENET_RGMII_RXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RD0__ENET_RGMII_RD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RD1__ENET_RGMII_RD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RD2__ENET_RGMII_RD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RD3__ENET_RGMII_RD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	MX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	/* AR8031 PHY Reset */
++	MX6_PAD_EIM_D29__GPIO_3_29		| MUX_PAD_CTRL(NO_PAD_CTRL),
++};
++
++static void setup_iomux_uart(void)
++{
++	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
++}
++
++static void setup_iomux_enet(void)
++{
++	imx_iomux_v3_setup_multiple_pads(enet_pads, ARRAY_SIZE(enet_pads));
++
++	/* Reset AR8031 PHY */
++	gpio_direction_output(ETH_PHY_RESET, 0);
++	udelay(500);
++	gpio_set_value(ETH_PHY_RESET, 1);
++}
++
++static struct fsl_esdhc_cfg usdhc_cfg[1] = {
++	{USDHC3_BASE_ADDR},
++};
++
++int board_mmc_init(bd_t *bis)
++{
++	imx_iomux_v3_setup_multiple_pads(usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
++
++	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
++	return fsl_esdhc_initialize(bis, &usdhc_cfg[0]);
++}
++
++static int mx6_rgmii_rework(struct phy_device *phydev)
++{
++	unsigned short val;
++
++	/* To enable AR8031 ouput a 125MHz clk from CLK_25M */
++	phy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x7);
++	phy_write(phydev, MDIO_DEVAD_NONE, 0xe, 0x8016);
++	phy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x4007);
++
++	val = phy_read(phydev, MDIO_DEVAD_NONE, 0xe);
++	val &= 0xffe3;
++	val |= 0x18;
++	phy_write(phydev, MDIO_DEVAD_NONE, 0xe, val);
++
++	/* introduce tx clock delay */
++	phy_write(phydev, MDIO_DEVAD_NONE, 0x1d, 0x5);
++	val = phy_read(phydev, MDIO_DEVAD_NONE, 0x1e);
++	val |= 0x0100;
++	phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, val);
++
++	return 0;
++}
++
++int board_phy_config(struct phy_device *phydev)
++{
++	mx6_rgmii_rework(phydev);
++
++	if (phydev->drv->config)
++		phydev->drv->config(phydev);
++
++	return 0;
++}
++
++int board_eth_init(bd_t *bis)
++{
++	int ret;
++
++	setup_iomux_enet();
++
++	ret = cpu_eth_init(bis);
++	if (ret)
++		printf("FEC MXC: %s:failed\n", __func__);
++
++	return 0;
++}
++
++int board_early_init_f(void)
++{
++	setup_iomux_uart();
++	return 0;
++}
++
++int board_init(void)
++{
++	/* address of boot parameters */
++	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
++
++	return 0;
++}
++
++u32 get_board_rev(void)
++{
++	return get_cpu_rev();
++}
++
++int checkboard(void)
++{
++	puts("Board: Wandboard\n");
++
++	return 0;
++}
+diff --git a/boards.cfg b/boards.cfg
+index 34c77af..338e126 100644
+--- a/boards.cfg
++++ b/boards.cfg
+@@ -266,6 +266,8 @@ nitrogen6q                   arm         armv7       nitrogen6x          boundar
+ nitrogen6q2g                 arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048
+ nitrogen6s                   arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
+ nitrogen6s1g                 arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s1g.cfg,MX6S,DDR_MB=1024
++wandboard_dl		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024
++wandboard_solo		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
+ cm_t35                       arm         armv7       cm_t35              -              omap3
+ omap3_overo                  arm         armv7       overo               -              omap3
+ omap3_pandora                arm         armv7       pandora             -              omap3
+diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
+new file mode 100644
+index 0000000..c4fb704
+--- /dev/null
++++ b/include/configs/wandboard.h
+@@ -0,0 +1,211 @@
++/*
++ * Copyright (C) 2013 Freescale Semiconductor, Inc.
++ *
++ * Configuration settings for the Wandboard.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ */
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++#include <asm/arch/imx-regs.h>
++#include <asm/imx-common/gpio.h>
++#include <asm/sizes.h>
++
++#define CONFIG_MX6
++#define CONFIG_DISPLAY_CPUINFO
++#define CONFIG_DISPLAY_BOARDINFO
++
++#define MACH_TYPE_WANDBOARD		4412
++#define CONFIG_MACH_TYPE		MACH_TYPE_WANDBOARD
++
++#define CONFIG_CMDLINE_TAG
++#define CONFIG_SETUP_MEMORY_TAGS
++#define CONFIG_INITRD_TAG
++#define CONFIG_REVISION_TAG
++
++/* Size of malloc() pool */
++#define CONFIG_SYS_MALLOC_LEN		(3 * SZ_1M)
++
++#define CONFIG_BOARD_EARLY_INIT_F
++#define CONFIG_MXC_GPIO
++
++#define CONFIG_MXC_UART
++#define CONFIG_MXC_UART_BASE		UART1_BASE
++
++/* allow to overwrite serial and ethaddr */
++#define CONFIG_ENV_OVERWRITE
++#define CONFIG_CONS_INDEX		1
++#define CONFIG_BAUDRATE			115200
++
++/* Command definition */
++#include <config_cmd_default.h>
++
++#undef CONFIG_CMD_IMLS
++
++#define CONFIG_BOOTDELAY		5
++
++#define CONFIG_SYS_MEMTEST_START	0x10000000
++#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
++#define CONFIG_LOADADDR			0x12000000
++#define CONFIG_SYS_TEXT_BASE		0x17800000
++
++/* MMC Configuration */
++#define CONFIG_FSL_ESDHC
++#define CONFIG_FSL_USDHC
++#define CONFIG_SYS_FSL_ESDHC_ADDR	0
++#define CONFIG_SYS_FSL_USDHC_NUM	2
++
++#define CONFIG_MMC
++#define CONFIG_CMD_MMC
++#define CONFIG_GENERIC_MMC
++#define CONFIG_BOUNCE_BUFFER
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_FAT
++#define CONFIG_DOS_PARTITION
++
++/* Ethernet Configuration */
++#define CONFIG_CMD_PING
++#define CONFIG_CMD_DHCP
++#define CONFIG_CMD_MII
++#define CONFIG_CMD_NET
++#define CONFIG_FEC_MXC
++#define CONFIG_MII
++#define IMX_FEC_BASE			ENET_BASE_ADDR
++#define CONFIG_FEC_XCV_TYPE		RGMII
++#define CONFIG_ETHPRIME			"FEC"
++#define CONFIG_FEC_MXC_PHYADDR		1
++#define CONFIG_PHYLIB
++#define CONFIG_PHY_ATHEROS
++
++#if defined(CONFIG_MX6DL)
++#define CONFIG_DEFAULT_FDT_FILE		"imx6dl-wandboard.dtb"
++#elif defined(CONFIG_MX6S)
++#define CONFIG_DEFAULT_FDT_FILE		"imx6s-wandboard.dtb"
++#endif
++
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"script=boot.scr\0" \
++	"uimage=uImage\0" \
++	"console=ttymxc0\0" \
++	"fdt_high=0xffffffff\0" \
++	"initrd_high=0xffffffff\0" \
++	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
++	"fdt_addr=0x11000000\0" \
++	"boot_fdt=try\0" \
++	"ip_dyn=yes\0" \
++	"mmcdev=0\0" \
++	"mmcpart=2\0" \
++	"mmcroot=/dev/mmcblk0p3 rootwait rw\0" \
++	"mmcargs=setenv bootargs console=${console},${baudrate} " \
++		"root=${mmcroot}\0" \
++	"loadbootscript=" \
++		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
++	"bootscript=echo Running bootscript from mmc ...; " \
++		"source\0" \
++	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
++	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
++			"if run loadfdt; then " \
++				"bootm ${loadaddr} - ${fdt_addr}; " \
++			"else " \
++				"if test ${boot_fdt} = try; then " \
++					"bootm; " \
++				"else " \
++					"echo WARN: Cannot load the DT; " \
++				"fi; " \
++			"fi; " \
++		"else " \
++			"bootm; " \
++		"fi;\0" \
++	"netargs=setenv bootargs console=${console},${baudrate} " \
++		"root=/dev/nfs " \
++	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
++		"netboot=echo Booting from net ...; " \
++		"run netargs; " \
++		"if test ${ip_dyn} = yes; then " \
++			"setenv get_cmd dhcp; " \
++		"else " \
++			"setenv get_cmd tftp; " \
++		"fi; " \
++		"${get_cmd} ${uimage}; " \
++		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
++			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
++				"bootm ${loadaddr} - ${fdt_addr}; " \
++			"else " \
++				"if test ${boot_fdt} = try; then " \
++					"bootm; " \
++				"else " \
++					"echo WARN: Cannot load the DT; " \
++				"fi; " \
++			"fi; " \
++		"else " \
++			"bootm; " \
++		"fi;\0"
++
++#define CONFIG_BOOTCOMMAND \
++	   "mmc dev ${mmcdev};" \
++	   "mmc dev ${mmcdev}; if mmc rescan; then " \
++		   "if run loadbootscript; then " \
++			   "run bootscript; " \
++		   "else " \
++			   "if run loaduimage; then " \
++				   "run mmcboot; " \
++			   "else run netboot; " \
++			   "fi; " \
++		   "fi; " \
++	   "else run netboot; fi"
++
++/* Miscellaneous configurable options */
++#define CONFIG_SYS_LONGHELP
++#define CONFIG_SYS_HUSH_PARSER
++#define CONFIG_SYS_PROMPT	       "=> "
++#define CONFIG_AUTO_COMPLETE
++#define CONFIG_SYS_CBSIZE		256
++
++/* Print Buffer Size */
++#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
++#define CONFIG_SYS_MAXARGS	       16
++#define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
++
++#define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
++#define CONFIG_SYS_HZ			1000
++
++#define CONFIG_CMDLINE_EDITING
++
++/* Physical Memory Map */
++#define CONFIG_NR_DRAM_BANKS		1
++#define PHYS_SDRAM			MMDC0_ARB_BASE_ADDR
++
++#define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM
++#define CONFIG_SYS_INIT_RAM_ADDR	IRAM_BASE_ADDR
++#define CONFIG_SYS_INIT_RAM_SIZE	IRAM_SIZE
++
++#define CONFIG_SYS_INIT_SP_OFFSET \
++	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
++
++/* FLASH and environment organization */
++#define CONFIG_SYS_NO_FLASH
++
++#define CONFIG_ENV_SIZE			(8 * 1024)
++
++#define CONFIG_ENV_IS_IN_MMC
++#define CONFIG_ENV_OFFSET		(6 * 64 * 1024)
++#define CONFIG_SYS_MMC_ENV_DEV		0
++
++#define CONFIG_OF_LIBFDT
++#define CONFIG_CMD_BOOTZ
++
++#ifndef CONFIG_SYS_DCACHE_OFF
++#define CONFIG_CMD_CACHE
++#endif
++
++#endif			       /* __CONFIG_H * */
+-- 
+1.7.10.4
+

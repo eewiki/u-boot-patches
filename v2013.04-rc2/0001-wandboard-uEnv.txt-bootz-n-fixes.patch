@@ -1,0 +1,170 @@
+From 1e8149d0a997bacb4778087a63811ad6f5daef6d Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 19 Mar 2013 11:15:46 -0500
+Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"echo Loaded environment from uEnv.txt;" \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/wandboard.h |   81 +++++++++++++++----------------------------
+ 1 file changed, 28 insertions(+), 53 deletions(-)
+
+diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
+index c4fb704..aac0b8d 100644
+--- a/include/configs/wandboard.h
++++ b/include/configs/wandboard.h
+@@ -47,7 +47,7 @@
+ 
+ #undef CONFIG_CMD_IMLS
+ 
+-#define CONFIG_BOOTDELAY		5
++#define CONFIG_BOOTDELAY		1
+ 
+ #define CONFIG_SYS_MEMTEST_START	0x10000000
+ #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
+@@ -66,6 +66,8 @@
+ #define CONFIG_BOUNCE_BUFFER
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_DOS_PARTITION
+ 
+ /* Ethernet Configuration */
+@@ -99,68 +101,39 @@
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+ 	"mmcdev=0\0" \
+-	"mmcpart=2\0" \
+-	"mmcroot=/dev/mmcblk0p3 rootwait rw\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 rootwait ro\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+ 		"root=${mmcroot}\0" \
++	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc ...; " \
++		"env import -t $loadaddr $filesize\0" \
+ 	"loadbootscript=" \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if run loadfdt; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootm; " \
+-		"fi;\0" \
+-	"netargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=/dev/nfs " \
+-	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
+-		"netboot=echo Booting from net ...; " \
+-		"run netargs; " \
+-		"if test ${ip_dyn} = yes; then " \
+-			"setenv get_cmd dhcp; " \
+-		"else " \
+-			"setenv get_cmd tftp; " \
+-		"fi; " \
+-		"${get_cmd} ${uimage}; " \
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootm; " \
+-		"fi;\0"
++		"bootz ${loadaddr};\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev};" \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loaduimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"echo Loaded environment from uEnv.txt;" \
++			"run importbootenv;" \
++		"fi;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"if run loadzimage; then " \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ /* Miscellaneous configurable options */
+ #define CONFIG_SYS_LONGHELP
+@@ -202,7 +175,9 @@
+ #define CONFIG_SYS_MMC_ENV_DEV		0
+ 
+ #define CONFIG_OF_LIBFDT
++/* bootz: zImage/initrd.img support */
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #ifndef CONFIG_SYS_DCACHE_OFF
+ #define CONFIG_CMD_CACHE
+-- 
+1.7.10.4
+
