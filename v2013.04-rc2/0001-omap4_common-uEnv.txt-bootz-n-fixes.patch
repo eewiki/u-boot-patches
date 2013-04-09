@@ -20,11 +20,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/omap4_common.h |   25 ++++++++++++++++++-------
- 1 file changed, 18 insertions(+), 7 deletions(-)
+ include/configs/omap4_common.h |   31 ++++++++++++++++++++++---------
+ 1 file changed, 22 insertions(+), 9 deletions(-)
 
 diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
-index 6ae6a0f..43e054d 100644
+index 6ae6a0f..1aefacb 100644
 --- a/include/configs/omap4_common.h
 +++ b/include/configs/omap4_common.h
 @@ -124,6 +124,12 @@
@@ -49,18 +49,22 @@ index 6ae6a0f..43e054d 100644
  
  #define CONFIG_ENV_OVERWRITE
  
-@@ -146,24 +152,25 @@
+@@ -146,24 +152,27 @@
  	"console=ttyO2,115200n8\0" \
  	"fdt_high=0xffffffff\0" \
  	"usbtty=cdc_acm\0" \
 -	"vram=16M\0" \
 +	"defaultdisplay=dvi\0" \
 +	"dvimode=1280x720MR-16@60\0" \
++	"buddy=none\0" \
  	"mmcdev=0\0" \
- 	"mmcroot=/dev/mmcblk0p2 rw\0" \
- 	"mmcrootfstype=ext3 rootwait\0" \
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
  	"mmcargs=setenv bootargs console=${console} " \
 -		"vram=${vram} " \
++		"buddy=${buddy} "\
 +		"omapfb.mode=${defaultdisplay}:${dvimode} " \
  		"root=${mmcroot} " \
  		"rootfstype=${mmcrootfstype}\0" \
@@ -81,7 +85,7 @@ index 6ae6a0f..43e054d 100644
  
  #define CONFIG_BOOTCOMMAND \
  	"mmc dev ${mmcdev}; if mmc rescan; then " \
-@@ -280,4 +287,8 @@
+@@ -280,4 +289,8 @@
  
  #define CONFIG_SYS_THUMB_BUILD
  
