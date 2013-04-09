@@ -38,11 +38,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx6qsabre_common.h |   78 +++++++++++++-----------------------
- 1 file changed, 27 insertions(+), 51 deletions(-)
+ include/configs/mx6qsabre_common.h |   80 +++++++++++++-----------------------
+ 1 file changed, 28 insertions(+), 52 deletions(-)
 
 diff --git a/include/configs/mx6qsabre_common.h b/include/configs/mx6qsabre_common.h
-index 9eda9ed..d98631c 100644
+index 9eda9ed..11b0fdb 100644
 --- a/include/configs/mx6qsabre_common.h
 +++ b/include/configs/mx6qsabre_common.h
 @@ -47,6 +47,11 @@
@@ -57,8 +57,12 @@ index 9eda9ed..d98631c 100644
  #define CONFIG_GENERIC_MMC
  #define CONFIG_BOUNCE_BUFFER
  #define CONFIG_CMD_EXT2
-@@ -98,64 +103,35 @@
- 	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
+@@ -95,67 +100,38 @@
+ 	"initrd_high=0xffffffff\0" \
+ 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
+ 	"mmcpart=" __stringify(CONFIG_SYS_MMC_ENV_PART) "\0" \
+-	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 rootwait ro\0" \
  	"mmcargs=setenv bootargs console=${console},${baudrate} " \
  		"root=${mmcroot}\0" \
 -	"loadbootscript=" \

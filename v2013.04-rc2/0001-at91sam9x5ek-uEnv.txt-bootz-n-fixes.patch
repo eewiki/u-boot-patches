@@ -17,17 +17,43 @@ Defaults:
 
 fatload -> load
 bootm -> bootz
-loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"echo Loaded environment from uEnv.txt;" \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/at91sam9x5ek.h |   60 ++++++++++++++++++++++++++++++++--------
- 1 file changed, 48 insertions(+), 12 deletions(-)
+ include/configs/at91sam9x5ek.h |   64 ++++++++++++++++++++++++++++++++--------
+ 1 file changed, 51 insertions(+), 13 deletions(-)
 
 diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
-index ee6e3fc..37d8e27 100644
+index ee6e3fc..ebc6d2f 100644
 --- a/include/configs/at91sam9x5ek.h
 +++ b/include/configs/at91sam9x5ek.h
+@@ -67,7 +67,7 @@
+ #define CONFIG_ATMEL_LCD_RGB565
+ #define CONFIG_SYS_CONSOLE_IS_IN_ENV
+ 
+-#define CONFIG_BOOTDELAY	3
++#define CONFIG_BOOTDELAY	1
+ 
+ /*
+  * BOOTP options
 @@ -153,6 +153,14 @@
  #define CONFIG_MMC
  #define CONFIG_GENERIC_MMC
@@ -43,7 +69,7 @@ index ee6e3fc..37d8e27 100644
  #endif
  
  /* FAT */
-@@ -226,18 +234,46 @@
+@@ -226,18 +234,48 @@
  #endif
  
  #ifdef CONFIG_SYS_USE_MMC
@@ -85,9 +111,11 @@ index ee6e3fc..37d8e27 100644
 +		"bootz ${loadaddr} - ${fdtaddr}\0"
 +
 +#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
 +	"if mmc rescan; then " \
 +		"echo SD/MMC found on device ${mmcdev};" \
 +		"if run loadbootenv; then " \
++			"echo Loaded environment from uEnv.txt;" \
 +			"run importbootenv;" \
 +		"fi;" \
 +		"if test -n $uenvcmd; then " \
