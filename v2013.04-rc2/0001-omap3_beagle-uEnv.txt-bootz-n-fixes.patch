@@ -21,9 +21,9 @@ loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |   35 ++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h |   35 +++++++++++++++++++++--------------
- 2 files changed, 51 insertions(+), 19 deletions(-)
+ board/ti/beagle/beagle.c       |   35 +++++++++++++++++++++++++++-----
+ include/configs/omap3_beagle.h |   44 ++++++++++++++++++++++++----------------
+ 2 files changed, 57 insertions(+), 22 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 3d9b6dd..e4c6990 100644
@@ -108,7 +108,7 @@ index 3d9b6dd..e4c6990 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_A:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 48ce4c0..7c7e6ed 100644
+index 48ce4c0..daa4d70 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -150,6 +150,13 @@
@@ -134,20 +134,28 @@ index 48ce4c0..7c7e6ed 100644
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	"loadaddr=0x80200000\0" \
-@@ -222,10 +229,10 @@
+@@ -222,14 +229,15 @@
  	"console=ttyO2,115200n8\0" \
  	"mpurate=auto\0" \
  	"buddy=none\0" \
+-	"optargs=\0" \
 +	"buddy2=none\0" \
- 	"optargs=\0" \
  	"camera=none\0" \
 -	"vram=12M\0" \
 -	"dvimode=640x480MR-16@60\0" \
++	"wl12xx_clk=none\0" \
++	"optargs=\0" \
 +	"dvimode=1280x720MR-16@60\0" \
  	"defaultdisplay=dvi\0" \
  	"mmcdev=0\0" \
- 	"mmcroot=/dev/mmcblk0p2 rw\0" \
-@@ -238,9 +245,9 @@
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
+ 	"nandrootfstype=ubifs\0" \
+ 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
+@@ -238,9 +246,10 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -155,11 +163,12 @@ index 48ce4c0..7c7e6ed 100644
  		"camera=${camera} "\
 -		"vram=${vram} " \
 -		"omapfb.mode=dvi:${dvimode} " \
++		"wl12xx_clk=${wl12xx_clk} "\
 +		"omapfb.mode=${defaultdisplay}:${dvimode} " \
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
  		"rootfstype=${mmcrootfstype}\0" \
-@@ -248,9 +255,9 @@
+@@ -248,9 +257,10 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -167,11 +176,12 @@ index 48ce4c0..7c7e6ed 100644
  		"camera=${camera} "\
 -		"vram=${vram} " \
 -		"omapfb.mode=dvi:${dvimode} " \
++		"wl12xx_clk=${wl12xx_clk} "\
 +		"omapfb.mode=${defaultdisplay}:${dvimode} " \
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${nandroot} " \
  		"rootfstype=${nandrootfstype}\0" \
-@@ -262,24 +269,24 @@
+@@ -262,24 +272,24 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -186,7 +196,7 @@ index 48ce4c0..7c7e6ed 100644
 -	"loaduimagefat=fatload mmc ${mmcdev} ${loadaddr} uImage\0" \
 -	"loaduimage=ext2load mmc ${mmcdev}:2 ${loadaddr} /boot/uImage\0" \
 +	"loaduimagefat=fatload mmc ${mmcdev} ${loadaddr} zImage\0" \
-+	"loaduimage=ext2load mmc ${mmcdev}:2 ${loadaddr} /boot/zImage\0" \
++	"loaduimage=fatload mmc ${mmcdev} ${loadaddr} zImage\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
 -		"bootm ${loadaddr}\0" \
