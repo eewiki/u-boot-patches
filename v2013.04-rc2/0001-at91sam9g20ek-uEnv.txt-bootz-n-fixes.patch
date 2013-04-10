@@ -87,7 +87,7 @@ index 3aa394a..1e7b33e 100644
  {
  	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
 diff --git a/include/configs/at91sam9260ek.h b/include/configs/at91sam9260ek.h
-index ebcc69a..15bf865 100644
+index ebcc69a..aac6ca0 100644
 --- a/include/configs/at91sam9260ek.h
 +++ b/include/configs/at91sam9260ek.h
 @@ -81,7 +81,7 @@
@@ -144,8 +144,8 @@ index ebcc69a..15bf865 100644
 +	"initrd_high=0xffffffff\0" \
 +	"fdt_high=0xffffffff\0" \
 +	"loadaddr=0x22000000\0" \
-+	"fdtaddr=0x27FF0000\0" \
-+	"fdtfile=/dtbs/at91sam9g20ek.dtb\0" \
++	"fdtaddr=0x21000000\0" \
++	"fdtfile=/dtbs/at91sam9g20ek_2mmc.dtb\0" \
 +	"console=ttyS0,115200n8\0" \
 +	"optargs=\0" \
 +	"mmcdev=0\0" \
