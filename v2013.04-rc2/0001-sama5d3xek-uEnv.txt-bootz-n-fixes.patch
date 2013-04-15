@@ -3,6 +3,39 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:56:06 -0500
 Subject: [PATCH] sama5d3xek: uEnv.txt, bootz, n fixes
 
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"echo Loaded environment from uEnv.txt;" \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  include/configs/sama5d3xek.h |   44 +++++++++++++++++++++++++++++++++++++++---
