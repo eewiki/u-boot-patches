@@ -48,11 +48,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h |   23 ++++++++++++++---------
- 1 file changed, 14 insertions(+), 9 deletions(-)
+ include/configs/am335x_evm.h |   38 +++++++++++++++++++++++++++-----------
+ 1 file changed, 27 insertions(+), 11 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index ef00306..93beafa 100644
+index ef00306..fdf165d 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -35,6 +35,7 @@
@@ -101,7 +101,7 @@ index ef00306..93beafa 100644
  	"nandboot=echo Booting from nand ...; " \
  		"run nandargs; " \
  		"nand read ${loadaddr} ${nandsrcaddr} ${nandimgsize}; " \
-@@ -138,13 +143,13 @@
+@@ -138,22 +143,33 @@
  		"bootm ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
@@ -119,6 +119,28 @@ index ef00306..93beafa 100644
  
  #endif
  
+ #define CONFIG_BOOTCOMMAND \
+ 	"run findfdt; " \
+-	"mmc dev ${mmcdev}; if mmc rescan; then " \
++	"if test $board_name = A335BNLT; then " \
++		"setenv mmcdev 1; mmc dev ${mmcdev}; if mmc rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"if run loadbootenv; then " \
++				"run importbootenv;" \
++			"fi;" \
++			"if test -n $uenvcmd; then " \
++				"echo Running uenvcmd ...;" \
++				"run uenvcmd;" \
++			"fi;" \
++		"fi;" \
++	"fi;" \
++	"setenv mmcdev 0; mmc dev ${mmcdev}; if mmc rescan; then " \
+ 		"echo SD/MMC found on device ${mmcdev};" \
+ 		"if run loadbootenv; then " \
+-			"echo Loaded environment from ${bootenv};" \
+ 			"run importbootenv;" \
+ 		"fi;" \
+ 		"if test -n $uenvcmd; then " \
 -- 
 1.7.10.4
 
