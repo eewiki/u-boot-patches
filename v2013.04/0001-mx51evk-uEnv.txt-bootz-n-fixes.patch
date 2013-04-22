@@ -48,11 +48,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx51evk.h |   55 ++++++++++++++++++++++++++++++++-------------
- 1 file changed, 40 insertions(+), 15 deletions(-)
+ include/configs/mx51evk.h |   60 +++++++++++++++++++++++++++++++++------------
+ 1 file changed, 45 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
-index cb3d938..9442406 100644
+index cb3d938..0015454 100644
 --- a/include/configs/mx51evk.h
 +++ b/include/configs/mx51evk.h
 @@ -89,6 +89,14 @@
@@ -70,8 +70,12 @@ index cb3d938..9442406 100644
  /*
   * Eth Configs
   */
-@@ -154,13 +162,26 @@
+@@ -152,15 +160,30 @@
+ #define CONFIG_LOADADDR		0x90800000	/* loadaddr env var */
+ 
  #define CONFIG_EXTRA_ENV_SETTINGS \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
  	"script=boot.scr\0" \
  	"uimage=uImage\0" \
 +	"loadaddr=0x90800000\0" \
@@ -102,16 +106,19 @@ index cb3d938..9442406 100644
  	"loadbootscript=" \
  		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
  	"bootscript=echo Running bootscript from mmc ...; " \
-@@ -168,7 +189,7 @@
+@@ -168,7 +191,10 @@
  	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
 -		"bootm\0" \
 +		"bootz ${loadaddr} - ${dtb_addr}\0 " \
++	"mmc_classic_boot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr}\0" \
  	"netargs=setenv bootargs console=ttymxc0,${baudrate} " \
  		"root=/dev/nfs " \
  		"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
-@@ -178,15 +199,19 @@
+@@ -178,15 +204,19 @@
  
  #define CONFIG_BOOTCOMMAND \
  	"mmc dev ${mmcdev}; if mmc rescan; then " \
