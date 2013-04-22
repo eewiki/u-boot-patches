@@ -1,0 +1,136 @@
+From 18db6d25d451b8d4ec0a3021cf70bde9242433c7 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 15 Mar 2013 10:56:06 -0500
+Subject: [PATCH] sama5d3xek: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+	"mmcargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"root=${mmcroot} " \
+		"rootfstype=${mmcrootfstype} " \
+		"video=${video}\0" \
+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+#endif
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/sama5d3xek.h |   55 +++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 51 insertions(+), 4 deletions(-)
+
+diff --git a/include/configs/sama5d3xek.h b/include/configs/sama5d3xek.h
+index b5da1d3..5c7d6b3 100644
+--- a/include/configs/sama5d3xek.h
++++ b/include/configs/sama5d3xek.h
+@@ -83,7 +83,7 @@
+ /* board specific(not enough SRAM) */
+ #define CONFIG_SAMA5D3_LCD_BASE		0x23E00000
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ /*
+  * BOOTP options
+@@ -180,6 +180,13 @@
+ 
+ #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
+ #define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ #endif
+ 
+ #define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
+@@ -213,9 +220,49 @@
+ #define CONFIG_ENV_OFFSET		0x2000
+ #define CONFIG_ENV_OFFSET_REDUND	0x4000
+ #define CONFIG_ENV_SIZE			0x2000
+-#define CONFIG_BOOTCOMMAND	"mmcinfo;fatload mmc 0:1 0x21000000 dtb;" \
+-				"fatload mmc 0:1 0x22000000 uImage;" \
+-				"bootm 0x22000000 - 0x21000000"
++
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"ftdaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"fdt_file=/dtbs/sama5d34ek.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadzimage=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"loadfdt=load mmc ${mmcdev} ${ftdaddr} ${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${ftdaddr}\0" \
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
++
+ #define CONFIG_SYS_MMC_ENV_DEV 0
+ #else
+ #define CONIG_ENV_IS_NOWHERE
+-- 
+1.7.10.4
+

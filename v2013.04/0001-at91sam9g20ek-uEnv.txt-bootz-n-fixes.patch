@@ -1,0 +1,209 @@
+From 5f051cc398d8f6001a3defa0a74c4e9ee53e5f5f Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 5 Apr 2013 13:10:36 -0500
+Subject: [PATCH] at91sam9g20ek: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+	"mmcargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"root=${mmcroot} " \
+		"rootfstype=${mmcrootfstype} " \
+		"video=${video}\0" \
+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+#endif
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/cpu/arm926ejs/at91/at91sam9260_devices.c |    4 ++
+ board/atmel/at91sam9260ek/at91sam9260ek.c         |   10 +++
+ include/configs/at91sam9260ek.h                   |   68 ++++++++++++++++++---
+ 3 files changed, 74 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/cpu/arm926ejs/at91/at91sam9260_devices.c b/arch/arm/cpu/arm926ejs/at91/at91sam9260_devices.c
+index 19ec615..5e995e1 100644
+--- a/arch/arm/cpu/arm926ejs/at91/at91sam9260_devices.c
++++ b/arch/arm/cpu/arm926ejs/at91/at91sam9260_devices.c
+@@ -203,6 +203,10 @@ void at91_macb_hw_init(void)
+ #if defined(CONFIG_GENERIC_ATMEL_MCI)
+ void at91_mci_hw_init(void)
+ {
++	/* Enable mci clock */
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	writel(1 << ATMEL_ID_MCI, &pmc->pcer);
++
+ 	at91_set_a_periph(AT91_PIO_PORTA, 8, 1);	/* MCCK */
+ #if defined(CONFIG_ATMEL_MCI_PORTB)
+ 	at91_set_b_periph(AT91_PIO_PORTA, 1, 1);	/* MCCDB */
+diff --git a/board/atmel/at91sam9260ek/at91sam9260ek.c b/board/atmel/at91sam9260ek/at91sam9260ek.c
+index 3aa394a..1e7b33e 100644
+--- a/board/atmel/at91sam9260ek/at91sam9260ek.c
++++ b/board/atmel/at91sam9260ek/at91sam9260ek.c
+@@ -30,6 +30,7 @@
+ #include <asm/arch/at91_pmc.h>
+ #include <asm/arch/at91_rstc.h>
+ #include <asm/arch/gpio.h>
++#include <atmel_mci.h>
+ 
+ #if defined(CONFIG_RESET_PHY_R) && defined(CONFIG_MACB)
+ # include <net.h>
+@@ -143,6 +144,15 @@ static void at91sam9260ek_macb_hw_init(void)
+ }
+ #endif
+ 
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++int board_mmc_init(bd_t *bd)
++{
++	at91_mci_hw_init();
++
++	return atmel_mci_init((void *)ATMEL_BASE_MCI);
++}
++#endif
++
+ int board_early_init_f(void)
+ {
+ 	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
+diff --git a/include/configs/at91sam9260ek.h b/include/configs/at91sam9260ek.h
+index ebcc69a..d819129 100644
+--- a/include/configs/at91sam9260ek.h
++++ b/include/configs/at91sam9260ek.h
+@@ -81,7 +81,7 @@
+ #define	CONFIG_RED_LED		AT91_PIN_PA9	/* this is the power led */
+ #define	CONFIG_GREEN_LED	AT91_PIN_PA6	/* this is the user led */
+ 
+-#define CONFIG_BOOTDELAY	3
++#define CONFIG_BOOTDELAY	1
+ 
+ /*
+  * BOOTP options
+@@ -105,6 +105,7 @@
+ #define CONFIG_CMD_PING		1
+ #define CONFIG_CMD_DHCP		1
+ #define CONFIG_CMD_NAND		1
++#define CONFIG_CMD_MMC		1
+ #define CONFIG_CMD_USB		1
+ 
+ /*
+@@ -161,6 +162,20 @@
+ /* NOR flash - no real flash on this board */
+ #define CONFIG_SYS_NO_FLASH			1
+ 
++/* MMC */
++#ifdef CONFIG_CMD_MMC
++#define CONFIG_MMC
++#define CONFIG_GENERIC_MMC
++#define CONFIG_GENERIC_ATMEL_MCI
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
++#endif
++
+ /* Ethernet */
+ #define CONFIG_MACB			1
+ #define CONFIG_RMII			1
+@@ -218,14 +233,50 @@
+ #define CONFIG_ENV_OFFSET		0xc0000
+ #define CONFIG_ENV_OFFSET_REDUND	0x100000
+ #define CONFIG_ENV_SIZE		0x20000		/* 1 sector = 128 kB */
+-#define CONFIG_BOOTCOMMAND	"nand read 0x22000000 0x200000 0x300000; bootm"
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"mtdparts=atmel_nand:256k(bootstrap)ro,512k(uboot)ro,"		\
+-	"256k(env),256k(env_redundant),256k(spare),"			\
+-	"512k(dtb),6M(kernel)ro,-(rootfs) "				\
+-	"root=/dev/mtdblock7 rw rootfstype=jffs2"
+ 
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
++	"loadaddr=0x22000000\0" \
++	"fdtaddr=0x21000000\0" \
++	"fdtfile=/dtbs/at91sam9g20ek_2mmc.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtfile}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #endif
+ 
+ #define CONFIG_SYS_PROMPT		"U-Boot> "
+@@ -235,6 +286,7 @@
+ #define CONFIG_SYS_LONGHELP		1
+ #define CONFIG_CMDLINE_EDITING	1
+ #define CONFIG_AUTO_COMPLETE
++#define CONFIG_SYS_HUSH_PARSER
+ 
+ /*
+  * Size of malloc() pool
+-- 
+1.7.10.4
+
