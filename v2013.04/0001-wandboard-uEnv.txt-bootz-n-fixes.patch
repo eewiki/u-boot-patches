@@ -52,7 +52,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 34 insertions(+), 53 deletions(-)
 
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 120e3f6..ccd970e 100644
+index 120e3f6..618e8ae 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -47,7 +47,7 @@
@@ -91,7 +91,7 @@ index 120e3f6..ccd970e 100644
 +		"root=${mmcroot} " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"video=${video}\0" \
-+	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
 +		"env import -t $loadaddr $filesize\0" \
  	"loadbootscript=" \

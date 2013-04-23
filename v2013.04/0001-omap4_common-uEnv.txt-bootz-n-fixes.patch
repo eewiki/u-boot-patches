@@ -48,11 +48,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/omap4_common.h |   32 +++++++++++++++++++++++++++-----
- 1 file changed, 27 insertions(+), 5 deletions(-)
+ include/configs/omap4_common.h |   35 +++++++++++++++++++++++++++++------
+ 1 file changed, 29 insertions(+), 6 deletions(-)
 
 diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
-index 1fd3097..0040322 100644
+index 1fd3097..c192eed 100644
 --- a/include/configs/omap4_common.h
 +++ b/include/configs/omap4_common.h
 @@ -124,6 +124,12 @@
@@ -77,7 +77,7 @@ index 1fd3097..0040322 100644
  #define CONFIG_ENV_VARS_UBOOT_CONFIG
  #define CONFIG_CMD_FS_GENERIC
  #define CONFIG_CMD_EXT2
-@@ -155,23 +161,32 @@
+@@ -155,23 +161,33 @@
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
@@ -87,6 +87,7 @@ index 1fd3097..0040322 100644
  	"mmcdev=0\0" \
 -	"mmcroot=/dev/mmcblk0p2 rw\0" \
 -	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcpart=1\0" \
 +	"mmcroot=/dev/mmcblk0p2 ro\0" \
 +	"mmcrootfstype=ext4 rootwait fixrtc\0" \
  	"mmcargs=setenv bootargs console=${console} " \
@@ -96,15 +97,16 @@ index 1fd3097..0040322 100644
  		"root=${mmcroot} " \
  		"rootfstype=${mmcrootfstype}\0" \
 -	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
-+	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
++	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
 -	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
-+	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
- 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
  		"env import -t ${loadaddr} ${filesize}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loaduimage=load mmc ${mmcdev} ${loadaddr} zImage\0" \
++	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
  	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
@@ -114,7 +116,7 @@ index 1fd3097..0040322 100644
  	"findfdt="\
  		"if test $board_name = sdp4430; then " \
  			"setenv fdtfile omap4-sdp.dtb; fi; " \
-@@ -193,6 +208,9 @@
+@@ -193,6 +209,9 @@
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
  			"fi;" \
@@ -124,7 +126,7 @@ index 1fd3097..0040322 100644
  		"fi;" \
  		"if run loadimage; then " \
  			"run loadfdt;" \
-@@ -296,4 +314,8 @@
+@@ -296,4 +315,8 @@
  
  #define CONFIG_SYS_THUMB_BUILD
  

@@ -48,11 +48,40 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h |   38 +++++++++++++++++++++++++++-----------
- 1 file changed, 27 insertions(+), 11 deletions(-)
+ arch/arm/cpu/armv7/am33xx/ddr.c |   10 ++++++++++
+ include/configs/am335x_evm.h    |   38 ++++++++++++++++++++++++++------------
+ 2 files changed, 36 insertions(+), 12 deletions(-)
 
+diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
+index d1e2fd3..3a93db1 100644
+--- a/arch/arm/cpu/armv7/am33xx/ddr.c
++++ b/arch/arm/cpu/armv7/am33xx/ddr.c
+@@ -21,6 +21,12 @@ http://www.ti.com/
+ #include <asm/io.h>
+ #include <asm/emif.h>
+ 
++/* This value might need some tweaking, but it effectively allows the LCDC */
++/* and the ARM to play fairer in memory, so the LCDC does not get starved causing */
++/* the screen to roll */
++/* See Page 439 in spruh73g (AM33xx TRM) for details */
++#define AM33XX_INT_CONFIG_COUNT 0x00303030
++
+ /**
+  * Base address for EMIF instances
+  */
+@@ -79,6 +85,10 @@ void set_sdram_timings(const struct emif_regs *regs, int nr)
+ 	writel(regs->sdram_tim2, &emif_reg[nr]->emif_sdram_tim_2_shdw);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3_shdw);
++
++	/* Configure INT_CONFIG value so that LCDC does not get stalled */
++	/* for a long time if ARM is accessing memory */
++	writel(AM33XX_INT_CONFIG_COUNT, &emif_reg[nr]->emif_l3_config);
+ }
+ 
+ /**
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index ef00306..fdf165d 100644
+index ef00306..cc65b00 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -35,6 +35,7 @@
@@ -63,6 +92,24 @@ index ef00306..fdf165d 100644
  #define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
  #define CONFIG_SETUP_MEMORY_TAGS
  #define CONFIG_INITRD_TAG
+@@ -43,7 +44,7 @@
+ 
+ /* commands to include */
+ #include <config_cmd_default.h>
+-
++#define CONFIG_CMD_GPIO
+ #define CONFIG_CMD_ASKENV
+ #define CONFIG_VERSION_VARIABLE
+ 
+@@ -59,7 +60,7 @@
+ 	"rdaddr=0x81000000\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=uImage\0" \
+-	"fdtfile=\0" \
++	"fdtfile=am335x-boneblack.dtb\0" \
+ 	"console=ttyO0,115200n8\0" \
+ 	"optargs=\0" \
+ 	"mtdids=" MTDIDS_DEFAULT "\0" \
 @@ -68,8 +69,9 @@
  	"dfu_alt_info_emmc=rawemmc mmc 0 3751936\0" \
  	"dfu_alt_info_nand=" DFU_ALT_INFO_NAND "\0" \
@@ -101,7 +148,7 @@ index ef00306..fdf165d 100644
  	"nandboot=echo Booting from nand ...; " \
  		"run nandargs; " \
  		"nand read ${loadaddr} ${nandsrcaddr} ${nandimgsize}; " \
-@@ -138,22 +143,33 @@
+@@ -138,9 +143,9 @@
  		"bootm ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
@@ -111,36 +158,44 @@ index ef00306..fdf165d 100644
 -			"setenv fdtfile am335x-boneblack.dtb; fi; " \
 +			"setenv fdtfile am335x-boneblack.dtb; setenv dtb_file am335x-boneblack.dtb; fi; " \
  		"if test $board_name = A33515BB; then " \
--			"setenv fdtfile am335x-evm.dtb; fi; " \
-+			"setenv fdtfile am335x-evm.dtb; setenv dtb_file am335x-evm.dtb; fi; " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
  		"if test $board_name = A335X_SK; then " \
--			"setenv fdtfile am335x-evmsk.dtb; fi\0" \
-+			"setenv fdtfile am335x-evmsk.dtb; setenv dtb_file am335x-evmsk.dtb; fi; " \
- 
+@@ -149,23 +154,32 @@
  #endif
  
  #define CONFIG_BOOTCOMMAND \
++	"gpio set 53; " \
++	"i2c mw 0x24 1 0x3e; " \
  	"run findfdt; " \
--	"mmc dev ${mmcdev}; if mmc rescan; then " \
-+	"if test $board_name = A335BNLT; then " \
-+		"setenv mmcdev 1; mmc dev ${mmcdev}; if mmc rescan; then " \
-+			"echo SD/MMC found on device ${mmcdev};" \
-+			"if run loadbootenv; then " \
-+				"run importbootenv;" \
-+			"fi;" \
-+			"if test -n $uenvcmd; then " \
-+				"echo Running uenvcmd ...;" \
-+				"run uenvcmd;" \
-+			"fi;" \
-+		"fi;" \
++	"mmc dev 0; if mmc rescan ; then " \
++		"echo micro SD card found;" \
++		"setenv mmcdev 0;"\
++	"else " \
++		"echo No micro SD card found, setting mmcdev to 1;" \
++		"setenv mmcdev 1;"\
 +	"fi;" \
-+	"setenv mmcdev 0; mmc dev ${mmcdev}; if mmc rescan; then " \
+ 	"mmc dev ${mmcdev}; if mmc rescan; then " \
++		"gpio set 54; " \
  		"echo SD/MMC found on device ${mmcdev};" \
  		"if run loadbootenv; then " \
 -			"echo Loaded environment from ${bootenv};" \
  			"run importbootenv;" \
  		"fi;" \
  		"if test -n $uenvcmd; then " \
+ 			"echo Running uenvcmd ...;" \
+ 			"run uenvcmd;" \
+ 		"fi;" \
++		"gpio set 55; " \
+ 		"if run loaduimage; then " \
++			"gpio set 56; " \
+ 			"run loadfdt;" \
+ 			"run mmcboot;" \
+ 		"fi;" \
+-	"else " \
+-		"run nandboot;" \
+ 	"fi;" \
+ 
+ /* Clock Defines */
 -- 
 1.7.10.4
 

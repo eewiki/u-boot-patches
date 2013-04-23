@@ -48,9 +48,9 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |   35 ++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h |   40 +++++++++++++++++++++++++++-------------
- 2 files changed, 57 insertions(+), 18 deletions(-)
+ board/ti/beagle/beagle.c       |   35 +++++++++++++++++++++++++-----
+ include/configs/omap3_beagle.h |   46 ++++++++++++++++++++++++++--------------
+ 2 files changed, 60 insertions(+), 21 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 3d9b6dd..e4c6990 100644
@@ -135,7 +135,7 @@ index 3d9b6dd..e4c6990 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_A:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 48ce4c0..f8b6144 100644
+index 48ce4c0..58d0093 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -150,6 +150,13 @@
@@ -161,7 +161,7 @@ index 48ce4c0..f8b6144 100644
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	"loadaddr=0x80200000\0" \
-@@ -222,14 +229,16 @@
+@@ -222,14 +229,17 @@
  	"console=ttyO2,115200n8\0" \
  	"mpurate=auto\0" \
  	"buddy=none\0" \
@@ -177,12 +177,13 @@ index 48ce4c0..f8b6144 100644
  	"mmcdev=0\0" \
 -	"mmcroot=/dev/mmcblk0p2 rw\0" \
 -	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcpart=1\0" \
 +	"mmcroot=/dev/mmcblk0p2 ro\0" \
 +	"mmcrootfstype=ext4 rootwait fixrtc\0" \
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -238,9 +247,11 @@
+@@ -238,9 +248,11 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -195,7 +196,7 @@ index 48ce4c0..f8b6144 100644
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
  		"rootfstype=${mmcrootfstype}\0" \
-@@ -248,9 +259,11 @@
+@@ -248,38 +260,41 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -208,7 +209,12 @@ index 48ce4c0..f8b6144 100644
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${nandroot} " \
  		"rootfstype=${nandrootfstype}\0" \
-@@ -262,24 +275,25 @@
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t $loadaddr $filesize\0" \
+ 	"ramargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -219,11 +225,12 @@ index 48ce4c0..f8b6144 100644
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${ramroot} " \
  		"rootfstype=${ramrootfstype}\0" \
- 	"loadramdisk=fatload mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+-	"loadramdisk=fatload mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
 -	"loaduimagefat=fatload mmc ${mmcdev} ${loadaddr} uImage\0" \
 -	"loaduimage=ext2load mmc ${mmcdev}:2 ${loadaddr} /boot/uImage\0" \
-+	"loaduimagefat=fatload mmc ${mmcdev} ${loadaddr} zImage\0" \
-+	"loaduimage=fatload mmc ${mmcdev} ${loadaddr} zImage\0" \
++	"loadramdisk=fatload mmc ${mmcdev}:${mmcpart} ${rdaddr} ramdisk.gz\0" \
++	"loaduimagefat=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
 -		"bootm ${loadaddr}\0" \
@@ -240,6 +247,14 @@ index 48ce4c0..f8b6144 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
+@@ -294,7 +309,6 @@
+ 		"fi;" \
+ 		"echo SD/MMC found on device ${mmcdev};" \
+ 		"if run loadbootenv; then " \
+-			"echo Loaded environment from ${bootenv};" \
+ 			"run importbootenv;" \
+ 		"fi;" \
+ 		"if test -n $uenvcmd; then " \
 -- 
 1.7.10.4
 
