@@ -48,11 +48,11 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx6qsabrelite.h |   67 +++++++++++++++++++++++++++++----------
- 1 file changed, 51 insertions(+), 16 deletions(-)
+ include/configs/mx6qsabrelite.h |   62 +++++++++++++++++++++++++++++----------
+ 1 file changed, 46 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/mx6qsabrelite.h b/include/configs/mx6qsabrelite.h
-index b814418..ac00f30 100644
+index b814418..b58fb4a 100644
 --- a/include/configs/mx6qsabrelite.h
 +++ b/include/configs/mx6qsabrelite.h
 @@ -84,6 +84,12 @@
@@ -68,12 +68,11 @@ index b814418..ac00f30 100644
  #define CONFIG_DOS_PARTITION
  
  #define CONFIG_CMD_SATA
-@@ -165,23 +171,36 @@
+@@ -165,23 +171,35 @@
  	"console=ttymxc1\0" \
  	"fdt_high=0xffffffff\0" \
  	"initrd_high=0xffffffff\0" \
 -	"fdt_file=imx6q-sabrelite.dtb\0" \
-+	"ethaddr=\0" \
 +	"fdt_file=/dtbs/imx6q-sabrelite.dtb\0" \
  	"fdt_addr=0x11000000\0" \
  	"boot_fdt=try\0" \
@@ -111,7 +110,7 @@ index b814418..ac00f30 100644
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
  				"bootm ${loadaddr} - ${fdt_addr}; " \
-@@ -221,16 +240,32 @@
+@@ -221,16 +239,28 @@
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -125,10 +124,6 @@ index b814418..ac00f30 100644
 -			   "fi; " \
 -		   "fi; " \
 -	   "else run netboot; fi"
-+	"if test -n $ethaddr; then " \
-+		"echo ethaddr was not set using: 00:19:b8:01:00:00...; " \
-+		"setenv ethaddr 00:19:b8:01:00:00; " \
-+	"fi; " \
 +	"mmc dev 0; if mmc rescan ; then " \
 +		"setenv mmcdev 0; " \
 +		"echo SD/MMC found on device ${mmcdev}; " \
