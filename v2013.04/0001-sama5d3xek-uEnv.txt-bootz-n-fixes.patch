@@ -52,7 +52,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 52 insertions(+), 4 deletions(-)
 
 diff --git a/include/configs/sama5d3xek.h b/include/configs/sama5d3xek.h
-index b5da1d3..6b8b9aa 100644
+index b5da1d3..497be2c 100644
 --- a/include/configs/sama5d3xek.h
 +++ b/include/configs/sama5d3xek.h
 @@ -83,7 +83,7 @@
@@ -106,7 +106,7 @@ index b5da1d3..6b8b9aa 100644
 +	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
 +		"env import -t $loadaddr $filesize\0" \
-+	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_file}\0" \
 +	"mmcboot=echo Booting from mmc ...; " \
 +		"run mmcargs; " \
