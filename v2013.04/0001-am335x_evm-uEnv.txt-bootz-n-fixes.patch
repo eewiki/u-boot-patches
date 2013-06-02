@@ -48,9 +48,9 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/cpu/armv7/am33xx/ddr.c |   10 +++++++
- include/configs/am335x_evm.h    |   62 +++++++++++++++++++++++++--------------
- 2 files changed, 50 insertions(+), 22 deletions(-)
+ arch/arm/cpu/armv7/am33xx/ddr.c |   10 ++++++
+ include/configs/am335x_evm.h    |   64 +++++++++++++++++++++++++--------------
+ 2 files changed, 52 insertions(+), 22 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
 index d1e2fd3..3a93db1 100644
@@ -81,7 +81,7 @@ index d1e2fd3..3a93db1 100644
  
  /**
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index ef00306..8d20b89 100644
+index ef00306..3124a5a 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -35,6 +35,7 @@
@@ -160,7 +160,7 @@ index ef00306..8d20b89 100644
  		"if test $board_name = A33515BB; then " \
  			"setenv fdtfile am335x-evm.dtb; fi; " \
  		"if test $board_name = A335X_SK; then " \
-@@ -149,23 +154,36 @@
+@@ -149,23 +154,38 @@
  #endif
  
  #define CONFIG_BOOTCOMMAND \
@@ -182,6 +182,7 @@ index ef00306..8d20b89 100644
 +			"echo Running uenvcmd ...; " \
 +			"run uenvcmd;" \
 +		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo trying eMMC (BeagleBone Black) ...; echo;" \
 +	"fi;" \
 +	"mmc dev 1; if mmc rescan ; then " \
 +		"gpio set 54; " \
@@ -207,6 +208,7 @@ index ef00306..8d20b89 100644
 -	"else " \
 -		"run nandboot;" \
 +		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo halting ...; echo;" \
  	"fi;" \
  
  /* Clock Defines */
