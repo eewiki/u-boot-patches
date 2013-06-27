@@ -49,9 +49,10 @@ bootm -> bootz
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/wandboard/README      |    5 ++++
+ board/wandboard/wandboard.c |    2 +-
  boards.cfg                  |    1 +
  include/configs/wandboard.h |   55 ++++++++++++++++++++++++++++++-------------
- 3 files changed, 44 insertions(+), 17 deletions(-)
+ 4 files changed, 45 insertions(+), 18 deletions(-)
 
 diff --git a/board/wandboard/README b/board/wandboard/README
 index ce83bbe..65d3d05 100644
@@ -69,6 +70,19 @@ index ce83bbe..65d3d05 100644
  To build U-Boot for the Wandboard Solo version:
  
  $ make wandboard_solo_config
+diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
+index 5666cbf..43c02ac 100644
+--- a/board/wandboard/wandboard.c
++++ b/board/wandboard/wandboard.c
+@@ -48,7 +48,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ int dram_init(void)
+ {
+-	gd->ram_size = CONFIG_DDR_MB * SZ_1M;
++	gd->ram_size = (phys_size_t)CONFIG_DDR_MB * 1024 * 1024;
+ 
+ 	return 0;
+ }
 diff --git a/boards.cfg b/boards.cfg
 index 1e598cb..bf9bfe0 100644
 --- a/boards.cfg
