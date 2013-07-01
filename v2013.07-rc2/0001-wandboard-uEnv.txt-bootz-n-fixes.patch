@@ -1,0 +1,214 @@
+From 1e8149d0a997bacb4778087a63811ad6f5daef6d Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 19 Mar 2013 11:15:46 -0500
+Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+	"mmcargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"root=${mmcroot} " \
+		"rootfstype=${mmcrootfstype} " \
+		"video=${video}\0" \
+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+#endif
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/wandboard/README      |    5 ++++
+ board/wandboard/wandboard.c |    2 +-
+ boards.cfg                  |    1 +
+ include/configs/wandboard.h |   55 ++++++++++++++++++++++++++++++-------------
+ 4 files changed, 45 insertions(+), 18 deletions(-)
+
+diff --git a/board/wandboard/README b/board/wandboard/README
+index ce83bbe..65d3d05 100644
+--- a/board/wandboard/README
++++ b/board/wandboard/README
+@@ -17,6 +17,11 @@ To build U-Boot for the Wandboard Dual Lite version:
+ $ make wandboard_dl_config
+ $ make
+ 
++To build U-Boot for the Wandboard Quad version:
++
++$ make wandboard_quad_config
++$ make
++
+ To build U-Boot for the Wandboard Solo version:
+ 
+ $ make wandboard_solo_config
+diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
+index 5666cbf..4ed4ba7 100644
+--- a/board/wandboard/wandboard.c
++++ b/board/wandboard/wandboard.c
+@@ -48,7 +48,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ int dram_init(void)
+ {
+-	gd->ram_size = CONFIG_DDR_MB * SZ_1M;
++	gd->ram_size = (phys_size_t)CONFIG_DDR_MB * 1024 * 1024;
+ 
+ 	return 0;
+ }
+diff --git a/boards.cfg b/boards.cfg
+index c0c4282..9604bf2 100644
+--- a/boards.cfg
++++ b/boards.cfg
+@@ -281,6 +281,7 @@ nitrogen6q2g                 arm         armv7       nitrogen6x          boundar
+ nitrogen6s                   arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
+ nitrogen6s1g                 arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s1g.cfg,MX6S,DDR_MB=1024
+ wandboard_dl		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024
++wandboard_quad		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048
+ wandboard_solo		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
+ omap3_overo                  arm         armv7       overo               -              omap3
+ omap3_pandora                arm         armv7       pandora             -              omap3
+diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
+index 5593f1c..6be66c6 100644
+--- a/include/configs/wandboard.h
++++ b/include/configs/wandboard.h
+@@ -51,7 +51,7 @@
+ #define CONFIG_CMD_BMODE
+ #define CONFIG_CMD_SETEXPR
+ 
+-#define CONFIG_BOOTDELAY		5
++#define CONFIG_BOOTDELAY		1
+ 
+ #define CONFIG_SYS_MEMTEST_START	0x10000000
+ #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
+@@ -70,6 +70,8 @@
+ #define CONFIG_BOUNCE_BUFFER
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_DOS_PARTITION
+ 
+ /* Ethernet Configuration */
+@@ -103,6 +105,8 @@
+ 
+ #if defined(CONFIG_MX6DL)
+ #define CONFIG_DEFAULT_FDT_FILE		"imx6dl-wandboard.dtb"
++#elif defined(CONFIG_MX6Q)
++#define CONFIG_DEFAULT_FDT_FILE		"imx6q-wandboard.dtb"
+ #elif defined(CONFIG_MX6S)
+ #define CONFIG_DEFAULT_FDT_FILE		"imx6s-wandboard.dtb"
+ #endif
+@@ -117,9 +121,12 @@
+ 	"fdt_addr=0x11000000\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+-	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
+-	"mmcpart=2\0" \
+-	"mmcroot=/dev/mmcblk0p3 rootwait rw\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -135,15 +142,24 @@
+ 			"fi; "	\
+ 		"fi\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}\0" \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
+ 	"loadbootscript=" \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
++		"bootz ${loadaddr};\0" \
++	"mmcdefault=echo Booting from mmc ...; " \
++		"run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+ 				"bootm ${loadaddr} - ${fdt_addr}; " \
+@@ -183,16 +199,20 @@
+ 		"fi;\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loaduimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"if run loadzimage; then " \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ /* Miscellaneous configurable options */
+ #define CONFIG_SYS_LONGHELP
+@@ -235,6 +255,7 @@
+ 
+ #define CONFIG_OF_LIBFDT
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #ifndef CONFIG_SYS_DCACHE_OFF
+ #define CONFIG_CMD_CACHE
+-- 
+1.7.10.4
+
