@@ -48,11 +48,26 @@ bootm -> bootz
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/omap4_common.h |   35 +++++++++++++++++++++++++++++------
- 1 file changed, 29 insertions(+), 6 deletions(-)
+ arch/arm/cpu/armv7/omap-common/emif-common.c |    3 ++
+ include/configs/omap4_common.h               |   40 ++++++++++++++++++++------
+ 2 files changed, 35 insertions(+), 8 deletions(-)
 
+diff --git a/arch/arm/cpu/armv7/omap-common/emif-common.c b/arch/arm/cpu/armv7/omap-common/emif-common.c
+index 652e5a7..9ede3f5 100644
+--- a/arch/arm/cpu/armv7/omap-common/emif-common.c
++++ b/arch/arm/cpu/armv7/omap-common/emif-common.c
+@@ -1200,6 +1200,9 @@ void dmm_init(u32 base)
+ 	/* TRAP for invalid TILER mappings in section 0 */
+ 	lis_map_regs_calculated.dmm_lisa_map_0 = DMM_LISA_MAP_0_INVAL_ADDR_TRAP;
+ 
++	if (omap_revision() >= OMAP4460_ES1_0)
++		lis_map_regs_calculated.is_ma_present = 1;
++
+ 	lisa_map_regs = &lis_map_regs_calculated;
+ #endif
+ 	struct dmm_lisa_map_regs *hw_lisa_map_regs =
 diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
-index 1fd3097..c192eed 100644
+index 2fa4382..7ddb983 100644
 --- a/include/configs/omap4_common.h
 +++ b/include/configs/omap4_common.h
 @@ -124,6 +124,12 @@
@@ -77,7 +92,7 @@ index 1fd3097..c192eed 100644
  #define CONFIG_ENV_VARS_UBOOT_CONFIG
  #define CONFIG_CMD_FS_GENERIC
  #define CONFIG_CMD_EXT2
-@@ -155,23 +161,33 @@
+@@ -156,23 +162,33 @@
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
@@ -116,7 +131,7 @@ index 1fd3097..c192eed 100644
  	"findfdt="\
  		"if test $board_name = sdp4430; then " \
  			"setenv fdtfile omap4-sdp.dtb; fi; " \
-@@ -193,6 +209,9 @@
+@@ -200,6 +216,9 @@
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
  			"fi;" \
@@ -126,7 +141,26 @@ index 1fd3097..c192eed 100644
  		"fi;" \
  		"if run loadimage; then " \
  			"run loadfdt;" \
-@@ -296,4 +315,8 @@
+@@ -219,7 +238,7 @@
+ /* Print Buffer Size */
+ #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
+ 					sizeof(CONFIG_SYS_PROMPT) + 16)
+-#define CONFIG_SYS_MAXARGS		16
++#define CONFIG_SYS_MAXARGS		64
+ /* Boot Argument Buffer Size */
+ #define CONFIG_SYS_BARGSIZE		(CONFIG_SYS_CBSIZE)
+ 
+@@ -255,7 +274,8 @@
+ #define CONFIG_SYS_CACHELINE_SIZE	32
+ 
+ /* Defines for SDRAM init */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* Pandaboard ES Rev B3 */
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
+ 
+ #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
+ #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
+@@ -303,4 +323,8 @@
  
  #define CONFIG_SYS_THUMB_BUILD
  
