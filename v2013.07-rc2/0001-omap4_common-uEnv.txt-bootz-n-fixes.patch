@@ -1,0 +1,140 @@
+From e7cf59c5ce03491f09ec65b818bd6add5c491d9f Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 15 Mar 2013 10:16:52 -0500
+Subject: [PATCH] omap4_common: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+	"mmcargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"root=${mmcroot} " \
+		"rootfstype=${mmcrootfstype} " \
+		"video=${video}\0" \
+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+#endif
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/omap4_common.h |   35 +++++++++++++++++++++++++++++------
+ 1 file changed, 29 insertions(+), 6 deletions(-)
+
+diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
+index 1fd3097..c192eed 100644
+--- a/include/configs/omap4_common.h
++++ b/include/configs/omap4_common.h
+@@ -124,6 +124,12 @@
+ /* Enabled commands */
+ #define CONFIG_CMD_EXT2		/* EXT2 Support                 */
+ #define CONFIG_CMD_FAT		/* FAT support                  */
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ #define CONFIG_CMD_I2C		/* I2C serial bus support	*/
+ #define CONFIG_CMD_MMC		/* MMC support                  */
+ 
+@@ -137,7 +143,7 @@
+  * Environment setup
+  */
+ 
+-#define CONFIG_BOOTDELAY	3
++#define CONFIG_BOOTDELAY	1
+ #define CONFIG_ENV_VARS_UBOOT_CONFIG
+ #define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_CMD_EXT2
+@@ -155,23 +161,33 @@
+ 	"bootfile=zImage\0" \
+ 	"usbtty=cdc_acm\0" \
+ 	"vram=16M\0" \
++	"defaultdisplay=dvi\0" \
++	"dvimode=1280x720MR-16@60\0" \
++	"buddy=none\0" \
+ 	"mmcdev=0\0" \
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"mmcargs=setenv bootargs console=${console} " \
++		"buddy=${buddy} "\
+ 		"vram=${vram} " \
++		"omapfb.mode=${defaultdisplay}:${dvimode} " \
+ 		"root=${mmcroot} " \
+ 		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
++	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
+ 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
+ 		"run mmcargs; " \
+ 		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"mmc_classic_boot=echo Booting from mmc${mmcdev} ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr}\0" \
+ 	"findfdt="\
+ 		"if test $board_name = sdp4430; then " \
+ 			"setenv fdtfile omap4-sdp.dtb; fi; " \
+@@ -193,6 +209,9 @@
+ 				"echo Running uenvcmd ...;" \
+ 				"run uenvcmd;" \
+ 			"fi;" \
++			"if run loaduimage; then " \
++				"run mmc_classic_boot; " \
++			"fi; " \
+ 		"fi;" \
+ 		"if run loadimage; then " \
+ 			"run loadfdt;" \
+@@ -296,4 +315,8 @@
+ 
+ #define CONFIG_SYS_THUMB_BUILD
+ 
++/* FIXME: Should be safe to remove in v3.8.x */
++#define CONFIG_SYS_ENABLE_PADS_ALL
++#define CONFIG_SYS_CLOCKS_ENABLE_ALL
++
+ #endif /* __CONFIG_OMAP4_COMMON_H */
+-- 
+1.7.10.4
+
