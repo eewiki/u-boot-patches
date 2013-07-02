@@ -51,8 +51,8 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/wandboard/README      |    5 ++++
  board/wandboard/wandboard.c |    2 +-
  boards.cfg                  |    1 +
- include/configs/wandboard.h |   55 ++++++++++++++++++++++++++++++-------------
- 4 files changed, 45 insertions(+), 18 deletions(-)
+ include/configs/wandboard.h |   66 +++++++++++++++++++++++++++----------------
+ 4 files changed, 49 insertions(+), 25 deletions(-)
 
 diff --git a/board/wandboard/README b/board/wandboard/README
 index ce83bbe..65d3d05 100644
@@ -71,7 +71,7 @@ index ce83bbe..65d3d05 100644
  
  $ make wandboard_solo_config
 diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
-index 5666cbf..4ed4ba7 100644
+index 5666cbf..43c02ac 100644
 --- a/board/wandboard/wandboard.c
 +++ b/board/wandboard/wandboard.c
 @@ -48,7 +48,7 @@ DECLARE_GLOBAL_DATA_PTR;
@@ -96,7 +96,7 @@ index c0c4282..9604bf2 100644
  omap3_overo                  arm         armv7       overo               -              omap3
  omap3_pandora                arm         armv7       pandora             -              omap3
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 5593f1c..6be66c6 100644
+index 5593f1c..898b129 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -51,7 +51,7 @@
@@ -142,7 +142,7 @@ index 5593f1c..6be66c6 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -135,15 +142,24 @@
+@@ -135,27 +142,33 @@
  			"fi; "	\
  		"fi\0" \
  	"mmcargs=setenv bootargs console=${console},${baudrate} " \
@@ -164,13 +164,45 @@ index 5593f1c..6be66c6 100644
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
-+		"bootz ${loadaddr};\0" \
-+	"mmcdefault=echo Booting from mmc ...; " \
-+		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
- 				"bootm ${loadaddr} - ${fdt_addr}; " \
-@@ -183,16 +199,20 @@
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
+ 			"else " \
+ 				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
++					"bootz ${loadaddr}; " \
+ 				"else " \
+ 					"echo WARN: Cannot load the DT; " \
+ 				"fi; " \
+ 			"fi; " \
+ 		"else " \
+-			"bootm; " \
++			"bootz ${loadaddr}; " \
+ 		"fi;\0" \
+ 	"netargs=setenv bootargs console=${console},${baudrate} " \
+ 		"root=/dev/nfs " \
+@@ -167,32 +180,36 @@
+ 		"else " \
+ 			"setenv get_cmd tftp; " \
+ 		"fi; " \
+-		"${get_cmd} ${uimage}; " \
++		"${get_cmd} zImage; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
+ 			"else " \
+ 				"if test ${boot_fdt} = try; then " \
+-					"bootm; " \
++					"bootz ${loadaddr}; " \
+ 				"else " \
+ 					"echo WARN: Cannot load the DT; " \
+ 				"fi; " \
+ 			"fi; " \
+ 		"else " \
+-			"bootm; " \
++			"bootz ${loadaddr}; " \
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -201,7 +233,7 @@ index 5593f1c..6be66c6 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -235,6 +255,7 @@
+@@ -235,6 +252,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
