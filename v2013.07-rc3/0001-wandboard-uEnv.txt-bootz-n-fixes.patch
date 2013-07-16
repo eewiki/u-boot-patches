@@ -49,13 +49,11 @@ bootm -> bootz
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/wandboard/README      |    5 ++++
- board/wandboard/wandboard.c |    2 +-
- boards.cfg                  |    1 +
- include/configs/wandboard.h |   66 +++++++++++++++++++++++++++----------------
- 4 files changed, 49 insertions(+), 25 deletions(-)
+ include/configs/wandboard.h |   62 +++++++++++++++++++++++++++----------------
+ 2 files changed, 44 insertions(+), 23 deletions(-)
 
 diff --git a/board/wandboard/README b/board/wandboard/README
-index ce83bbe..65d3d05 100644
+index 498db2f..4e54ee3 100644
 --- a/board/wandboard/README
 +++ b/board/wandboard/README
 @@ -17,6 +17,11 @@ To build U-Boot for the Wandboard Dual Lite version:
@@ -70,33 +68,8 @@ index ce83bbe..65d3d05 100644
  To build U-Boot for the Wandboard Solo version:
  
  $ make wandboard_solo_config
-diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
-index 5666cbf..43c02ac 100644
---- a/board/wandboard/wandboard.c
-+++ b/board/wandboard/wandboard.c
-@@ -48,7 +48,7 @@ DECLARE_GLOBAL_DATA_PTR;
- 
- int dram_init(void)
- {
--	gd->ram_size = CONFIG_DDR_MB * SZ_1M;
-+	gd->ram_size = (phys_size_t)CONFIG_DDR_MB * 1024 * 1024;
- 
- 	return 0;
- }
-diff --git a/boards.cfg b/boards.cfg
-index c0c4282..9604bf2 100644
---- a/boards.cfg
-+++ b/boards.cfg
-@@ -281,6 +281,7 @@ nitrogen6q2g                 arm         armv7       nitrogen6x          boundar
- nitrogen6s                   arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
- nitrogen6s1g                 arm         armv7       nitrogen6x          boundary       mx6		nitrogen6x:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s1g.cfg,MX6S,DDR_MB=1024
- wandboard_dl		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024
-+wandboard_quad		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048
- wandboard_solo		     arm	 armv7	     wandboard		 -		mx6 wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6s.cfg,MX6S,DDR_MB=512
- omap3_overo                  arm         armv7       overo               -              omap3
- omap3_pandora                arm         armv7       pandora             -              omap3
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 5593f1c..898b129 100644
+index ee6bf21..898b129 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -51,7 +51,7 @@
@@ -117,32 +90,22 @@ index 5593f1c..898b129 100644
  #define CONFIG_DOS_PARTITION
  
  /* Ethernet Configuration */
-@@ -103,6 +105,8 @@
- 
- #if defined(CONFIG_MX6DL)
- #define CONFIG_DEFAULT_FDT_FILE		"imx6dl-wandboard.dtb"
-+#elif defined(CONFIG_MX6Q)
-+#define CONFIG_DEFAULT_FDT_FILE		"imx6q-wandboard.dtb"
- #elif defined(CONFIG_MX6S)
- #define CONFIG_DEFAULT_FDT_FILE		"imx6s-wandboard.dtb"
- #endif
-@@ -117,9 +121,12 @@
+@@ -119,9 +121,12 @@
  	"fdt_addr=0x11000000\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
 -	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
--	"mmcpart=2\0" \
--	"mmcroot=/dev/mmcblk0p3 rootwait rw\0" \
 +	"optargs=\0" \
 +	"video=\0" \
 +	"mmcdev=0\0" \
-+	"mmcpart=1\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
 +	"mmcroot=/dev/mmcblk0p2 ro\0" \
 +	"mmcrootfstype=ext4 rootwait\0" \
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -135,27 +142,33 @@
+@@ -137,27 +142,33 @@
  			"fi; "	\
  		"fi\0" \
  	"mmcargs=setenv bootargs console=${console},${baudrate} " \
@@ -182,7 +145,7 @@ index 5593f1c..898b129 100644
  		"fi;\0" \
  	"netargs=setenv bootargs console=${console},${baudrate} " \
  		"root=/dev/nfs " \
-@@ -167,32 +180,36 @@
+@@ -169,32 +180,36 @@
  		"else " \
  			"setenv get_cmd tftp; " \
  		"fi; " \
@@ -233,7 +196,7 @@ index 5593f1c..898b129 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -235,6 +252,7 @@
+@@ -237,6 +252,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
