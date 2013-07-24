@@ -5,9 +5,9 @@ Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |   38 +++++++++++++++++++++++----
- include/configs/omap3_beagle.h |   56 ++++++++++++++++++++++++++++------------
- 2 files changed, 72 insertions(+), 22 deletions(-)
+ board/ti/beagle/beagle.c       |   38 ++++++++++++++++++++---
+ include/configs/omap3_beagle.h |   66 +++++++++++++++++++++++++++++-----------
+ 2 files changed, 81 insertions(+), 23 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index c686f40..7e028bc 100644
@@ -111,7 +111,7 @@ index c686f40..7e028bc 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_A:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 48ce4c0..45f48eb 100644
+index 48ce4c0..2d7ceed 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -150,6 +150,13 @@
@@ -128,7 +128,7 @@ index 48ce4c0..45f48eb 100644
  #define CONFIG_CMD_JFFS2	/* JFFS2 Support		*/
  #define CONFIG_CMD_MTDPARTS	/* Enable MTD parts commands */
  #define CONFIG_MTD_DEVICE	/* needed for mtdparts commands */
-@@ -212,7 +219,7 @@
+@@ -212,24 +219,31 @@
  							/* partition */
  
  /* Environment information */
@@ -137,7 +137,12 @@ index 48ce4c0..45f48eb 100644
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	"loadaddr=0x80200000\0" \
-@@ -222,14 +229,18 @@
+ 	"rdaddr=0x81000000\0" \
++	"fdt_high=0xffffffff\0" \
++	"fdtaddr=0x80f80000\0" \
++	"fdtfile=/dtbs/omap3-beagle-xm.dtb\0" \
+ 	"usbtty=cdc_acm\0" \
+ 	"bootfile=uImage.beagle\0" \
  	"console=ttyO2,115200n8\0" \
  	"mpurate=auto\0" \
  	"buddy=none\0" \
@@ -160,7 +165,7 @@ index 48ce4c0..45f48eb 100644
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -238,48 +249,54 @@
+@@ -238,48 +252,59 @@
  		"${optargs} " \
  		"mpurate=${mpurate} " \
  		"buddy=${buddy} "\
@@ -209,11 +214,16 @@ index 48ce4c0..45f48eb 100644
 -	"loaduimage=ext2load mmc ${mmcdev}:2 ${loadaddr} /boot/uImage\0" \
 +	"loadramdisk=fatload mmc ${mmcdev}:${mmcpart} ${rdaddr} ramdisk.gz\0" \
 +	"loaduimagefat=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
-+	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} uImage\0" \
++	"loadzimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtfile}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
 -		"bootm ${loadaddr}\0" \
 +		"bootz ${loadaddr}\0" \
++	"mmcfdtboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
  	"nandboot=echo Booting from nand ...; " \
  		"run nandargs; " \
  		"nand read ${loadaddr} 280000 400000; " \
@@ -226,7 +236,7 @@ index 48ce4c0..45f48eb 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
-@@ -294,13 +311,18 @@
+@@ -294,14 +319,19 @@
  		"fi;" \
  		"echo SD/MMC found on device ${mmcdev};" \
  		"if run loadbootenv; then " \
@@ -242,10 +252,12 @@ index 48ce4c0..45f48eb 100644
  			"echo Running uenvcmd ...;" \
  			"run uenvcmd;" \
  		"fi;" \
-+		"echo Running default loaduimage ...;" \
- 		"if run loaduimage; then " \
+-		"if run loaduimage; then " \
++		"echo Running default loadzimage ...;" \
++		"if run loadzimage; then " \
  			"run mmcboot;" \
  		"fi;" \
+ 	"fi;" \
 -- 
 1.7.10.4
 
