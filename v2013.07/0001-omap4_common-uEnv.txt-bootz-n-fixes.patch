@@ -3,56 +3,13 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:16:52 -0500
 Subject: [PATCH] omap4_common: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/omap4_common.h |   42 ++++++++++++++++++++++++++++++++--------
- 1 file changed, 34 insertions(+), 8 deletions(-)
+ include/configs/omap4_common.h |   45 ++++++++++++++++++++++++++++++++--------
+ 1 file changed, 36 insertions(+), 9 deletions(-)
 
 diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
-index 2fa4382..578c044 100644
+index 2fa4382..ce72abb 100644
 --- a/include/configs/omap4_common.h
 +++ b/include/configs/omap4_common.h
 @@ -124,6 +124,12 @@
@@ -77,7 +34,11 @@ index 2fa4382..578c044 100644
  #define CONFIG_ENV_VARS_UBOOT_CONFIG
  #define CONFIG_CMD_FS_GENERIC
  #define CONFIG_CMD_EXT2
-@@ -156,23 +162,33 @@
+@@ -153,26 +159,37 @@
+ 	"fdtfile=undefined\0" \
+ 	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
++	"fdtdir=/dtbs\0" \
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
@@ -106,7 +67,7 @@ index 2fa4382..578c044 100644
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
  		"env import -t ${loadaddr} ${filesize}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
  	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
@@ -116,7 +77,16 @@ index 2fa4382..578c044 100644
  	"findfdt="\
  		"if test $board_name = sdp4430; then " \
  			"setenv fdtfile omap4-sdp.dtb; fi; " \
-@@ -196,10 +212,15 @@
+@@ -184,7 +201,7 @@
+ 			"setenv fdtfile omap4-panda-es.dtb; fi;" \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
+ 
+ #define CONFIG_BOOTCOMMAND \
+ 	"run findfdt; " \
+@@ -196,10 +213,15 @@
  			"if run loadbootenv; then " \
  				"run importbootenv; " \
  			"fi;" \
@@ -125,14 +95,14 @@ index 2fa4382..578c044 100644
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
  			"fi;" \
-+			"echo Running default loaduimage ...;" \
-+			"if run loaduimage; then " \
++			"echo Running default loadzimage ...;" \
++			"if run loadzimage; then " \
 +				"run mmc_classic_boot; " \
 +			"fi; " \
  		"fi;" \
  		"if run loadimage; then " \
  			"run loadfdt;" \
-@@ -219,7 +240,7 @@
+@@ -219,7 +241,7 @@
  /* Print Buffer Size */
  #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
  					sizeof(CONFIG_SYS_PROMPT) + 16)
@@ -141,7 +111,7 @@ index 2fa4382..578c044 100644
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		(CONFIG_SYS_CBSIZE)
  
-@@ -255,7 +276,8 @@
+@@ -255,7 +277,8 @@
  #define CONFIG_SYS_CACHELINE_SIZE	32
  
  /* Defines for SDRAM init */
@@ -151,7 +121,7 @@ index 2fa4382..578c044 100644
  
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
-@@ -303,4 +325,8 @@
+@@ -303,4 +326,8 @@
  
  #define CONFIG_SYS_THUMB_BUILD
  
