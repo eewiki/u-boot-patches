@@ -3,56 +3,13 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:16:23 -0500
 Subject: [PATCH] mx53loco: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev} ...;" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"echo Checking if uenvcmd is set ...;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"echo Running default loadzimage ...;" \
-		"if run loadzimage; then " \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx53loco.h |   61 ++++++++++++++++++++++++++++++++------------
- 1 file changed, 44 insertions(+), 17 deletions(-)
+ include/configs/mx53loco.h |   65 ++++++++++++++++++++++++++++++++------------
+ 1 file changed, 48 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/mx53loco.h b/include/configs/mx53loco.h
-index cc31e9b..2204a3d 100644
+index cc31e9b..0e3f422 100644
 --- a/include/configs/mx53loco.h
 +++ b/include/configs/mx53loco.h
 @@ -56,6 +56,12 @@
@@ -68,7 +25,7 @@ index cc31e9b..2204a3d 100644
  #define CONFIG_DOS_PARTITION
  
  /* Eth Configs */
-@@ -117,22 +123,37 @@
+@@ -117,27 +123,46 @@
  #define CONFIG_SYS_TEXT_BASE    0x77800000
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -76,8 +33,8 @@ index cc31e9b..2204a3d 100644
 +	"fdt_high=0xffffffff\0" \
  	"script=boot.scr\0" \
  	"uimage=uImage\0" \
--	"fdt_file=imx53-qsb.dtb\0" \
-+	"fdt_file=/dtbs/imx53-qsb.dtb\0" \
++	"fdt_dir=/dtbs/\0" \
+ 	"fdt_file=imx53-qsb.dtb\0" \
  	"fdt_addr=0x71000000\0" \
 -	"boot_fdt=try\0" \
 +	"boot_fdt=yes\0" \
@@ -109,11 +66,20 @@ index cc31e9b..2204a3d 100644
 +		"env import -t ${loadaddr} ${filesize}\0" \
 +	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
 +	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
-+	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_dir}${fdt_file}\0" \
++	"mmc_classic_boot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdt_addr};\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-@@ -175,16 +196,22 @@
+ 			"if run loadfdt; then " \
+-				"bootm ${loadaddr} - ${fdt_addr}; " \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
+ 			"else " \
+ 				"if test ${boot_fdt} = try; then " \
+ 					"bootm; " \
+@@ -175,16 +200,22 @@
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
