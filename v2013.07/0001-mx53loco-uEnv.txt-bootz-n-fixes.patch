@@ -69,7 +69,7 @@ index cc31e9b..0e3f422 100644
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_dir}${fdt_file}\0" \
 +	"mmc_classic_boot=echo Booting from mmc ...; " \
 +		"run mmcargs; " \
-+		"bootz ${loadaddr} - ${fdt_addr};\0" \
++		"bootz ${loadaddr};\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
