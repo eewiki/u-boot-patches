@@ -3,54 +3,11 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:12:53 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/cpu/armv7/am33xx/ddr.c |   10 +++++++
- include/configs/am335x_evm.h    |   60 ++++++++++++++++++++++++++-------------
- 2 files changed, 50 insertions(+), 20 deletions(-)
+ include/configs/am335x_evm.h    |   62 ++++++++++++++++++++++++++-------------
+ 2 files changed, 52 insertions(+), 20 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
 index d1e2fd3..3a93db1 100644
@@ -81,7 +38,7 @@ index d1e2fd3..3a93db1 100644
  
  /**
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 9c3c2cd..b7c30b5 100644
+index c5a6d4b..c1d2408 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -36,6 +36,7 @@
@@ -148,7 +105,7 @@ index 9c3c2cd..b7c30b5 100644
  	"nandboot=echo Booting from nand ...; " \
  		"run nandargs; " \
  		"nand read ${loadaddr} ${nandsrcaddr} ${nandimgsize}; " \
-@@ -151,23 +156,38 @@
+@@ -151,23 +156,40 @@
  #endif
  
  #define CONFIG_BOOTCOMMAND \
@@ -165,6 +122,7 @@ index 9c3c2cd..b7c30b5 100644
 +			"run importbootenv; " \
 +		"fi; " \
 +		"gpio set 55; " \
++		"echo Checking if uenvcmd is set ...;" \
 +		"if test -n $uenvcmd; then " \
 +			"gpio set 56; " \
 +			"echo Running uenvcmd ...; " \
@@ -183,6 +141,7 @@ index 9c3c2cd..b7c30b5 100644
 +			"run importbootenv; " \
 +		"fi; " \
 +		"gpio set 55; " \
++		"echo Checking if uenvcmd is set ...;" \
  		"if test -n $uenvcmd; then " \
 -			"echo Running uenvcmd ...;" \
 +			"gpio set 56; " \
