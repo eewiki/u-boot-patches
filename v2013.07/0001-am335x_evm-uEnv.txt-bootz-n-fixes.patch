@@ -1,0 +1,205 @@
+From 5c9cbc5c8b21e5f1d47788755c0a554439b03e03 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 15 Mar 2013 10:12:53 -0500
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Defaults:
+#define CONFIG_BOOTDELAY	1
+
+#define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
+
+/* bootz: zImage/initrd.img support */
+#define CONFIG_CMD_BOOTZ
+#define CONFIG_SUPPORT_RAW_INITRD
+
+fatload -> load
+bootm -> bootz
+
+	"mmcargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"root=${mmcroot} " \
+		"rootfstype=${mmcrootfstype} " \
+		"video=${video}\0" \
+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
+		"env import -t ${loadaddr} ${filesize}\0" \
+
+
+#define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"echo SD/MMC found on device ${mmcdev};" \
+		"if run loadbootenv; then " \
+			"run importbootenv;" \
+		"fi;" \
+		"if test -n $uenvcmd; then " \
+			"echo Running uenvcmd ...;" \
+			"run uenvcmd;" \
+		"fi;" \
+		"if run loadzimage; then " \
+			"run loadfdt;" \
+			"run mmcboot;" \
+		"fi;" \
+	"fi;"
+#endif
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/cpu/armv7/am33xx/ddr.c |   10 +++++++
+ include/configs/am335x_evm.h    |   60 ++++++++++++++++++++++++++-------------
+ 2 files changed, 50 insertions(+), 20 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
+index d1e2fd3..3a93db1 100644
+--- a/arch/arm/cpu/armv7/am33xx/ddr.c
++++ b/arch/arm/cpu/armv7/am33xx/ddr.c
+@@ -21,6 +21,12 @@ http://www.ti.com/
+ #include <asm/io.h>
+ #include <asm/emif.h>
+ 
++/* This value might need some tweaking, but it effectively allows the LCDC */
++/* and the ARM to play fairer in memory, so the LCDC does not get starved causing */
++/* the screen to roll */
++/* See Page 439 in spruh73g (AM33xx TRM) for details */
++#define AM33XX_INT_CONFIG_COUNT 0x00303030
++
+ /**
+  * Base address for EMIF instances
+  */
+@@ -79,6 +85,10 @@ void set_sdram_timings(const struct emif_regs *regs, int nr)
+ 	writel(regs->sdram_tim2, &emif_reg[nr]->emif_sdram_tim_2_shdw);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3_shdw);
++
++	/* Configure INT_CONFIG value so that LCDC does not get stalled */
++	/* for a long time if ARM is accessing memory */
++	writel(AM33XX_INT_CONFIG_COUNT, &emif_reg[nr]->emif_l3_config);
+ }
+ 
+ /**
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index 9c3c2cd..b7c30b5 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -36,6 +36,7 @@
+ 
+ #define CONFIG_OF_LIBFDT
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ #define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
+ #define CONFIG_SETUP_MEMORY_TAGS
+ #define CONFIG_INITRD_TAG
+@@ -44,7 +45,7 @@
+ 
+ /* commands to include */
+ #include <config_cmd_default.h>
+-
++#define CONFIG_CMD_GPIO
+ #define CONFIG_CMD_ASKENV
+ #define CONFIG_VERSION_VARIABLE
+ 
+@@ -60,7 +61,7 @@
+ 	"rdaddr=0x81000000\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=uImage\0" \
+-	"fdtfile=undefined\0" \
++	"fdtfile=am335x-boneblack.dtb\0" \
+ 	"console=ttyO0,115200n8\0" \
+ 	"optargs=\0" \
+ 	"mtdids=" MTDIDS_DEFAULT "\0" \
+@@ -69,8 +70,9 @@
+ 	"dfu_alt_info_emmc=rawemmc mmc 0 3751936\0" \
+ 	"dfu_alt_info_nand=" DFU_ALT_INFO_NAND "\0" \
+ 	"mmcdev=0\0" \
++	"mmcpart=1\0" \
+ 	"mmcroot=/dev/mmcblk0p2 ro\0" \
+-	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"bootpart=0:2\0" \
+ 	"nandroot=ubi0:rootfs rw ubi.mtd=7,2048\0" \
+ 	"nandrootfstype=ubifs rootwait=1\0" \
+@@ -105,7 +107,7 @@
+ 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+ 		"ip=dhcp\0" \
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t $loadaddr $filesize\0" \
+ 	"ramargs=setenv bootargs console=${console} " \
+@@ -113,11 +115,14 @@
+ 		"root=${ramroot} " \
+ 		"rootfstype=${ramrootfstype}\0" \
+ 	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+-	"loaduimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loaduimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} /dtbs/${fdtfile}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+-		"bootm ${loadaddr} - ${fdtaddr}\0" \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"mmc_classic_boot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr}\0" \
+ 	"nandboot=echo Booting from nand ...; " \
+ 		"run nandargs; " \
+ 		"nand read ${loadaddr} ${nandsrcaddr} ${nandimgsize}; " \
+@@ -151,23 +156,38 @@
+ #endif
+ 
+ #define CONFIG_BOOTCOMMAND \
++	"gpio set 53; " \
++	"i2c mw 0x24 1 0x3e; " \
+ 	"run findfdt; " \
+-	"mmc dev ${mmcdev}; if mmc rescan; then " \
+-		"echo SD/MMC found on device ${mmcdev};" \
++	"mmc dev 0; if mmc rescan ; then " \
++		"gpio set 54; " \
++		"setenv mmcdev 0; " \
++		"echo SD/MMC found on device ${mmcdev}; " \
++		"if run loadbootenv; then " \
++			"run importbootenv; " \
++		"fi; " \
++		"gpio set 55; " \
++		"if test -n $uenvcmd; then " \
++			"gpio set 56; " \
++			"echo Running uenvcmd ...; " \
++			"run uenvcmd;" \
++		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo trying eMMC (BeagleBone Black) ...; echo;" \
++	"fi;" \
++	"mmc dev 1; if mmc rescan ; then " \
++		"gpio set 54; " \
++		"setenv mmcdev 1; " \
++		"echo SD/MMC found on device ${mmcdev}; " \
+ 		"if run loadbootenv; then " \
+-			"echo Loaded environment from ${bootenv};" \
+-			"run importbootenv;" \
+-		"fi;" \
++			"run importbootenv; " \
++		"fi; " \
++		"gpio set 55; " \
+ 		"if test -n $uenvcmd; then " \
+-			"echo Running uenvcmd ...;" \
++			"gpio set 56; " \
++			"echo Running uenvcmd ...; " \
+ 			"run uenvcmd;" \
+-		"fi;" \
+-		"if run loaduimage; then " \
+-			"run loadfdt;" \
+-			"run mmcboot;" \
+-		"fi;" \
+-	"else " \
+-		"run nandboot;" \
++		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo halting ...; echo;" \
+ 	"fi;" \
+ 
+ /* Clock Defines */
+-- 
+1.7.10.4
+
