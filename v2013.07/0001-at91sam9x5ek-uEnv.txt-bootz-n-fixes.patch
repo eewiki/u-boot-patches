@@ -3,59 +3,16 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:15:16 -0500
 Subject: [PATCH] at91sam9x5ek: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/at91sam9x5ek.h |   65 ++++++++++++++++++++++++++++++++--------
- 1 file changed, 52 insertions(+), 13 deletions(-)
+ include/configs/at91sam9x5ek.h |   67 ++++++++++++++++++++++++++++++++--------
+ 1 file changed, 54 insertions(+), 13 deletions(-)
 
 diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
-index ee6e3fc..6a0604a 100644
+index 5dd2295..7f8980c 100644
 --- a/include/configs/at91sam9x5ek.h
 +++ b/include/configs/at91sam9x5ek.h
-@@ -67,7 +67,7 @@
+@@ -74,7 +74,7 @@
  #define CONFIG_ATMEL_LCD_RGB565
  #define CONFIG_SYS_CONSOLE_IS_IN_ENV
  
@@ -64,7 +21,7 @@ index ee6e3fc..6a0604a 100644
  
  /*
   * BOOTP options
-@@ -153,6 +153,14 @@
+@@ -160,6 +160,14 @@
  #define CONFIG_MMC
  #define CONFIG_GENERIC_MMC
  #define CONFIG_GENERIC_ATMEL_MCI
@@ -79,7 +36,7 @@ index ee6e3fc..6a0604a 100644
  #endif
  
  /* FAT */
-@@ -226,18 +234,49 @@
+@@ -233,18 +241,51 @@
  #endif
  
  #ifdef CONFIG_SYS_USE_MMC
@@ -129,10 +86,12 @@ index ee6e3fc..6a0604a 100644
 +		"if run loadbootenv; then " \
 +			"run importbootenv;" \
 +		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
 +		"if test -n $uenvcmd; then " \
 +			"echo Running uenvcmd ...;" \
 +			"run uenvcmd;" \
 +		"fi;" \
++		"echo Running default loadzimage ...;" \
 +		"if run loadzimage; then " \
 +			"run loadfdt;" \
 +			"run mmcboot;" \
