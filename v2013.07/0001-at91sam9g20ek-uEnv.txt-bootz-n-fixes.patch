@@ -3,56 +3,13 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 5 Apr 2013 13:10:36 -0500
 Subject: [PATCH] at91sam9g20ek: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/at91sam9260ek.h |   69 +++++++++++++++++++++++++++++++++------
- 1 file changed, 59 insertions(+), 10 deletions(-)
+ include/configs/at91sam9260ek.h |   71 +++++++++++++++++++++++++++++++++------
+ 1 file changed, 61 insertions(+), 10 deletions(-)
 
 diff --git a/include/configs/at91sam9260ek.h b/include/configs/at91sam9260ek.h
-index 4328944..da0ff59 100644
+index 4328944..dfd3e2f 100644
 --- a/include/configs/at91sam9260ek.h
 +++ b/include/configs/at91sam9260ek.h
 @@ -81,7 +81,7 @@
@@ -85,7 +42,7 @@ index 4328944..da0ff59 100644
  /* Ethernet */
  #define CONFIG_MACB			1
  #define CONFIG_RMII			1
-@@ -263,15 +277,49 @@
+@@ -263,15 +277,51 @@
  #define CONFIG_ENV_OFFSET		0x2000
  #define CONFIG_ENV_SIZE			0x1000
  #define CONFIG_SYS_MMC_ENV_DEV		0
@@ -132,10 +89,12 @@ index 4328944..da0ff59 100644
 +		"if run loadbootenv; then " \
 +			"run importbootenv;" \
 +		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
 +		"if test -n $uenvcmd; then " \
 +			"echo Running uenvcmd ...;" \
 +			"run uenvcmd;" \
 +		"fi;" \
++		"echo Running default loadzimage ...;" \
 +		"if run loadzimage; then " \
 +			"run loadfdt;" \
 +			"run mmcboot;" \
@@ -144,7 +103,7 @@ index 4328944..da0ff59 100644
  #endif
  
  #define CONFIG_SYS_PROMPT		"U-Boot> "
-@@ -281,6 +329,7 @@
+@@ -281,6 +331,7 @@
  #define CONFIG_SYS_LONGHELP		1
  #define CONFIG_CMDLINE_EDITING	1
  #define CONFIG_AUTO_COMPLETE
