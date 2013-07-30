@@ -3,56 +3,13 @@ From: Robert Nelson <robertcnelson@gmail.com>
 Date: Fri, 15 Mar 2013 10:52:21 -0500
 Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
 
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
-
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx23_olinuxino.h |   57 ++++++++++++++++++++++++++++----------
- 1 file changed, 42 insertions(+), 15 deletions(-)
+ include/configs/mx23_olinuxino.h |   59 ++++++++++++++++++++++++++++----------
+ 1 file changed, 44 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
-index 38ad7f4..d12a8b8 100644
+index 38ad7f4..e6260b8 100644
 --- a/include/configs/mx23_olinuxino.h
 +++ b/include/configs/mx23_olinuxino.h
 @@ -64,6 +64,15 @@
@@ -121,7 +78,7 @@ index 38ad7f4..d12a8b8 100644
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
  				"bootm ${loadaddr} - ${fdt_addr}; " \
-@@ -254,15 +276,20 @@
+@@ -254,15 +276,22 @@
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -141,10 +98,12 @@ index 38ad7f4..d12a8b8 100644
 +		"if run loadbootenv; then " \
 +			"run importbootenv;" \
 +		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
 +		"if test -n $uenvcmd; then " \
 +			"echo Running uenvcmd ...;" \
 +			"run uenvcmd;" \
 +		"fi;" \
++		"echo Running default loadzimage ...;" \
 +		"if run loadzimage; then " \
 +			"run loadfdt;" \
 +			"run mmcboot;" \
