@@ -1,6 +1,6 @@
-From 70ff943fad6491fb81b12a97761d8be7dc5e6d02 Mon Sep 17 00:00:00 2001
+From c59b2098317a34c837fcadb8ceb25b0d513caace Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 15 Mar 2013 10:14:10 -0500
+Date: Thu, 8 Aug 2013 11:01:11 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,7 +10,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  2 files changed, 81 insertions(+), 23 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
-index c686f40..7e028bc 100644
+index c48dece..35a5508 100644
 --- a/board/ti/beagle/beagle.c
 +++ b/board/ti/beagle/beagle.c
 @@ -70,6 +70,7 @@
@@ -21,7 +21,7 @@ index c686f40..7e028bc 100644
  #define BCT_BRETTL3			0x01000F00
  #define BCT_BRETTL4			0x02000F00
  #define LSR_COM6L_ADPT			0x01001300
-@@ -215,25 +216,25 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
+@@ -214,25 +215,25 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
   *		bus 1 for the availability of an AT24C01B serial EEPROM.
   *		returns the device_vendor field from the EEPROM
   */
@@ -51,7 +51,7 @@ index c686f40..7e028bc 100644
  			 sizeof(expansion_config));
  	}
  
-@@ -343,15 +344,18 @@ int misc_init_r(void)
+@@ -340,15 +341,18 @@ int misc_init_r(void)
  	case REVISION_AXBX:
  		printf("Beagle Rev Ax/Bx\n");
  		setenv("beaglerev", "AxBx");
@@ -70,7 +70,7 @@ index c686f40..7e028bc 100644
  		MUX_BEAGLE_C();
  		/* Set VAUX2 to 1.8V for EHCI PHY */
  		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
-@@ -399,7 +403,7 @@ int misc_init_r(void)
+@@ -386,7 +390,7 @@ int misc_init_r(void)
  					TWL4030_PM_RECEIVER_DEV_GRP_P1);
  	}
  
@@ -79,7 +79,7 @@ index c686f40..7e028bc 100644
  	case TINCANTOOLS_ZIPPY:
  		printf("Recognized Tincantools Zippy board (rev %d %s)\n",
  			expansion_config.revision,
-@@ -482,6 +486,30 @@ int misc_init_r(void)
+@@ -469,6 +473,30 @@ int misc_init_r(void)
  	if (expansion_config.content == 1)
  		setenv(expansion_config.env_var, expansion_config.env_setting);
  
@@ -109,7 +109,7 @@ index c686f40..7e028bc 100644
 +
  	twl4030_power_init();
  	switch (get_board_revision()) {
- 	case REVISION_XM_A:
+ 	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
 index 48ce4c0..2d7ceed 100644
 --- a/include/configs/omap3_beagle.h

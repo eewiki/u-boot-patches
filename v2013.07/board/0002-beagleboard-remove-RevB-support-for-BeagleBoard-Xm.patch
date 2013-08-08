@@ -1,0 +1,109 @@
+From 4802b8a26110679d08c9e770312dad12056f6f5f Mon Sep 17 00:00:00 2001
+From: Nishanth Menon <nm@ti.com>
+Date: Mon, 15 Jul 2013 12:11:30 -0500
+Subject: [PATCH 2/2] beagleboard: remove RevB support for BeagleBoard Xm
+
+beagleboard: remove RevB support for BeagleBoard Xm
+
+As reported in http://marc.info/?l=u-boot&m=137358037827735&w=2
+
+There is no need for the "xMB" variant, as the gpio pins used for
+identification where never changed from the xMA when the newer silcon
+was used for the xMB, So rename XM A revision as AB revision
+and report accordingly
+
+Reported-by: Robert Nelson <robertcnelson@gmail.com>
+Signed-off-by: Nishanth Menon <nm@ti.com>
+---
+ board/ti/beagle/beagle.c |   28 +++++++---------------------
+ board/ti/beagle/beagle.h |    3 +--
+ 2 files changed, 8 insertions(+), 23 deletions(-)
+
+diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
+index 7e028bc..35a5508 100644
+--- a/board/ti/beagle/beagle.c
++++ b/board/ti/beagle/beagle.c
+@@ -183,8 +183,7 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
+ 			timings->rfr_ctrl = SDP_3430_SDRC_RFR_CTRL_200MHz;
+ 			break;
+ 		}
+-	case REVISION_XM_A:
+-	case REVISION_XM_B:
++	case REVISION_XM_AB:
+ 	case REVISION_XM_C:
+ 		if (pop_mfr == 0) {
+ 			/* 256MB DDR */
+@@ -257,8 +256,7 @@ static void beagle_display_init(void)
+ 	case REVISION_C4:
+ 		omap3_dss_panel_config(&dvid_cfg);
+ 		break;
+-	case REVISION_XM_A:
+-	case REVISION_XM_B:
++	case REVISION_XM_AB:
+ 	case REVISION_XM_C:
+ 	default:
+ 		omap3_dss_panel_config(&dvid_cfg_xm);
+@@ -277,12 +275,11 @@ static void beagle_dvi_pup(void)
+ 	case REVISION_AXBX:
+ 	case REVISION_CX:
+ 	case REVISION_C4:
+-	case REVISION_XM_A:
+ 		gpio_request(170, "");
+ 		gpio_direction_output(170, 0);
+ 		gpio_set_value(170, 1);
+ 		break;
+-	case REVISION_XM_B:
++	case REVISION_XM_AB:
+ 	case REVISION_XM_C:
+ 	default:
+ 		#define GPIODATADIR1 (TWL4030_BASEADD_GPIO+3)
+@@ -363,19 +360,9 @@ int misc_init_r(void)
+ 					TWL4030_PM_RECEIVER_VAUX2_DEV_GRP,
+ 					TWL4030_PM_RECEIVER_DEV_GRP_P1);
+ 		break;
+-	case REVISION_XM_A:
+-		printf("Beagle xM Rev A\n");
+-		setenv("beaglerev", "xMA");
+-		MUX_BEAGLE_XM();
+-		/* Set VAUX2 to 1.8V for EHCI PHY */
+-		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+-					TWL4030_PM_RECEIVER_VAUX2_VSEL_18,
+-					TWL4030_PM_RECEIVER_VAUX2_DEV_GRP,
+-					TWL4030_PM_RECEIVER_DEV_GRP_P1);
+-		break;
+-	case REVISION_XM_B:
+-		printf("Beagle xM Rev B\n");
+-		setenv("beaglerev", "xMB");
++	case REVISION_XM_AB:
++		printf("Beagle xM Rev A/B\n");
++		setenv("beaglerev", "xMAB");
+ 		MUX_BEAGLE_XM();
+ 		/* Set VAUX2 to 1.8V for EHCI PHY */
+ 		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+@@ -512,8 +499,7 @@ int misc_init_r(void)
+ 
+ 	twl4030_power_init();
+ 	switch (get_board_revision()) {
+-	case REVISION_XM_A:
+-	case REVISION_XM_B:
++	case REVISION_XM_AB:
+ 		twl4030_led_init(TWL4030_LED_LEDEN_LEDBON);
+ 		break;
+ 	default:
+diff --git a/board/ti/beagle/beagle.h b/board/ti/beagle/beagle.h
+index 6d71bbc..27f8b12 100644
+--- a/board/ti/beagle/beagle.h
++++ b/board/ti/beagle/beagle.h
+@@ -39,8 +39,7 @@ const omap3_sysinfo sysinfo = {
+ #define REVISION_AXBX	0x7
+ #define REVISION_CX	0x6
+ #define REVISION_C4	0x5
+-#define REVISION_XM_A	0x0
+-#define REVISION_XM_B	0x1
++#define REVISION_XM_AB	0x0
+ #define REVISION_XM_C	0x2
+ 
+ /*
+-- 
+1.7.10.4
+
