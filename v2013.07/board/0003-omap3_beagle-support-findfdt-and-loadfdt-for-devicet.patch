@@ -1,0 +1,69 @@
+From c04df211012e1d635ac586f31216f1d9ac90a4ba Mon Sep 17 00:00:00 2001
+From: Nishanth Menon <nm@ti.com>
+Date: Mon, 15 Jul 2013 12:11:32 -0500
+Subject: [PATCH 3/3] omap3_beagle: support findfdt and loadfdt for devicetree
+ support
+
+omap3_beagle: support findfdt and loadfdt for devicetree support
+
+For folks not using concatenated device tree with uImage, having
+an handy function to find and load device tree is very handy.
+
+So introduce findfdt and loadfdt and run findfdt by default to make
+it easier on user scripts.
+
+Signed-off-by: Nishanth Menon <nm@ti.com>
+---
+ include/configs/omap3_beagle.h |   15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
+index 48ce4c0..a1a5f47 100644
+--- a/include/configs/omap3_beagle.h
++++ b/include/configs/omap3_beagle.h
+@@ -217,6 +217,8 @@
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	"loadaddr=0x80200000\0" \
+ 	"rdaddr=0x81000000\0" \
++	"fdt_high=0xffffffff\0" \
++	"fdtaddr=0x80f80000\0" \
+ 	"usbtty=cdc_acm\0" \
+ 	"bootfile=uImage.beagle\0" \
+ 	"console=ttyO2,115200n8\0" \
+@@ -254,6 +256,17 @@
+ 		"omapdss.def_disp=${defaultdisplay} " \
+ 		"root=${nandroot} " \
+ 		"rootfstype=${nandrootfstype}\0" \
++	"findfdt=" \
++		"if test $beaglerev = AxBx; then " \
++			"setenv fdtfile omap3-beagle.dtb; fi; " \
++		"if test $beaglerev = Cx; then " \
++			"setenv fdtfile omap3-beagle.dtb; fi; " \
++		"if test $beaglerev = xMAB; then " \
++			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
++		"if test $beaglerev = xMC; then " \
++			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
++		"if test $fdtfile = undefined; then " \
++			"echo WARNING: Could not determine device tree to use; fi; \0" \
+ 	"bootenv=uEnv.txt\0" \
+ 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+@@ -270,6 +283,7 @@
+ 	"loadramdisk=fatload mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+ 	"loaduimagefat=fatload mmc ${mmcdev} ${loadaddr} uImage\0" \
+ 	"loaduimage=ext2load mmc ${mmcdev}:2 ${loadaddr} /boot/uImage\0" \
++	"loadfdt=fatload mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+ 		"bootm ${loadaddr}\0" \
+@@ -286,6 +300,7 @@
+ 	"userbutton_nonxm=gpio input 7;\0"
+ /* "run userbutton" will return 1 (false) if pressed and 0 (true) if not */
+ #define CONFIG_BOOTCOMMAND \
++	"run findfdt; " \
+ 	"mmc dev ${mmcdev}; if mmc rescan; then " \
+ 		"if run userbutton; then " \
+ 			"setenv bootenv uEnv.txt;" \
+-- 
+1.7.10.4
+
