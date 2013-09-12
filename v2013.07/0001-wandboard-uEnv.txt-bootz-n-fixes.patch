@@ -1,58 +1,15 @@
-From 1e8149d0a997bacb4778087a63811ad6f5daef6d Mon Sep 17 00:00:00 2001
+From b5e95ced39892a0165fc7e200e6b7e06281cc943 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 19 Mar 2013 11:15:46 -0500
+Date: Thu, 12 Sep 2013 11:08:10 -0500
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
-
-Defaults:
-#define CONFIG_BOOTDELAY	1
-
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FS_GENERIC
-
-/* bootz: zImage/initrd.img support */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_SUPPORT_RAW_INITRD
-
-fatload -> load
-bootm -> bootz
-
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype} " \
-		"video=${video}\0" \
-	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-		"env import -t ${loadaddr} ${filesize}\0" \
-
-
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"echo SD/MMC found on device ${mmcdev};" \
-		"if run loadbootenv; then " \
-			"run importbootenv;" \
-		"fi;" \
-		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
-		"if run loadzimage; then " \
-			"run loadfdt;" \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;"
-#endif
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/wandboard.h |   63 ++++++++++++++++++++++++++++---------------
- 1 file changed, 41 insertions(+), 22 deletions(-)
+ include/configs/wandboard.h | 65 +++++++++++++++++++++++++++++----------------
+ 1 file changed, 42 insertions(+), 23 deletions(-)
 
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index ee6bf21..b875e5c 100644
+index ee6bf21..3be97d9 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -51,7 +51,7 @@
@@ -73,6 +30,15 @@ index ee6bf21..b875e5c 100644
  #define CONFIG_DOS_PARTITION
  
  /* Ethernet Configuration */
+@@ -106,7 +108,7 @@
+ #elif defined(CONFIG_MX6Q)
+ #define CONFIG_DEFAULT_FDT_FILE		"imx6q-wandboard.dtb"
+ #elif defined(CONFIG_MX6S)
+-#define CONFIG_DEFAULT_FDT_FILE		"imx6s-wandboard.dtb"
++#define CONFIG_DEFAULT_FDT_FILE		"imx6dl-wandboard.dtb"
+ #endif
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
 @@ -119,9 +121,12 @@
  	"fdt_addr=0x11000000\0" \
  	"boot_fdt=try\0" \
@@ -190,5 +156,5 @@ index ee6bf21..b875e5c 100644
  #ifndef CONFIG_SYS_DCACHE_OFF
  #define CONFIG_CMD_CACHE
 -- 
-1.7.10.4
+1.8.4.rc3
 
