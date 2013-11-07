@@ -1,0 +1,62 @@
+From 5e6f75c3ac2c8413c56e06f461710ee31a510493 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Thu, 17 Oct 2013 11:52:21 -0500
+Subject: [PATCH] omap5_common: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/omap5_common.h | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/include/configs/omap5_common.h b/include/configs/omap5_common.h
+index 827eaab..52cd31b 100644
+--- a/include/configs/omap5_common.h
++++ b/include/configs/omap5_common.h
+@@ -49,6 +49,8 @@
+ #define CONFIG_ENV_SIZE			(128 << 10)
+ 
+ #include <configs/ti_armv7_common.h>
++#define CONFIG_SUPPORT_RAW_INITRD
++#define CONFIG_BOOTDELAY	1
+ 
+ /*
+  * Hardware drivers
+@@ -83,20 +85,21 @@
+ 	"partitions=" PARTS_DEFAULT "\0" \
+ 	"optargs=\0" \
+ 	"mmcdev=0\0" \
+-	"mmcroot=/dev/mmcblk1p2 rw\0" \
+-	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro fixrtc\0" \
++	"mmcrootfstype=ext4\0" \
+ 	"mmcargs=setenv bootargs console=${console} " \
+ 		"${optargs} " \
+ 		"vram=${vram} " \
+ 		"root=${mmcroot} " \
+ 		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
++	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootfile}\0" \
+ 	"mmcboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+@@ -122,7 +125,7 @@
+ 			"setenv fdtfile dra7-evm.dtb; fi;" \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} /dtbs/${fdtfile};\0" \
+ 
+ #define CONFIG_BOOTCOMMAND \
+ 	"run findfdt; " \
+-- 
+1.8.4.rc3
+
