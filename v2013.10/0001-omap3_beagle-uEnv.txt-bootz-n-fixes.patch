@@ -1,13 +1,13 @@
-From fb96855a5ebbaa73e79ef3f86908641d8cea8c4e Mon Sep 17 00:00:00 2001
+From 44f6d4d16c372305a8a18db109445a48744b385b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 8 Aug 2013 11:01:11 -0500
+Date: Thu, 7 Nov 2013 14:11:22 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |   38 ++++++++++++++++++++++++++----
- include/configs/omap3_beagle.h |   51 ++++++++++++++++++++++++++--------------
- 2 files changed, 67 insertions(+), 22 deletions(-)
+ board/ti/beagle/beagle.c       | 38 ++++++++++++++++++++++++++----
+ include/configs/omap3_beagle.h | 52 ++++++++++++++++++++++++++++--------------
+ 2 files changed, 68 insertions(+), 22 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 62e9bea..a550a7f 100644
@@ -111,7 +111,7 @@ index 62e9bea..a550a7f 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c1245e7..646ec88 100644
+index 9fcd50b..2512d26 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -134,8 +134,10 @@
@@ -201,7 +201,7 @@ index c1245e7..646ec88 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -261,22 +272,22 @@
+@@ -261,22 +272,23 @@
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${ramroot} " \
  		"rootfstype=${ramrootfstype}\0" \
@@ -210,6 +210,7 @@ index c1245e7..646ec88 100644
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
 +	"loadramdisk=load mmc ${mmcdev}:${mmcpart} ${rdaddr} ramdisk.gz\0" \
 +	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} /dtbs/${fdtfile}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
@@ -231,7 +232,7 @@ index c1245e7..646ec88 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
-@@ -295,10 +306,16 @@
+@@ -295,10 +307,16 @@
  			"echo Loaded environment from ${bootenv};" \
  			"run importbootenv;" \
  		"fi;" \
@@ -249,5 +250,5 @@ index c1245e7..646ec88 100644
  			"run mmcboot;" \
  		"fi;" \
 -- 
-1.7.10.4
+1.8.4.rc3
 
