@@ -1,0 +1,178 @@
+From 0e221090058ffc996900941d4c0a904505b42ac4 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Thu, 17 Oct 2013 11:40:03 -0500
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/cpu/armv7/am33xx/ddr.c   | 10 +++++
+ include/configs/am335x_evm.h      | 84 +++++++++++++++++++++------------------
+ include/configs/ti_armv7_common.h |  1 +
+ 3 files changed, 57 insertions(+), 38 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
+index fa697c7..63e0760 100644
+--- a/arch/arm/cpu/armv7/am33xx/ddr.c
++++ b/arch/arm/cpu/armv7/am33xx/ddr.c
+@@ -12,6 +12,12 @@
+ #include <asm/io.h>
+ #include <asm/emif.h>
+ 
++/* This value might need some tweaking, but it effectively allows the LCDC */
++/* and the ARM to play fairer in memory, so the LCDC does not get starved causing */
++/* the screen to roll */
++/* See Page 439 in spruh73g (AM33xx TRM) for details */
++#define AM33XX_INT_CONFIG_COUNT 0x00303030
++
+ /**
+  * Base address for EMIF instances
+  */
+@@ -70,6 +76,10 @@ void set_sdram_timings(const struct emif_regs *regs, int nr)
+ 	writel(regs->sdram_tim2, &emif_reg[nr]->emif_sdram_tim_2_shdw);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3);
+ 	writel(regs->sdram_tim3, &emif_reg[nr]->emif_sdram_tim_3_shdw);
++
++	/* Configure INT_CONFIG value so that LCDC does not get stalled */
++	/* for a long time if ARM is accessing memory */
++	writel(AM33XX_INT_CONFIG_COUNT, &emif_reg[nr]->emif_l3_config);
+ }
+ 
+ /**
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index c2ba7e3..37f0265 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -64,14 +64,15 @@
+ 	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=zImage\0" \
+-	"fdtfile=undefined\0" \
++	"fdtfile=am335x-boneblack.dtb\0" \
+ 	"console=ttyO0,115200n8\0" \
+ 	"optargs=\0" \
+ 	"dfu_alt_info_mmc=" DFU_ALT_INFO_MMC "\0" \
+ 	"dfu_alt_info_emmc=rawemmc mmc 0 3751936\0" \
+ 	"mmcdev=0\0" \
++	"mmcpart=1\0" \
+ 	"mmcroot=/dev/mmcblk0p2 ro\0" \
+-	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"rootpath=/export/rootfs\0" \
+ 	"nfsopts=nolock\0" \
+ 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
+@@ -97,7 +98,7 @@
+ 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+ 		"ip=dhcp\0" \
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t $loadaddr $filesize\0" \
+ 	"dfu_alt_info_ram=" DFU_ALT_INFO_RAM "\0" \
+@@ -107,36 +108,14 @@
+ 		"rootfstype=${ramrootfstype}\0" \
+ 	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+-	"mmcloados=run mmcargs; " \
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if run loadfdt; then " \
+-				"bootz ${loadaddr} - ${fdtaddr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootz; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootz; " \
+-		"fi;\0" \
+-	"mmcboot=mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
+-			"echo SD/MMC found on device ${mmcdev};" \
+-			"if run loadbootenv; then " \
+-				"echo Loaded environment from ${bootenv};" \
+-				"run importbootenv;" \
+-			"fi;" \
+-			"if test -n $uenvcmd; then " \
+-				"echo Running uenvcmd ...;" \
+-				"run uenvcmd;" \
+-			"fi;" \
+-			"if run loadimage; then " \
+-				"run mmcloados;" \
+-			"fi;" \
+-		"fi;\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} /dtbs/${fdtfile}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"mmc_classic_boot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr}\0" \
+ 	"spiboot=echo Booting from spi ...; " \
+ 		"run spiargs; " \
+ 		"sf probe ${spibusno}:0; " \
+@@ -167,12 +146,41 @@
+ #endif
+ 
+ #define CONFIG_BOOTCOMMAND \
++	"gpio set 53; " \
++	"i2c mw 0x24 1 0x3e; " \
+ 	"run findfdt; " \
+-	"run mmcboot;" \
+-	"setenv mmcdev 1; " \
+-	"setenv bootpart 1:2; " \
+-	"run mmcboot;" \
+-	"run nandboot;"
++	"mmc dev 0; if mmc rescan ; then " \
++		"gpio set 54; " \
++		"setenv mmcdev 0; " \
++		"echo SD/MMC found on device ${mmcdev}; " \
++		"if run loadbootenv; then " \
++			"run importbootenv; " \
++		"fi; " \
++		"gpio set 55; " \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"gpio set 56; " \
++			"echo Running uenvcmd ...; " \
++			"run uenvcmd;" \
++		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo trying eMMC (BeagleBone Black) ...; echo;" \
++	"fi;" \
++	"mmc dev 1; if mmc rescan ; then " \
++		"gpio set 54; " \
++		"setenv mmcdev 1; " \
++		"echo SD/MMC found on device ${mmcdev}; " \
++		"if run loadbootenv; then " \
++			"run importbootenv; " \
++		"fi; " \
++		"gpio set 55; " \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"gpio set 56; " \
++			"echo Running uenvcmd ...; " \
++			"run uenvcmd;" \
++		"fi; " \
++		"echo; echo uenvcmd was not defined in uEnv.txt ...; echo halting ...; echo;" \
++	"fi;" \
+ 
+ /* NS16550 Configuration */
+ #define CONFIG_SYS_NS16550_COM1		0x44e09000	/* Base EVM has UART0 */
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index e89e874..bb75fff 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -149,6 +149,7 @@
+ #define CONFIG_CMD_ASKENV
+ #define CONFIG_CMD_ECHO
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /*
+  * Common filesystems support.  When we have removable storage we
+-- 
+1.8.4.rc3
+
