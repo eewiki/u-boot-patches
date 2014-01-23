@@ -1,15 +1,15 @@
-From b103f840bb50e737214a38596df065b53b36cc59 Mon Sep 17 00:00:00 2001
+From d0bf1e44422e4102859d9420a8abf42c3600f500 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 15 Jan 2014 15:29:01 -0600
+Date: Thu, 23 Jan 2014 16:24:13 -0600
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/wandboard.h | 55 +++++++++++++++++++++++++++++++--------------
- 1 file changed, 38 insertions(+), 17 deletions(-)
+ include/configs/wandboard.h | 56 +++++++++++++++++++++++++++++++--------------
+ 1 file changed, 39 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 3488472..41a0fd7 100644
+index 3488472..13f7233 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -49,7 +49,7 @@
@@ -86,7 +86,7 @@ index 3488472..41a0fd7 100644
  		"fi;\0" \
  	"netargs=setenv bootargs console=${console},${baudrate} " \
  		"root=/dev/nfs " \
-@@ -183,16 +197,22 @@
+@@ -183,16 +197,23 @@
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -113,13 +113,14 @@ index 3488472..41a0fd7 100644
 +		"fi;" \
 +		"echo Running default loadzimage ...;" \
 +		"if run loadzimage; then " \
++			"run loadfdt;" \
 +			"run mmcboot;" \
 +		"fi;" \
 +	"fi;"
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -233,6 +253,7 @@
+@@ -233,6 +254,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
