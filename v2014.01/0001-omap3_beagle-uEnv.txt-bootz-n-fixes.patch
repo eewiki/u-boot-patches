@@ -1,13 +1,13 @@
-From 03ff3bddbcefb86e466a48833b7ae89190262b13 Mon Sep 17 00:00:00 2001
+From 2d9b5927195751ddf4ddc6816cafe5238468bf7a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 28 Jan 2014 17:06:23 -0600
+Date: Wed, 29 Jan 2014 09:50:20 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h | 36 ++++++++++++++++++++++++------------
- 2 files changed, 57 insertions(+), 17 deletions(-)
+ include/configs/omap3_beagle.h | 40 ++++++++++++++++++++++++++--------------
+ 2 files changed, 59 insertions(+), 19 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 9669a32..f3f2f80 100644
@@ -111,7 +111,7 @@ index 9669a32..f3f2f80 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c58bc91..dc11523 100644
+index c58bc91..b6df846 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -134,8 +134,10 @@
@@ -125,7 +125,7 @@ index c58bc91..dc11523 100644
  #define CONFIG_CMD_MTDPARTS	/* Enable MTD parts commands */
  #define CONFIG_MTD_DEVICE	/* needed for mtdparts commands */
  #define MTDIDS_DEFAULT			"nand0=nand"
-@@ -189,7 +191,7 @@
+@@ -189,29 +191,31 @@
  							/* devices */
  
  /* Environment information */
@@ -133,10 +133,12 @@ index c58bc91..dc11523 100644
 +#define CONFIG_BOOTDELAY		1
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
- 	"loadaddr=0x80200000\0" \
-@@ -197,21 +199,23 @@
+-	"loadaddr=0x80200000\0" \
++	"loadaddr=0x80300000\0" \
+ 	"rdaddr=0x81000000\0" \
  	"fdt_high=0xffffffff\0" \
- 	"fdtaddr=0x80f80000\0" \
+-	"fdtaddr=0x80f80000\0" \
++	"fdtaddr=0x815f0000\0" \
  	"usbtty=cdc_acm\0" \
 -	"bootfile=uImage\0" \
 +	"bootfile=zImage\0" \
