@@ -1,27 +1,18 @@
-From d283c3700529312242291dcae621ba10f3e7f7ac Mon Sep 17 00:00:00 2001
+From 030c6c307abea343c4b834a702780beb4ec3e285 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 13 Nov 2013 10:33:49 -0600
+Date: Wed, 29 Jan 2014 14:02:51 -0600
 Subject: [PATCH] omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/omap4_common.h | 32 +++++++++++++++++++++++++-------
- 1 file changed, 25 insertions(+), 7 deletions(-)
+ include/configs/omap4_common.h | 30 +++++++++++++++++++++---------
+ 1 file changed, 21 insertions(+), 9 deletions(-)
 
 diff --git a/include/configs/omap4_common.h b/include/configs/omap4_common.h
-index ea56eeb..0488209 100644
+index d099bfd..36aa799 100644
 --- a/include/configs/omap4_common.h
 +++ b/include/configs/omap4_common.h
-@@ -47,13 +47,15 @@
-  * the timings to use or use pre-determined timings (based on using the
-  * dynamic method.  Default to the static timing infomation.
-  */
--#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-+/* Pandaboard ES Rev B3 */
-+/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
- #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
- #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
- #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
+@@ -54,6 +54,7 @@
  #endif
  
  #include <configs/ti_armv7_common.h>
@@ -29,10 +20,21 @@ index ea56eeb..0488209 100644
  
  /*
   * Hardware drivers
-@@ -94,26 +96,37 @@
+@@ -87,33 +88,43 @@
+  * Environment setup
+  */
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+-	"loadaddr=0x82000000\0" \
++	"loadaddr=0x80300000\0" \
+ 	"console=ttyO2,115200n8\0" \
+ 	"fdt_high=0xffffffff\0" \
+-	"fdtaddr=0x80f80000\0" \
++	"fdtaddr=0x815f0000\0" \
  	"fdtfile=undefined\0" \
- 	"bootpart=0:2\0" \
- 	"bootdir=/boot\0" \
+-	"bootpart=0:2\0" \
+-	"bootdir=/boot\0" \
++	"bootpart=0:1\0" \
++	"bootdir=\0" \
 +	"fdtdir=/dtbs\0" \
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
@@ -53,16 +55,14 @@ index ea56eeb..0488209 100644
  		"root=${mmcroot} " \
  		"rootfstype=${mmcrootfstype}\0" \
 -	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
-+	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot.scr\0" \
++	"loadbootscript=load mmc ${bootpart} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
 -	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
--	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
-+	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
-+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} uEnv.txt\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
  		"env import -t ${loadaddr} ${filesize}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
  	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
@@ -72,16 +72,16 @@ index ea56eeb..0488209 100644
  	"findfdt="\
  		"if test $board_name = sdp4430; then " \
  			"setenv fdtfile omap4-sdp.dtb; fi; " \
-@@ -125,7 +138,7 @@
+@@ -125,7 +136,7 @@
  			"setenv fdtfile omap4-panda-es.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
-+	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
  
  #define CONFIG_BOOTCOMMAND \
  	"run findfdt; " \
-@@ -137,10 +150,15 @@
+@@ -137,6 +148,7 @@
  			"if run loadbootenv; then " \
  				"run importbootenv; " \
  			"fi;" \
@@ -89,14 +89,6 @@ index ea56eeb..0488209 100644
  			"if test -n ${uenvcmd}; then " \
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
- 			"fi;" \
-+			"echo Running default loadzimage ...;" \
-+			"if run loadzimage; then " \
-+				"run mmc_classic_boot; " \
-+			"fi; " \
- 		"fi;" \
- 		"if run loadimage; then " \
- 			"run loadfdt;" \
 -- 
-1.8.4.2
+1.8.5.3
 
