@@ -1,13 +1,13 @@
-From 2d9b5927195751ddf4ddc6816cafe5238468bf7a Mon Sep 17 00:00:00 2001
+From 10839eee0ebbc00bd95ae0d7ee5d754e58b2193f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 29 Jan 2014 09:50:20 -0600
+Date: Wed, 29 Jan 2014 16:46:08 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h | 40 ++++++++++++++++++++++++++--------------
- 2 files changed, 59 insertions(+), 19 deletions(-)
+ include/configs/omap3_beagle.h | 41 ++++++++++++++++++++++++++---------------
+ 2 files changed, 59 insertions(+), 20 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 9669a32..f3f2f80 100644
@@ -111,7 +111,7 @@ index 9669a32..f3f2f80 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c58bc91..b6df846 100644
+index c58bc91..4a52d44 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -134,8 +134,10 @@
@@ -175,7 +175,13 @@ index c58bc91..b6df846 100644
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -249,8 +254,11 @@
+@@ -244,13 +249,16 @@
+ 		"if test $beaglerev = C4; then " \
+ 			"setenv fdtfile omap3-beagle.dtb; fi; " \
+ 		"if test $beaglerev = xMAB; then " \
+-			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
++			"setenv fdtfile omap3-beagle-xm-ab.dtb; fi; " \
+ 		"if test $beaglerev = xMC; then " \
  			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -213,7 +219,7 @@ index c58bc91..b6df846 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
-@@ -296,11 +304,15 @@
+@@ -296,11 +304,14 @@
  			"echo Loaded environment from ${bootenv};" \
  			"run importbootenv;" \
  		"fi;" \
@@ -225,7 +231,6 @@ index c58bc91..b6df846 100644
 +		"echo Running default loadimage ...;" \
  		"if run loadimage; then " \
 +			"run loadfdt;" \
-+			"run fixfdt;" \
  			"run mmcboot;" \
  		"fi;" \
  	"fi;" \
