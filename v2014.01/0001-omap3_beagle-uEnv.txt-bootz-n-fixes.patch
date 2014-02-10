@@ -1,13 +1,13 @@
-From 10839eee0ebbc00bd95ae0d7ee5d754e58b2193f Mon Sep 17 00:00:00 2001
+From 76aaf72132fe8526b41bf974d1a7b6254d0de88f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 29 Jan 2014 16:46:08 -0600
+Date: Mon, 10 Feb 2014 15:01:00 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h | 41 ++++++++++++++++++++++++++---------------
- 2 files changed, 59 insertions(+), 20 deletions(-)
+ board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++-----
+ include/configs/omap3_beagle.h | 46 ++++++++++++++++++++++++++++--------------
+ 2 files changed, 64 insertions(+), 20 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 9669a32..f3f2f80 100644
@@ -111,7 +111,7 @@ index 9669a32..f3f2f80 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c58bc91..4a52d44 100644
+index c58bc91..11f2607 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -134,8 +134,10 @@
@@ -219,10 +219,15 @@ index c58bc91..4a52d44 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
-@@ -296,11 +304,14 @@
+@@ -296,11 +304,19 @@
  			"echo Loaded environment from ${bootenv};" \
  			"run importbootenv;" \
  		"fi;" \
++		"echo Checking if lcdcmd is set ...;" \
++		"if test -n $lcdcmd; then " \
++			"echo Running lcdcmd ...;" \
++			"run lcdcmd;" \
++		"fi;" \
 +		"echo Checking if uenvcmd is set ...;" \
  		"if test -n $uenvcmd; then " \
  			"echo Running uenvcmd ...;" \
