@@ -1,14 +1,14 @@
-From 0e221090058ffc996900941d4c0a904505b42ac4 Mon Sep 17 00:00:00 2001
+From d402cad64c3498f15c0a96fa5c9a746002090c5e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 17 Oct 2013 11:40:03 -0500
+Date: Tue, 25 Feb 2014 10:20:42 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/cpu/armv7/am33xx/ddr.c   | 10 +++++
- include/configs/am335x_evm.h      | 84 +++++++++++++++++++++------------------
+ arch/arm/cpu/armv7/am33xx/ddr.c   | 10 ++++
+ include/configs/am335x_evm.h      | 97 +++++++++++++++++++++++----------------
  include/configs/ti_armv7_common.h |  1 +
- 3 files changed, 57 insertions(+), 38 deletions(-)
+ 3 files changed, 68 insertions(+), 40 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
 index fa697c7..63e0760 100644
@@ -39,15 +39,16 @@ index fa697c7..63e0760 100644
  
  /**
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index c2ba7e3..37f0265 100644
+index c2ba7e3..c735579 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
-@@ -64,14 +64,15 @@
+@@ -64,14 +64,16 @@
  	"bootpart=0:2\0" \
  	"bootdir=/boot\0" \
  	"bootfile=zImage\0" \
 -	"fdtfile=undefined\0" \
 +	"fdtfile=am335x-boneblack.dtb\0" \
++	"fdtbase=am335x-boneblack\0" \
  	"console=ttyO0,115200n8\0" \
  	"optargs=\0" \
  	"dfu_alt_info_mmc=" DFU_ALT_INFO_MMC "\0" \
@@ -60,7 +61,7 @@ index c2ba7e3..37f0265 100644
  	"rootpath=/export/rootfs\0" \
  	"nfsopts=nolock\0" \
  	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
-@@ -97,7 +98,7 @@
+@@ -97,7 +99,7 @@
  		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
  		"ip=dhcp\0" \
  	"bootenv=uEnv.txt\0" \
@@ -69,7 +70,7 @@ index c2ba7e3..37f0265 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"dfu_alt_info_ram=" DFU_ALT_INFO_RAM "\0" \
-@@ -107,36 +108,14 @@
+@@ -107,36 +109,14 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -114,7 +115,19 @@ index c2ba7e3..37f0265 100644
  	"spiboot=echo Booting from spi ...; " \
  		"run spiargs; " \
  		"sf probe ${spibusno}:0; " \
-@@ -167,12 +146,41 @@
+@@ -154,9 +134,9 @@
+ 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
+ 	"findfdt="\
+ 		"if test $board_name = A335BONE; then " \
+-			"setenv fdtfile am335x-bone.dtb; fi; " \
++			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
+ 		"if test $board_name = A335BNLT; then " \
+-			"setenv fdtfile am335x-boneblack.dtb; fi; " \
++			"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; fi; " \
+ 		"if test $board_name = A33515BB; then " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
+ 		"if test $board_name = A335X_SK; then " \
+@@ -167,12 +147,49 @@
  #endif
  
  #define CONFIG_BOOTCOMMAND \
@@ -133,6 +146,10 @@ index c2ba7e3..37f0265 100644
 +		"if run loadbootenv; then " \
 +			"run importbootenv; " \
 +		"fi; " \
++		"if test -n $cape; then " \
++			"setenv fdtfile $fdtbase-$cape.dtb; " \
++			"echo using: $fdtfile...; " \
++		"fi; " \
 +		"gpio set 55; " \
 +		"echo Checking if uenvcmd is set ...;" \
 +		"if test -n $uenvcmd; then " \
@@ -148,6 +165,10 @@ index c2ba7e3..37f0265 100644
 +		"echo SD/MMC found on device ${mmcdev}; " \
 +		"if run loadbootenv; then " \
 +			"run importbootenv; " \
++		"fi; " \
++		"if test -n $cape; then " \
++			"setenv fdtfile $fdtbase-$cape.dtb; " \
++			"echo using: $fdtfile...; " \
 +		"fi; " \
 +		"gpio set 55; " \
 +		"echo Checking if uenvcmd is set ...;" \
@@ -174,5 +195,5 @@ index e89e874..bb75fff 100644
  /*
   * Common filesystems support.  When we have removable storage we
 -- 
-1.8.4.rc3
+1.8.5.3
 
