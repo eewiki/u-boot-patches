@@ -1,0 +1,406 @@
+From 2d2e0f82548276a41c01440b921fd73465e3ccb3 Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Sun, 9 Feb 2014 15:52:39 +0800
+Subject: [PATCH] ARM: atmel: add sama5d3 Xplained board support
+
+Add sama5d3 Xplained board support which use Atmel SAMA5D36 SoC.
+Now it supports boot from NAND flash and SD/MMC card.
+Features support:
+  - NAND flash
+  - SD/MMC card
+  - Two USB hosts
+  - Ethernet (one GMAC, one EMAC)
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ board/atmel/sama5d3_xplained/Makefile           |  15 ++
+ board/atmel/sama5d3_xplained/sama5d3_xplained.c | 130 +++++++++++++++
+ boards.cfg                                      |   2 +
+ include/configs/sama5d3_xplained.h              | 203 ++++++++++++++++++++++++
+ 4 files changed, 350 insertions(+)
+ create mode 100644 board/atmel/sama5d3_xplained/Makefile
+ create mode 100644 board/atmel/sama5d3_xplained/sama5d3_xplained.c
+ create mode 100644 include/configs/sama5d3_xplained.h
+
+diff --git a/board/atmel/sama5d3_xplained/Makefile b/board/atmel/sama5d3_xplained/Makefile
+new file mode 100644
+index 0000000..ec82b06
+--- /dev/null
++++ b/board/atmel/sama5d3_xplained/Makefile
+@@ -0,0 +1,15 @@
++#
++# (C) Copyright 2003-2008
++# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
++#
++# (C) Copyright 2008
++# Stelian Pop <stelian@popies.net>
++# Lead Tech Design <www.leadtechdesign.com>
++#
++# (C) Copyright 2014
++# Bo Shen <voice.shen@atmel.com>
++#
++# SPDX-License-Identifier:	GPL-2.0+
++#
++
++obj-y += sama5d3_xplained.o
+diff --git a/board/atmel/sama5d3_xplained/sama5d3_xplained.c b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+new file mode 100644
+index 0000000..39f2dc6
+--- /dev/null
++++ b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+@@ -0,0 +1,130 @@
++/*
++ * Copyright (C) 2014 Atmel Corporation
++ *		      Bo Shen <voice.shen@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <mmc.h>
++#include <asm/io.h>
++#include <asm/arch/sama5d3_smc.h>
++#include <asm/arch/at91_common.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/at91_rstc.h>
++#include <asm/arch/gpio.h>
++#include <asm/arch/clk.h>
++#include <atmel_mci.h>
++#include <net.h>
++#include <netdev.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#ifdef CONFIG_NAND_ATMEL
++void sama5d3_xplained_nand_hw_init(void)
++{
++	struct at91_smc *smc = (struct at91_smc *)ATMEL_BASE_SMC;
++
++	at91_periph_clk_enable(ATMEL_ID_SMC);
++
++	/* Configure SMC CS3 for NAND/SmartMedia */
++	writel(AT91_SMC_SETUP_NWE(2) | AT91_SMC_SETUP_NCS_WR(1) |
++	       AT91_SMC_SETUP_NRD(2) | AT91_SMC_SETUP_NCS_RD(1),
++	       &smc->cs[3].setup);
++	writel(AT91_SMC_PULSE_NWE(3) | AT91_SMC_PULSE_NCS_WR(5) |
++	       AT91_SMC_PULSE_NRD(3) | AT91_SMC_PULSE_NCS_RD(5),
++	       &smc->cs[3].pulse);
++	writel(AT91_SMC_CYCLE_NWE(8) | AT91_SMC_CYCLE_NRD(8),
++	       &smc->cs[3].cycle);
++	writel(AT91_SMC_TIMINGS_TCLR(3) | AT91_SMC_TIMINGS_TADL(10) |
++	       AT91_SMC_TIMINGS_TAR(3)  | AT91_SMC_TIMINGS_TRR(4)   |
++	       AT91_SMC_TIMINGS_TWB(5)  | AT91_SMC_TIMINGS_RBNSEL(3)|
++	       AT91_SMC_TIMINGS_NFSEL(1), &smc->cs[3].timings);
++	writel(AT91_SMC_MODE_RM_NRD | AT91_SMC_MODE_WM_NWE |
++	       AT91_SMC_MODE_EXNW_DISABLE |
++#ifdef CONFIG_SYS_NAND_DBW_16
++	       AT91_SMC_MODE_DBW_16 |
++#else /* CONFIG_SYS_NAND_DBW_8 */
++	       AT91_SMC_MODE_DBW_8 |
++#endif
++	       AT91_SMC_MODE_TDF_CYCLE(3),
++	       &smc->cs[3].mode);
++}
++#endif
++
++#ifdef CONFIG_CMD_USB
++static void sama5d3_xplained_usb_hw_init(void)
++{
++	at91_set_pio_output(AT91_PIO_PORTE, 3, 0);
++	at91_set_pio_output(AT91_PIO_PORTE, 4, 0);
++}
++#endif
++
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++static void sama5d3_xplained_mci0_hw_init(void)
++{
++	at91_mci_hw_init();
++
++	at91_set_pio_output(AT91_PIO_PORTE, 2, 0);	/* MCI0 Power */
++}
++#endif
++
++int board_early_init_f(void)
++{
++	at91_periph_clk_enable(ATMEL_ID_PIOA);
++	at91_periph_clk_enable(ATMEL_ID_PIOB);
++	at91_periph_clk_enable(ATMEL_ID_PIOC);
++	at91_periph_clk_enable(ATMEL_ID_PIOD);
++	at91_periph_clk_enable(ATMEL_ID_PIOE);
++
++	at91_seriald_hw_init();
++
++	return 0;
++}
++
++int board_init(void)
++{
++	/* adress of boot parameters */
++	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
++
++#ifdef CONFIG_NAND_ATMEL
++	sama5d3_xplained_nand_hw_init();
++#endif
++#ifdef CONFIG_CMD_USB
++	sama5d3_xplained_usb_hw_init();
++#endif
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++	sama5d3_xplained_mci0_hw_init();
++#endif
++#ifdef CONFIG_MACB
++	at91_gmac_hw_init();
++	at91_macb_hw_init();
++#endif
++	return 0;
++}
++
++int dram_init(void)
++{
++	gd->ram_size = get_ram_size((void *)CONFIG_SYS_SDRAM_BASE,
++				    CONFIG_SYS_SDRAM_SIZE);
++
++	return 0;
++}
++
++int board_eth_init(bd_t *bis)
++{
++#ifdef CONFIG_MACB
++	macb_eth_initialize(0, (void *)ATMEL_BASE_GMAC, 0x00);
++	macb_eth_initialize(0, (void *)ATMEL_BASE_EMAC, 0x00);
++#endif
++	return 0;
++}
++
++#ifdef CONFIG_GENERIC_ATMEL_MCI
++int board_mmc_init(bd_t *bis)
++{
++	atmel_mci_init((void *)ATMEL_BASE_MCI0);
++
++	return 0;
++}
++#endif
+diff --git a/boards.cfg b/boards.cfg
+index 7a8688a..b309d65 100644
+--- a/boards.cfg
++++ b/boards.cfg
+@@ -273,6 +273,8 @@ Active  arm         armv7          am33xx      ti              ti816x
+ Active  arm         armv7          at91        atmel           sama5d3xek          sama5d3xek_mmc                       sama5d3xek:SAMA5D3,SYS_USE_MMC                                                                                                    Bo Shen <voice.shen@atmel.com>
+ Active  arm         armv7          at91        atmel           sama5d3xek          sama5d3xek_nandflash                 sama5d3xek:SAMA5D3,SYS_USE_NANDFLASH                                                                                              Bo Shen <voice.shen@atmel.com>
+ Active  arm         armv7          at91        atmel           sama5d3xek          sama5d3xek_spiflash                  sama5d3xek:SAMA5D3,SYS_USE_SERIALFLASH                                                                                            Bo Shen <voice.shen@atmel.com>
++Active  arm         armv7          at91        atmel           sama5d3_xplained    sama5d3_xplained_mmc                 sama5d3_xplained:SAMA5D3,SYS_USE_MMC                                                                                              Bo Shen <voice.shen@atmel.com>
++Active  arm         armv7          at91        atmel           sama5d3_xplained    sama5d3_xplained_nandflash           sama5d3_xplained:SAMA5D3,SYS_USE_NANDFLASH                                                                                        Bo Shen <voice.shen@atmel.com>
+ Active  arm         armv7          exynos      samsung         arndale             arndale                              -                                                                                                                                 Inderpal Singh <inderpal.singh@linaro.org>
+ Active  arm         armv7          exynos      samsung         origen              origen                               -                                                                                                                                 Chander Kashyap <k.chander@samsung.com>
+ Active  arm         armv7          exynos      samsung         smdk5250            smdk5250                             -                                                                                                                                 Chander Kashyap <k.chander@samsung.com>
+diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
+new file mode 100644
+index 0000000..91cc7d8
+--- /dev/null
++++ b/include/configs/sama5d3_xplained.h
+@@ -0,0 +1,203 @@
++/*
++ * Configuration settings for the SAMA5D3 Xplained board.
++ *
++ * Copyright (C) 2014 Atmel Corporation
++ *		      Bo Shen <voice.shen@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++#include <asm/hardware.h>
++
++#define CONFIG_SYS_TEXT_BASE		0x26f00000
++
++/* ARM asynchronous clock */
++#define CONFIG_SYS_AT91_SLOW_CLOCK      32768
++#define CONFIG_SYS_AT91_MAIN_CLOCK      12000000 /* from 12 MHz crystal */
++#define CONFIG_SYS_HZ		        1000
++
++#define CONFIG_AT91FAMILY
++#define CONFIG_ARCH_CPU_INIT
++#define CONFIG_SKIP_LOWLEVEL_INIT
++#define CONFIG_BOARD_EARLY_INIT_F
++#define CONFIG_DISPLAY_CPUINFO
++
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_OF_LIBFDT		/* Device Tree support */
++
++/* general purpose I/O */
++#define CONFIG_AT91_GPIO
++
++/* serial console */
++#define CONFIG_ATMEL_USART
++#define CONFIG_USART_BASE		ATMEL_BASE_DBGU
++#define CONFIG_USART_ID			ATMEL_ID_DBGU
++
++/*
++ * This needs to be defined for the OHCI code to work but it is defined as
++ * ATMEL_ID_UHPHS in the CPU specific header files.
++ */
++#define ATMEL_ID_UHP			ATMEL_ID_UHPHS
++
++/*
++ * Specify the clock enable bit in the PMC_SCER register.
++ */
++#define ATMEL_PMC_UHP			AT91SAM926x_PMC_UHP
++
++#define CONFIG_BOOTDELAY		3
++
++/*
++ * BOOTP options
++ */
++#define CONFIG_BOOTP_BOOTFILESIZE
++#define CONFIG_BOOTP_BOOTPATH
++#define CONFIG_BOOTP_GATEWAY
++#define CONFIG_BOOTP_HOSTNAME
++
++/* No NOR flash */
++#define CONFIG_SYS_NO_FLASH
++
++/*
++ * Command line configuration.
++ */
++#include <config_cmd_default.h>
++#undef CONFIG_CMD_FPGA
++#undef CONFIG_CMD_IMI
++#undef CONFIG_CMD_LOADS
++#define CONFIG_CMD_PING
++#define CONFIG_CMD_DHCP
++
++/* SDRAM */
++#define CONFIG_NR_DRAM_BANKS		1
++#define CONFIG_SYS_SDRAM_BASE           ATMEL_BASE_DDRCS
++#define CONFIG_SYS_SDRAM_SIZE		0x10000000
++
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_SDRAM_BASE + 4 * 1024 - GENERATED_GBL_DATA_SIZE)
++
++/* NAND flash */
++#define CONFIG_CMD_NAND
++
++#ifdef CONFIG_CMD_NAND
++#define CONFIG_NAND_ATMEL
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_NAND_BASE		ATMEL_BASE_CS3
++/* our ALE is AD21 */
++#define CONFIG_SYS_NAND_MASK_ALE	(1 << 21)
++/* our CLE is AD22 */
++#define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
++#define CONFIG_SYS_NAND_ONFI_DETECTION
++/* PMECC & PMERRLOC */
++#define CONFIG_ATMEL_NAND_HWECC
++#define CONFIG_ATMEL_NAND_HW_PMECC
++#define CONFIG_PMECC_CAP		4
++#define CONFIG_PMECC_SECTOR_SIZE	512
++#define CONFIG_CMD_NAND_TRIMFFS
++#define CONFIG_CMD_MTDPARTS
++
++#define CONFIG_MTD_DEVICE
++#define CONFIG_MTD_PARTITIONS
++#define CONFIG_RBTREE
++#define CONFIG_LZO
++#define CONFIG_CMD_UBI
++#define CONFIG_CMD_UBIFS
++#endif
++
++/* Ethernet Hardware */
++#define CONFIG_MACB
++#define CONFIG_RMII
++#define CONFIG_NET_MULTI
++#define CONFIG_NET_RETRY_COUNT		20
++#define CONFIG_MACB_SEARCH_PHY
++#define CONFIG_RGMII
++#define CONFIG_CMD_MII
++#define CONFIG_PHYLIB
++
++/* MMC */
++#define CONFIG_CMD_MMC
++
++#ifdef CONFIG_CMD_MMC
++#define CONFIG_MMC
++#define CONFIG_GENERIC_MMC
++#define CONFIG_GENERIC_ATMEL_MCI
++#define CONFIG_ATMEL_MCI_8BIT
++#endif
++
++/* USB */
++#define CONFIG_CMD_USB
++
++#ifdef CONFIG_CMD_USB
++#define CONFIG_USB_ATMEL
++#define CONFIG_USB_ATMEL_CLK_SEL_UPLL
++#define CONFIG_USB_OHCI_NEW
++#define CONFIG_SYS_USB_OHCI_CPU_INIT
++#define CONFIG_SYS_USB_OHCI_REGS_BASE		ATMEL_BASE_OHCI
++#define CONFIG_SYS_USB_OHCI_SLOT_NAME		"SAMA5D3 Xplained"
++#define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	2
++#define CONFIG_DOS_PARTITION
++#define CONFIG_USB_STORAGE
++#endif
++
++#if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
++#define CONFIG_CMD_FAT
++#define CONFIG_FAT_WRITE
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_EXT4_WRITE
++#endif
++
++#define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
++
++#if CONFIG_SYS_USE_NANDFLASH
++/* bootstrap + u-boot + env in nandflash */
++#define CONFIG_ENV_IS_IN_NAND
++#define CONFIG_ENV_OFFSET		0xc0000
++#define CONFIG_ENV_OFFSET_REDUND	0x100000
++#define CONFIG_ENV_SIZE			0x20000
++#define CONFIG_BOOTCOMMAND	"nand read 0x21000000 0x180000 0x80000;" \
++				"nand read 0x22000000 0x200000 0x600000;" \
++				"bootz 0x22000000 - 0x21000000"
++#elif CONFIG_SYS_USE_MMC
++/* bootstrap + u-boot + env in sd card */
++#define CONFIG_ENV_IS_IN_MMC
++#define CONFIG_ENV_OFFSET	0x2000
++#define CONFIG_ENV_SIZE		0x1000
++#define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 at91-sama5d3_xplained.dtb; " \
++				"fatload mmc 0:1 0x22000000 zImage; " \
++				"bootz 0x22000000 - 0x21000000"
++#define CONFIG_SYS_MMC_ENV_DEV	0
++#else
++#define CONFIG_ENV_IS_NOWHERE
++#endif
++
++#ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_BOOTARGS							\
++	"console=ttyS0,115200 earlyprintk "				\
++	"root=/dev/mmcblk0p2 rw rootwait"
++#else
++#define CONFIG_BOOTARGS							\
++	"console=ttyS0,115200 earlyprintk "				\
++	"mtdparts=atmel_nand:256k(bootstrap)ro,512k(uboot)ro,"		\
++	"256K(env),256k(evn_redundent),256k(spare),"			\
++	"512k(dtb),6M(kernel)ro,-(rootfs) "				\
++	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs"
++#endif
++
++#define CONFIG_BAUDRATE			115200
++
++#define CONFIG_SYS_PROMPT		"U-Boot> "
++#define CONFIG_SYS_CBSIZE		256
++#define CONFIG_SYS_MAXARGS		16
++#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
++					sizeof(CONFIG_SYS_PROMPT) + 16)
++#define CONFIG_SYS_LONGHELP
++#define CONFIG_CMDLINE_EDITING
++#define CONFIG_AUTO_COMPLETE
++#define CONFIG_SYS_HUSH_PARSER
++
++/* Size of malloc() pool */
++#define CONFIG_SYS_MALLOC_LEN		(4 * 1024 * 1024)
++
++#endif
+-- 
+1.9.0
+
