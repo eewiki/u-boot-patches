@@ -5,14 +5,126 @@ Subject: [PATCH] sama5d3_xplained: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/sama5d3_xplained.h | 58 +++++++++++++++++++++++++++++++++-----
- 1 file changed, 51 insertions(+), 7 deletions(-)
+ board/atmel/sama5d3_xplained/sama5d3_xplained.c |  84 +++++++++++++++++
+ include/configs/sama5d3_xplained.h              | 116 ++++++++++++++++++++++--
+ 2 files changed, 193 insertions(+), 7 deletions(-)
 
+diff --git a/board/atmel/sama5d3_xplained/sama5d3_xplained.c b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+index 39f2dc6..2442166 100644
+--- a/board/atmel/sama5d3_xplained/sama5d3_xplained.c
++++ b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+@@ -17,6 +17,8 @@
+ #include <atmel_mci.h>
+ #include <net.h>
+ #include <netdev.h>
++#include <spl.h>
++#include <asm/arch/atmel_mpddrc.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -128,3 +130,85 @@ int board_mmc_init(bd_t *bis)
+ 	return 0;
+ }
+ #endif
++
++/* SPL */
++#ifdef CONFIG_SPL_BUILD
++void spl_board_init(void)
++{
++#ifdef CONFIG_SYS_USE_MMC
++	sama5d3_xplained_mci0_hw_init();
++#endif
++}
++
++static void ddr2_conf(struct atmel_mpddr *ddr2)
++{
++	ddr2->md = (ATMEL_MPDDRC_MD_DBW_32_BITS | ATMEL_MPDDRC_MD_DDR2_SDRAM);
++
++	ddr2->cr = (ATMEL_MPDDRC_CR_NC_COL_10 |
++		    ATMEL_MPDDRC_CR_NR_ROW_13 |
++		    ATMEL_MPDDRC_CR_CAS_DDR_CAS3 |
++		    ATMEL_MPDDRC_CR_ENRDM_ON |
++		    ATMEL_MPDDRC_CR_NB_8BANKS |
++		    ATMEL_MPDDRC_CR_NDQS_DISABLED |
++		    ATMEL_MPDDRC_CR_DECOD_INTERLEAVED |
++		    ATMEL_MPDDRC_CR_UNAL_SUPPORTED);
++	/*
++	 * As the DDR2-SDRAm device requires a refresh time is 7.8125us
++	 * when DDR run at 133MHz, so it needs (7.81 * 133MHz7.81) clocks
++	 */
++	ddr2->rtr = 0x40F;
++
++	ddr2->tpr0 = (6 << ATMEL_MPDDRC_TPR0_TRAS_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRCD_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TWR_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR0_TRC_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRP_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRRD_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TWTR_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TMRD_OFFSET);
++
++	ddr2->tpr1 = (2 << ATMEL_MPDDRC_TPR1_TXP_OFFSET |
++		      200 << ATMEL_MPDDRC_TPR1_TXSRD_OFFSET |
++		      19 << ATMEL_MPDDRC_TPR1_TXSNR_OFFSET |
++		      17 << ATMEL_MPDDRC_TPR1_TRFC_OFFSET);
++
++	ddr2->tpr2 = (6 << ATMEL_MPDDRC_TPR2_TFAW_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR2_TRTP_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR2_TRPA_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR2_TXARDS_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR2_TXARD_OFFSET);
++}
++
++void mem_init(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	struct atmel_mpddr ddr2;
++
++	ddr2_conf(&ddr2);
++
++	/* enable MPDDR clock */
++	at91_periph_clk_enable(ATMEL_ID_MPDDRC);
++	writel(0x4, &pmc->scer);
++
++	/* DDRAM2 Controller initialize */
++	ddr2_init(ATMEL_BASE_DDRCS, &ddr2);
++}
++
++void at91_pmc_init(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	u32 tmp;
++
++	tmp = AT91_PMC_PLLAR_29 |
++	      AT91_PMC_PLLXR_PLLCOUNT(0x3f) |
++	      AT91_PMC_PLLXR_MUL(43) |
++	      AT91_PMC_PLLXR_DIV(1);
++	at91_plla_init(tmp);
++
++	writel(0x3 << 8, &pmc->pllicpr);
++
++	tmp = AT91_PMC_MCKR_MDIV_4 |
++	      AT91_PMC_MCKR_CSS_PLLA;
++	at91_mck_init(tmp);
++}
++#endif
 diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
-index 91cc7d8..fd05216 100644
+index 91cc7d8..054f4f3 100644
 --- a/include/configs/sama5d3_xplained.h
 +++ b/include/configs/sama5d3_xplained.h
-@@ -47,7 +47,7 @@
+@@ -21,7 +21,11 @@
+ 
+ #define CONFIG_AT91FAMILY
+ #define CONFIG_ARCH_CPU_INIT
++
++#ifndef CONFIG_SPL_BUILD
+ #define CONFIG_SKIP_LOWLEVEL_INIT
++#endif
++
+ #define CONFIG_BOARD_EARLY_INIT_F
+ #define CONFIG_DISPLAY_CPUINFO
+ 
+@@ -47,7 +51,7 @@
   */
  #define ATMEL_PMC_UHP			AT91SAM926x_PMC_UHP
  
@@ -21,7 +133,20 @@ index 91cc7d8..fd05216 100644
  
  /*
   * BOOTP options
-@@ -144,8 +144,14 @@
+@@ -75,8 +79,12 @@
+ #define CONFIG_SYS_SDRAM_BASE           ATMEL_BASE_DDRCS
+ #define CONFIG_SYS_SDRAM_SIZE		0x10000000
+ 
++#ifdef CONFIG_SPL_BUILD
++#define CONFIG_SYS_INIT_SP_ADDR		0x310000
++#else
+ #define CONFIG_SYS_INIT_SP_ADDR \
+ 	(CONFIG_SYS_SDRAM_BASE + 4 * 1024 - GENERATED_GBL_DATA_SIZE)
++#endif
+ 
+ /* NAND flash */
+ #define CONFIG_CMD_NAND
+@@ -144,8 +152,14 @@
  #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
  #define CONFIG_CMD_FAT
  #define CONFIG_FAT_WRITE
@@ -36,7 +161,7 @@ index 91cc7d8..fd05216 100644
  #endif
  
  #define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
-@@ -164,18 +170,56 @@
+@@ -164,18 +178,56 @@
  #define CONFIG_ENV_IS_IN_MMC
  #define CONFIG_ENV_OFFSET	0x2000
  #define CONFIG_ENV_SIZE		0x1000
@@ -99,6 +224,61 @@ index 91cc7d8..fd05216 100644
  #else
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\
+@@ -200,4 +252,54 @@
+ /* Size of malloc() pool */
+ #define CONFIG_SYS_MALLOC_LEN		(4 * 1024 * 1024)
+ 
++/* SPL */
++#define CONFIG_SPL
++#define CONFIG_SPL_FRAMEWORK
++#define CONFIG_SPL_TEXT_BASE		0x300000
++#define CONFIG_SPL_MAX_SIZE		0x10000
++#define CONFIG_SPL_BSS_START_ADDR	0x20000000
++#define CONFIG_SPL_BSS_MAX_SIZE		0x80000
++#define CONFIG_SYS_SPL_MALLOC_START	0x20080000
++#define CONFIG_SYS_SPL_MALLOC_SIZE	0x80000
++
++#define CONFIG_SPL_LIBCOMMON_SUPPORT
++#define CONFIG_SPL_LIBGENERIC_SUPPORT
++#define CONFIG_SPL_GPIO_SUPPORT
++#define CONFIG_SPL_SERIAL_SUPPORT
++
++#define CONFIG_SPL_BOARD_INIT
++#define CONFIG_SYS_MONITOR_LEN		(512 << 10)
++
++#ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_SPL_LDSCRIPT		arch/arm/cpu/at91-common/u-boot-spl.lds
++#define CONFIG_SPL_MMC_SUPPORT
++#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	0x400
++#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR 0x200
++#define CONFIG_SYS_MMC_SD_FAT_BOOT_PARTITION	1
++#define CONFIG_SPL_FAT_LOAD_PAYLOAD_NAME	"u-boot.img"
++#define CONFIG_SPL_FAT_SUPPORT
++#define CONFIG_SPL_LIBDISK_SUPPORT
++
++#elif CONFIG_SYS_USE_NANDFLASH
++#define CONFIG_SPL_NAND_SUPPORT
++#define CONFIG_SPL_NAND_DRIVERS
++#define CONFIG_SPL_NAND_BASE
++#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
++#define CONFIG_SYS_NAND_5_ADDR_CYCLE
++#define CONFIG_SYS_NAND_PAGE_SIZE	0x800
++#define CONFIG_SYS_NAND_PAGE_COUNT	64
++#define CONFIG_SYS_NAND_OOBSIZE		64
++#define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
++#define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
++
++#elif CONFIG_SYS_USE_SERIALFLASH
++#define CONFIG_SPL_SPI_SUPPORT
++#define CONFIG_SPL_SPI_FLASH_SUPPORT
++#define CONFIG_SPL_SPI_LOAD
++#define CONFIG_SPL_SPI_BUS		0
++#define CONFIG_SPL_SPI_CS		0
++#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x8400
++
++#endif
++
+ #endif
 -- 
 1.9.0
 
