@@ -1,0 +1,104 @@
+From 4af5306722127b2a1ded0d27b76e0bebdbfda845 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Mon, 3 Mar 2014 12:31:01 -0600
+Subject: [PATCH] sama5d3_xplained: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/sama5d3_xplained.h | 58 +++++++++++++++++++++++++++++++++-----
+ 1 file changed, 51 insertions(+), 7 deletions(-)
+
+diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
+index 91cc7d8..fd05216 100644
+--- a/include/configs/sama5d3_xplained.h
++++ b/include/configs/sama5d3_xplained.h
+@@ -47,7 +47,7 @@
+  */
+ #define ATMEL_PMC_UHP			AT91SAM926x_PMC_UHP
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ /*
+  * BOOTP options
+@@ -144,8 +144,14 @@
+ #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
+ #define CONFIG_CMD_FAT
+ #define CONFIG_FAT_WRITE
++#define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_EXT4
+ #define CONFIG_CMD_EXT4_WRITE
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ #endif
+ 
+ #define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
+@@ -164,18 +170,56 @@
+ #define CONFIG_ENV_IS_IN_MMC
+ #define CONFIG_ENV_OFFSET	0x2000
+ #define CONFIG_ENV_SIZE		0x1000
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 at91-sama5d3_xplained.dtb; " \
+-				"fatload mmc 0:1 0x22000000 zImage; " \
+-				"bootz 0x22000000 - 0x21000000"
+ #define CONFIG_SYS_MMC_ENV_DEV	0
+ #else
+ #define CONFIG_ENV_IS_NOWHERE
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"root=/dev/mmcblk0p2 rw rootwait"
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"ftdaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"fdt_file=/dtbs/at91-sama5d3_xplained.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${ftdaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadzimage ...;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #else
+ #define CONFIG_BOOTARGS							\
+ 	"console=ttyS0,115200 earlyprintk "				\
+-- 
+1.9.0
+
