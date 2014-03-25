@@ -1,13 +1,13 @@
-From 76aaf72132fe8526b41bf974d1a7b6254d0de88f Mon Sep 17 00:00:00 2001
+From 8cd5e80a16826355e67c1e7ca07efcde15d79547 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 10 Feb 2014 15:01:00 -0600
+Date: Tue, 25 Mar 2014 11:14:28 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h | 46 ++++++++++++++++++++++++++++--------------
- 2 files changed, 64 insertions(+), 20 deletions(-)
+ board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++-----
+ include/configs/omap3_beagle.h | 49 +++++++++++++++++++++++++++++-------------
+ 2 files changed, 67 insertions(+), 20 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 9669a32..f3f2f80 100644
@@ -111,7 +111,7 @@ index 9669a32..f3f2f80 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c58bc91..11f2607 100644
+index c58bc91..aa87ece 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -134,8 +134,10 @@
@@ -125,7 +125,7 @@ index c58bc91..11f2607 100644
  #define CONFIG_CMD_MTDPARTS	/* Enable MTD parts commands */
  #define CONFIG_MTD_DEVICE	/* needed for mtdparts commands */
  #define MTDIDS_DEFAULT			"nand0=nand"
-@@ -189,29 +191,31 @@
+@@ -189,29 +191,32 @@
  							/* devices */
  
  /* Environment information */
@@ -151,6 +151,7 @@ index c58bc91..11f2607 100644
  	"console=ttyO2,115200n8\0" \
  	"mpurate=auto\0" \
  	"buddy=none\0" \
++	"buddy2=none\0" \
  	"optargs=\0" \
  	"camera=none\0" \
 +	"musb=\0" \
@@ -165,7 +166,13 @@ index c58bc91..11f2607 100644
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -225,7 +229,8 @@
+@@ -220,16 +225,19 @@
+ 		"${optargs} " \
+ 		"mpurate=${mpurate} " \
+ 		"buddy=${buddy} "\
++		"buddy2=${buddy2} "\
+ 		"camera=${camera} "\
+ 		"vram=${vram} " \
  		"omapfb.mode=dvi:${dvimode} " \
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
@@ -175,7 +182,12 @@ index c58bc91..11f2607 100644
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -244,13 +249,16 @@
+ 		"buddy=${buddy} "\
++		"buddy2=${buddy2} "\
+ 		"camera=${camera} "\
+ 		"vram=${vram} " \
+ 		"omapfb.mode=dvi:${dvimode} " \
+@@ -244,13 +252,16 @@
  		"if test $beaglerev = C4; then " \
  			"setenv fdtfile omap3-beagle.dtb; fi; " \
  		"if test $beaglerev = xMAB; then " \
@@ -194,7 +206,7 @@ index c58bc91..11f2607 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -264,20 +272,20 @@
+@@ -264,20 +275,20 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -219,7 +231,7 @@ index c58bc91..11f2607 100644
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
-@@ -296,11 +304,19 @@
+@@ -296,11 +307,19 @@
  			"echo Loaded environment from ${bootenv};" \
  			"run importbootenv;" \
  		"fi;" \
@@ -240,5 +252,5 @@ index c58bc91..11f2607 100644
  		"fi;" \
  	"fi;" \
 -- 
-1.8.5.3
+1.9.0
 
