@@ -1,0 +1,149 @@
+From 070a425ce051d7da4ea9f000ae50ad6094a65147 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 12 Mar 2014 08:55:09 -0500
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/am335x_evm.h      | 43 ++++++++++++++++++++++++++-------------
+ include/configs/ti_armv7_common.h |  5 ++++-
+ 2 files changed, 33 insertions(+), 15 deletions(-)
+
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index 2020e7f..206ad64 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -61,13 +61,14 @@
+ 
+ #ifndef CONFIG_SPL_BUILD
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+-	"loadaddr=0x80200000\0" \
+-	"fdtaddr=0x80F80000\0" \
++	"loadaddr=0x82000000\0" \
++	"fdtaddr=0x88000000\0" \
+ 	"fdt_high=0xffffffff\0" \
+ 	"boot_fdt=try\0" \
+-	"rdaddr=0x81000000\0" \
+-	"bootpart=0:2\0" \
+-	"bootdir=/boot\0" \
++	"rdaddr=0x88080000\0" \
++	"bootpart=0:1\0" \
++	"bootdir=\0" \
++	"fdtdir=/dtbs\0" \
+ 	"bootfile=zImage\0" \
+ 	"fdtfile=undefined\0" \
+ 	"console=ttyO0,115200n8\0" \
+@@ -76,7 +77,8 @@
+ 		"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
+ 	"optargs=\0" \
+ 	"mmcdev=0\0" \
+-	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro fixrtc\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+ 	"rootpath=/export/rootfs\0" \
+ 	"nfsopts=nolock\0" \
+@@ -103,7 +105,7 @@
+ 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+ 		"ip=dhcp\0" \
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t $loadaddr $filesize\0" \
+ 	"ramargs=setenv bootargs console=${console} " \
+@@ -112,7 +114,7 @@
+ 		"rootfstype=${ramrootfstype}\0" \
+ 	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
+ 	"mmcloados=run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+@@ -129,18 +131,26 @@
+ 		"fi;\0" \
+ 	"mmcboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
++			"gpio set 54;" \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+ 			"if run loadbootenv; then " \
++				"gpio set 55;" \
+ 				"echo Loaded environment from ${bootenv};" \
+ 				"run importbootenv;" \
+ 			"fi;" \
++			"if test -n $cape; then " \
++				"if test -e mmc ${bootpart} ${fdtdir}/$fdtbase-$cape.dtb; then " \
++					"setenv fdtfile $fdtbase-$cape.dtb; " \
++				"fi; " \
++				"echo using: $fdtfile...; " \
++			"fi; " \
++			"echo Checking if uenvcmd is set ...;" \
+ 			"if test -n $uenvcmd; then " \
++				"gpio set 56; " \
+ 				"echo Running uenvcmd ...;" \
+ 				"run uenvcmd;" \
+ 			"fi;" \
+-			"if run loadimage; then " \
+-				"run mmcloados;" \
+-			"fi;" \
++			"echo; echo uenvcmd was not defined in uEnv.txt ...;"\
+ 		"fi;\0" \
+ 	"spiboot=echo Booting from spi ...; " \
+ 		"run spiargs; " \
+@@ -159,9 +169,9 @@
+ 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
+ 	"findfdt="\
+ 		"if test $board_name = A335BONE; then " \
+-			"setenv fdtfile am335x-bone.dtb; fi; " \
++			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
+ 		"if test $board_name = A335BNLT; then " \
+-			"setenv fdtfile am335x-boneblack.dtb; fi; " \
++			"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; fi; " \
+ 		"if test $board_name = A33515BB; then " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
+ 		"if test $board_name = A335X_SK; then " \
+@@ -173,10 +183,15 @@
+ #endif
+ 
+ #define CONFIG_BOOTCOMMAND \
++	"gpio set 53; " \
++	"i2c mw 0x24 1 0x3e; " \
+ 	"run findfdt; " \
+ 	"run mmcboot;" \
++	"gpio clear 56; " \
++	"gpio clear 55; " \
++	"gpio clear 54; " \
+ 	"setenv mmcdev 1; " \
+-	"setenv bootpart 1:2; " \
++	"setenv bootpart 1:1; " \
+ 	"run mmcboot;" \
+ 	"run nandboot;"
+ 
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 69d69a5..07f81c3 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -36,8 +36,10 @@
+ /*
+  * Our DDR memory always starts at 0x80000000 and U-Boot shall have
+  * relocated itself to higher in memory by the time this value is used.
++ * However, set this to a 32MB offset to allow for easier Linux kernel
++ * booting as the default is often used as the kernel load address.
+  */
+-#define CONFIG_SYS_LOAD_ADDR		0x80000000
++#define CONFIG_SYS_LOAD_ADDR		0x82000000
+ 
+ /*
+  * Default to a quick boot delay.
+@@ -151,6 +153,7 @@
+ #define CONFIG_CMD_ASKENV
+ #define CONFIG_CMD_ECHO
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /*
+  * Common filesystems support.  When we have removable storage we
+-- 
+1.9.0
+
