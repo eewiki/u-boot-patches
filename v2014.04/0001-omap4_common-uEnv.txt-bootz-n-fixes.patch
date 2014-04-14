@@ -1,0 +1,94 @@
+From 8fb97924030a45dd880083b95b3d371aba018044 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Mon, 3 Mar 2014 11:20:14 -0600
+Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/ti_omap4_common.h | 30 +++++++++++++++++++++---------
+ 1 file changed, 21 insertions(+), 9 deletions(-)
+
+diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
+index 2f0e4c0..7babc7b 100644
+--- a/include/configs/ti_omap4_common.h
++++ b/include/configs/ti_omap4_common.h
+@@ -54,6 +54,7 @@
+ #endif
+ 
+ #include <configs/ti_armv7_common.h>
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /*
+  * Hardware drivers
+@@ -87,33 +88,43 @@
+  * Environment setup
+  */
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+-	"loadaddr=0x82000000\0" \
++	"loadaddr=0x80300000\0" \
+ 	"console=ttyO2,115200n8\0" \
+ 	"fdt_high=0xffffffff\0" \
+-	"fdtaddr=0x80f80000\0" \
++	"fdtaddr=0x815f0000\0" \
+ 	"fdtfile=undefined\0" \
+-	"bootpart=0:2\0" \
+-	"bootdir=/boot\0" \
++	"bootpart=0:1\0" \
++	"bootdir=\0" \
++	"fdtdir=/dtbs\0" \
+ 	"bootfile=zImage\0" \
+ 	"usbtty=cdc_acm\0" \
+ 	"vram=16M\0" \
++	"defaultdisplay=dvi\0" \
++	"dvimode=1280x720MR-16@60\0" \
++	"buddy=none\0" \
+ 	"mmcdev=0\0" \
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"mmcargs=setenv bootargs console=${console} " \
++		"buddy=${buddy} "\
+ 		"vram=${vram} " \
++		"omapfb.mode=${defaultdisplay}:${dvimode} " \
+ 		"root=${mmcroot} " \
+ 		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
++	"loadbootscript=load mmc ${bootpart} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} uEnv.txt\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+ 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
+ 		"run mmcargs; " \
+ 		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"mmc_classic_boot=echo Booting from mmc${mmcdev} ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr}\0" \
+ 	"findfdt="\
+ 		"if test $board_name = sdp4430; then " \
+ 			"setenv fdtfile omap4-sdp.dtb; fi; " \
+@@ -125,7 +136,7 @@
+ 			"setenv fdtfile omap4-panda-es.dtb; fi;" \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
+ 
+ #define CONFIG_BOOTCOMMAND \
+ 	"run findfdt; " \
+@@ -137,6 +148,7 @@
+ 			"if run loadbootenv; then " \
+ 				"run importbootenv; " \
+ 			"fi;" \
++			"echo Checking if uenvcmd is set ...;" \
+ 			"if test -n ${uenvcmd}; then " \
+ 				"echo Running uenvcmd ...;" \
+ 				"run uenvcmd;" \
+-- 
+1.9.0
+
