@@ -1,4 +1,4 @@
-From f27989047d3bf63f78cee063c3958b5d57404dbd Mon Sep 17 00:00:00 2001
+From 590891a15d4f3facafeb3186a8d3217f33343eb3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Wed, 23 Apr 2014 11:48:34 -0500
 Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
@@ -6,11 +6,11 @@ Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/udoo/1066mhz_4x256mx16_dl.cfg | 58 +++++++++++++++++++++++++
- board/udoo/ddr-setup_dl.cfg         | 85 +++++++++++++++++++++++++++++++++++++
+ board/udoo/ddr-setup_dl.cfg         | 84 +++++++++++++++++++++++++++++++++++++
  board/udoo/udoo-dl.cfg              | 29 +++++++++++++
  boards.cfg                          |  1 +
- include/configs/udoo.h              | 56 ++++++++++++++++--------
- 5 files changed, 212 insertions(+), 17 deletions(-)
+ include/configs/udoo.h              | 56 +++++++++++++++++--------
+ 5 files changed, 211 insertions(+), 17 deletions(-)
  create mode 100644 board/udoo/1066mhz_4x256mx16_dl.cfg
  create mode 100644 board/udoo/ddr-setup_dl.cfg
  create mode 100644 board/udoo/udoo-dl.cfg
@@ -81,10 +81,10 @@ index 0000000..e37c9f9
 +DATA 4, MX6_MMDC_P0_MDSCR,	0x00000000
 diff --git a/board/udoo/ddr-setup_dl.cfg b/board/udoo/ddr-setup_dl.cfg
 new file mode 100644
-index 0000000..fa82c4d
+index 0000000..487570e
 --- /dev/null
 +++ b/board/udoo/ddr-setup_dl.cfg
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,84 @@
 +/*
 + * Copyright (C) 2013 Seco USA Inc
 + *
@@ -169,7 +169,6 @@ index 0000000..fa82c4d
 +DATA 4, MX6_MMDC_P1_MPRDDQBY1DL,	0x33333333
 +DATA 4, MX6_MMDC_P1_MPRDDQBY2DL,	0x33333333
 +DATA 4, MX6_MMDC_P1_MPRDDQBY3DL,	0x33333333
-+
 diff --git a/board/udoo/udoo-dl.cfg b/board/udoo/udoo-dl.cfg
 new file mode 100644
 index 0000000..46953c1
