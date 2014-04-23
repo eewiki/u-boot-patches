@@ -1,0 +1,233 @@
+From f27989047d3bf63f78cee063c3958b5d57404dbd Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 23 Apr 2014 11:48:34 -0500
+Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/udoo/800mhz_4x256mx16.cfg | 42 +++++++++++++++++++++++++++++++
+ board/udoo/udoo-dl.cfg          | 29 +++++++++++++++++++++
+ boards.cfg                      |  1 +
+ include/configs/udoo.h          | 56 ++++++++++++++++++++++++++++-------------
+ 4 files changed, 111 insertions(+), 17 deletions(-)
+ create mode 100644 board/udoo/800mhz_4x256mx16.cfg
+ create mode 100644 board/udoo/udoo-dl.cfg
+
+diff --git a/board/udoo/800mhz_4x256mx16.cfg b/board/udoo/800mhz_4x256mx16.cfg
+new file mode 100644
+index 0000000..7c7a3d1
+--- /dev/null
++++ b/board/udoo/800mhz_4x256mx16.cfg
+@@ -0,0 +1,42 @@
++/*
++ * Copyright (C) 2013 Boundary Devices
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002002D
++DATA 4, MX6_MMDC_P0_MDCFG0, 0x696C5323
++DATA 4, MX6_MMDC_P0_MDCFG1, 0xB66E8D63
++DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
++DATA 4, MX6_MMDC_P0_MDRWD, 0x000026D2
++DATA 4, MX6_MMDC_P0_MDOR, 0x006C1023
++DATA 4, MX6_MMDC_P0_MDOTC, 0x00333030
++DATA 4, MX6_MMDC_P0_MDPDC, 0x0002556D
++DATA 4, MX6_MMDC_P0_MDASP, 0x00000047
++DATA 4, MX6_MMDC_P0_MDCTL, 0x841A0000
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008032
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00048031
++DATA 4, MX6_MMDC_P0_MDSCR, 0x13208030
++DATA 4, MX6_MMDC_P0_MDSCR, 0x04008040
++DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1390003
++DATA 4, MX6_MMDC_P0_MDREF, 0x00007800
++DATA 4, MX6_MMDC_P0_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P1_MPODTCTRL, 0x00022227
++DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x42350231
++DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x021A0218
++DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x4B4B4E49
++DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x3F3F3035
++DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x0040003C
++DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x0032003E
++DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
++DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
++DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+diff --git a/board/udoo/udoo-dl.cfg b/board/udoo/udoo-dl.cfg
+new file mode 100644
+index 0000000..82f837e
+--- /dev/null
++++ b/board/udoo/udoo-dl.cfg
+@@ -0,0 +1,29 @@
++/*
++ * Copyright (C) 2013 Boundary Devices
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ *
++ * Refer doc/README.imximage for more details about how-to configure
++ * and create imximage boot image
++ *
++ * The syntax is taken as close as possible with the kwbimage
++ */
++
++/* image version */
++IMAGE_VERSION 2
++
++/*
++ * Boot Device : one of
++ * spi, sd (the board has no nand neither onenand)
++ */
++BOOT_FROM      sd
++
++#define __ASSEMBLY__
++#include <config.h>
++#include "asm/arch/mx6-ddr.h"
++#include "asm/arch/iomux.h"
++#include "asm/arch/crm_regs.h"
++
++#include "ddr-setup.cfg"
++#include "800mhz_4x256mx16.cfg"
++#include "clocks.cfg"
+diff --git a/boards.cfg b/boards.cfg
+index b4203f1..02ee6bd 100644
+--- a/boards.cfg
++++ b/boards.cfg
+@@ -304,6 +304,7 @@ Active  arm         armv7          mx5         freescale       mx53smd
+ Active  arm         armv7          mx5         genesi          mx51_efikamx        mx51_efikamx                         mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKAMX,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_mx.cfg                                -
+ Active  arm         armv7          mx5         genesi          mx51_efikamx        mx51_efikasb                         mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKASB,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_sb.cfg                                -
+ Active  arm         armv7          mx5         ttcontrol       vision2             vision2                              vision2:IMX_CONFIG=board/ttcontrol/vision2/imximage_hynix.cfg                                                                     Stefano Babic <sbabic@denx.de>
++Active  arm         armv7          mx6         -               udoo                udoo_dl                              udoo:IMX_CONFIG=board/udoo/udoo-dl.cfg,MX6DL,DDR_MB=1024                                                                          Fabio Estevam <fabio.estevam@freescale.com>
+ Active  arm         armv7          mx6         -               udoo                udoo_quad                            udoo:IMX_CONFIG=board/udoo/udoo.cfg,MX6Q,DDR_MB=1024                                                                              Fabio Estevam <fabio.estevam@freescale.com>
+ Active  arm         armv7          mx6         -               wandboard           wandboard_dl                         wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024                                                  Fabio Estevam <fabio.estevam@freescale.com>
+ Active  arm         armv7          mx6         -               wandboard           wandboard_quad                       wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048                                                  Fabio Estevam <fabio.estevam@freescale.com>
+diff --git a/include/configs/udoo.h b/include/configs/udoo.h
+index a0306de..da72328 100644
+--- a/include/configs/udoo.h
++++ b/include/configs/udoo.h
+@@ -76,7 +76,7 @@
+ #define CONFIG_CMD_BMODE
+ #define CONFIG_CMD_SETEXPR
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ #define CONFIG_SYS_MEMTEST_START	0x10000000
+ #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
+@@ -94,6 +94,8 @@
+ #define CONFIG_BOUNCE_BUFFER
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_DOS_PARTITION
+ 
+ #define CONFIG_DEFAULT_FDT_FILE		"imx6q-udoo.dtb"
+@@ -109,9 +111,12 @@
+ 	"fdt_addr=0x18000000\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
++	"optargs=\0" \
++	"video=\0" \
+ 	"mmcdev=0\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -127,27 +132,36 @@
+ 			"fi; "	\
+ 		"fi\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}\0" \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
+ 	"loadbootscript=" \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdt_addr};\0" \
++	"mmcbootdefault=echo Booting from mmc ...; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+ 				"bootz ${loadaddr} - ${fdt_addr}; " \
+ 			"else " \
+ 				"if test ${boot_fdt} = try; then " \
+-					"bootz; " \
++					"bootz ${loadaddr}; " \
+ 				"else " \
+ 					"echo WARN: Cannot load the DT; " \
+ 				"fi; " \
+ 			"fi; " \
+ 		"else " \
+-			"bootz; " \
++			"bootz ${loadaddr}; " \
+ 		"fi;\0" \
+ 	"netargs=setenv bootargs console=${console},${baudrate} " \
+ 		"root=/dev/nfs " \
+@@ -175,16 +189,23 @@
+ 		"fi;\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loadimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadimage ...;" \
++		"if run loadimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ /* Miscellaneous configurable options */
+ #define CONFIG_SYS_LONGHELP
+@@ -226,6 +247,7 @@
+ 
+ #define CONFIG_OF_LIBFDT
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #ifndef CONFIG_SYS_DCACHE_OFF
+ #define CONFIG_CMD_CACHE
+-- 
+1.9.2
+

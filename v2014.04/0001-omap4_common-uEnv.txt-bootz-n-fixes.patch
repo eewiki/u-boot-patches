@@ -1,18 +1,27 @@
-From 8fb97924030a45dd880083b95b3d371aba018044 Mon Sep 17 00:00:00 2001
+From 17a7a12fc461ea9db312925ada3fb4b3130e1b9b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 3 Mar 2014 11:20:14 -0600
+Date: Mon, 21 Apr 2014 08:47:12 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap4_common.h | 30 +++++++++++++++++++++---------
- 1 file changed, 21 insertions(+), 9 deletions(-)
+ include/configs/ti_omap4_common.h | 33 +++++++++++++++++++++++----------
+ 1 file changed, 23 insertions(+), 10 deletions(-)
 
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 2f0e4c0..7babc7b 100644
+index bcb5eab..c84d275 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -54,6 +54,7 @@
+@@ -47,13 +47,15 @@
+  * the timings to use or use pre-determined timings (based on using the
+  * dynamic method.  Default to the static timing infomation.
+  */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* Yet another panda (A4) with "new" memory... */
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
+ #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
+ #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
  #endif
  
  #include <configs/ti_armv7_common.h>
@@ -20,7 +29,7 @@ index 2f0e4c0..7babc7b 100644
  
  /*
   * Hardware drivers
-@@ -87,33 +88,43 @@
+@@ -87,33 +89,43 @@
   * Environment setup
   */
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -72,7 +81,7 @@ index 2f0e4c0..7babc7b 100644
  	"findfdt="\
  		"if test $board_name = sdp4430; then " \
  			"setenv fdtfile omap4-sdp.dtb; fi; " \
-@@ -125,7 +136,7 @@
+@@ -125,7 +137,7 @@
  			"setenv fdtfile omap4-panda-es.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -81,7 +90,7 @@ index 2f0e4c0..7babc7b 100644
  
  #define CONFIG_BOOTCOMMAND \
  	"run findfdt; " \
-@@ -137,6 +148,7 @@
+@@ -137,6 +149,7 @@
  			"if run loadbootenv; then " \
  				"run importbootenv; " \
  			"fi;" \
@@ -90,5 +99,5 @@ index 2f0e4c0..7babc7b 100644
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
 -- 
-1.9.0
+1.9.2
 
