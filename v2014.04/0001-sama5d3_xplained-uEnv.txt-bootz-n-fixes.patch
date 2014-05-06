@@ -1,13 +1,13 @@
-From 4af5306722127b2a1ded0d27b76e0bebdbfda845 Mon Sep 17 00:00:00 2001
+From 6f6f50662913bf0a8e118b195c938e66906d38cd Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 3 Mar 2014 12:31:01 -0600
+Date: Tue, 6 May 2014 11:01:05 -0500
 Subject: [PATCH] sama5d3_xplained: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/atmel/sama5d3_xplained/sama5d3_xplained.c |  84 +++++++++++++++++
- include/configs/sama5d3_xplained.h              | 116 ++++++++++++++++++++++--
- 2 files changed, 193 insertions(+), 7 deletions(-)
+ board/atmel/sama5d3_xplained/sama5d3_xplained.c |  84 ++++++++++++++++
+ include/configs/sama5d3_xplained.h              | 124 ++++++++++++++++++++++--
+ 2 files changed, 201 insertions(+), 7 deletions(-)
 
 diff --git a/board/atmel/sama5d3_xplained/sama5d3_xplained.c b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
 index 39f2dc6..2442166 100644
@@ -109,7 +109,7 @@ index 39f2dc6..2442166 100644
 +}
 +#endif
 diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
-index 91cc7d8..054f4f3 100644
+index 91cc7d8..3503762 100644
 --- a/include/configs/sama5d3_xplained.h
 +++ b/include/configs/sama5d3_xplained.h
 @@ -21,7 +21,11 @@
@@ -161,7 +161,7 @@ index 91cc7d8..054f4f3 100644
  #endif
  
  #define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
-@@ -164,18 +178,56 @@
+@@ -164,18 +178,64 @@
  #define CONFIG_ENV_IS_IN_MMC
  #define CONFIG_ENV_OFFSET	0x2000
  #define CONFIG_ENV_SIZE		0x1000
@@ -181,7 +181,8 @@ index 91cc7d8..054f4f3 100644
 +	"loadaddr=0x22000000\0" \
 +	"ftdaddr=0x21000000\0" \
 +	"bootfile=zImage\0" \
-+	"fdt_file=/dtbs/at91-sama5d3_xplained.dtb\0" \
++	"fdt_file=at91-sama5d3_xplained.dtb\0" \
++	"fdt_dir=/dtbs\0" \
 +	"console=ttyS0,115200n8\0" \
 +	"optargs=\0" \
 +	"video=\0" \
@@ -197,8 +198,14 @@ index 91cc7d8..054f4f3 100644
 +	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
 +		"env import -t $loadaddr $filesize\0" \
-+	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
-+	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_file}\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"validatefdt=" \
++		"if test ! -e mmc ${mmcdev}:${mmcpart} ${fdt_dir}/${fdt_file}; then " \
++			"warn: unable to find: [${fdt_file}] using: [at91-sama5d3_xplained.dtb];" \
++			"setenv fdt_file at91-sama5d3_xplained.dtb; " \
++		"fi; " \
++	"fi; \0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_dir}/${fdt_file}\0" \
 +	"mmcboot=echo Booting from mmc ...; " \
 +		"run mmcargs; " \
 +		"bootz ${loadaddr} - ${ftdaddr}\0"
@@ -215,8 +222,9 @@ index 91cc7d8..054f4f3 100644
 +			"echo Running uenvcmd ...;" \
 +			"run uenvcmd;" \
 +		"fi;" \
-+		"echo Running default loadzimage ...;" \
-+		"if run loadzimage; then " \
++		"echo Running default loadimage ...;" \
++		"if run loadimage; then " \
++			"run validatefdt;" \
 +			"run loadfdt;" \
 +			"run mmcboot;" \
 +		"fi;" \
@@ -224,7 +232,7 @@ index 91cc7d8..054f4f3 100644
  #else
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\
-@@ -200,4 +252,54 @@
+@@ -200,4 +260,54 @@
  /* Size of malloc() pool */
  #define CONFIG_SYS_MALLOC_LEN		(4 * 1024 * 1024)
  
@@ -280,5 +288,5 @@ index 91cc7d8..054f4f3 100644
 +
  #endif
 -- 
-1.9.0
+2.0.0.rc0
 
