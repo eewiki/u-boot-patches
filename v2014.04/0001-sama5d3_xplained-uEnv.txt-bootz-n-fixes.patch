@@ -1,6 +1,6 @@
-From 6f6f50662913bf0a8e118b195c938e66906d38cd Mon Sep 17 00:00:00 2001
+From e76d578240cd6cadc699daa93a2ce35bcd17d231 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 6 May 2014 11:01:05 -0500
+Date: Tue, 6 May 2014 11:43:31 -0500
 Subject: [PATCH] sama5d3_xplained: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -109,7 +109,7 @@ index 39f2dc6..2442166 100644
 +}
 +#endif
 diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
-index 91cc7d8..3503762 100644
+index 91cc7d8..a8361f6 100644
 --- a/include/configs/sama5d3_xplained.h
 +++ b/include/configs/sama5d3_xplained.h
 @@ -21,7 +21,11 @@
@@ -201,7 +201,7 @@ index 91cc7d8..3503762 100644
 +	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"validatefdt=" \
 +		"if test ! -e mmc ${mmcdev}:${mmcpart} ${fdt_dir}/${fdt_file}; then " \
-+			"warn: unable to find: [${fdt_file}] using: [at91-sama5d3_xplained.dtb];" \
++			"echo warn: unable to find: [${fdt_file}] using: [at91-sama5d3_xplained.dtb] ...;" \
 +			"setenv fdt_file at91-sama5d3_xplained.dtb; " \
 +		"fi; " \
 +	"fi; \0" \
