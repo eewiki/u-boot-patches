@@ -1,0 +1,412 @@
+From 86ffc558def3012819a89c82649d19179737ede7 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 6 May 2014 15:50:37 -0500
+Subject: [PATCH] sama5d3_xplained: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/atmel/sama5d3_xplained/sama5d3_xplained.c | 170 ++++++++++++++++++++++++
+ include/configs/sama5d3_xplained.h              | 138 ++++++++++++++++++-
+ 2 files changed, 301 insertions(+), 7 deletions(-)
+
+diff --git a/board/atmel/sama5d3_xplained/sama5d3_xplained.c b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+index 39f2dc6..bf962c0 100644
+--- a/board/atmel/sama5d3_xplained/sama5d3_xplained.c
++++ b/board/atmel/sama5d3_xplained/sama5d3_xplained.c
+@@ -14,12 +14,21 @@
+ #include <asm/arch/at91_rstc.h>
+ #include <asm/arch/gpio.h>
+ #include <asm/arch/clk.h>
++#include <lcd.h>
++#include <atmel_lcdc.h>
+ #include <atmel_mci.h>
+ #include <net.h>
+ #include <netdev.h>
++#include <spl.h>
++#include <asm/arch/atmel_mpddrc.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++/* ------------------------------------------------------------------------- */
++/*
++ * Miscelaneous platform dependent initialisations
++ */
++
+ #ifdef CONFIG_NAND_ATMEL
+ void sama5d3_xplained_nand_hw_init(void)
+ {
+@@ -69,6 +78,81 @@ static void sama5d3_xplained_mci0_hw_init(void)
+ }
+ #endif
+ 
++#ifdef CONFIG_LCD
++vidinfo_t panel_info = {
++	.vl_col = 480,
++	.vl_row = 272,
++	.vl_clk = 27000000,
++	.vl_sync = ATMEL_LCDC_INVLINE_NORMAL | ATMEL_LCDC_INVFRAME_NORMAL,
++	.vl_bpix = LCD_BPP,
++	.vl_tft = 1,
++	.vl_hsync_len = 128,
++	.vl_left_margin = 64,
++	.vl_right_margin = 64,
++	.vl_vsync_len = 2,
++	.vl_upper_margin = 22,
++	.vl_lower_margin = 21,
++	.mmio = ATMEL_BASE_LCDC,
++};
++
++void lcd_enable(void)
++{
++}
++
++void lcd_disable(void)
++{
++}
++
++static void sama5d3_xplained_lcd_hw_init(void)
++{
++	gd->fb_base = CONFIG_SAMA5D3_LCD_BASE;
++
++	/* The higher 8 bit of LCD is board related */
++	at91_set_c_periph(AT91_PIO_PORTC, 14, 0);	/* LCDD16 */
++	at91_set_c_periph(AT91_PIO_PORTC, 13, 0);	/* LCDD17 */
++	at91_set_c_periph(AT91_PIO_PORTC, 12, 0);	/* LCDD18 */
++	at91_set_c_periph(AT91_PIO_PORTC, 11, 0);	/* LCDD19 */
++	at91_set_c_periph(AT91_PIO_PORTC, 10, 0);	/* LCDD20 */
++	at91_set_c_periph(AT91_PIO_PORTC, 15, 0);	/* LCDD21 */
++	at91_set_c_periph(AT91_PIO_PORTE, 27, 0);	/* LCDD22 */
++	at91_set_c_periph(AT91_PIO_PORTE, 28, 0);	/* LCDD23 */
++
++	/* Configure lower 16 bit of LCD and enable clock */
++	at91_lcd_hw_init();
++}
++
++#ifdef CONFIG_LCD_INFO
++#include <nand.h>
++#include <version.h>
++
++void lcd_show_board_info(void)
++{
++	ulong dram_size;
++	uint64_t nand_size;
++	int i;
++	char temp[32];
++
++	lcd_printf("%s\n", U_BOOT_VERSION);
++	lcd_printf("(C) 2013 ATMEL Corp\n");
++	lcd_printf("at91@atmel.com\n");
++	lcd_printf("%s CPU at %s MHz\n", get_cpu_name(),
++		   strmhz(temp, get_cpu_clk_rate()));
++
++	dram_size = 0;
++	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++)
++		dram_size += gd->bd->bi_dram[i].size;
++
++	nand_size = 0;
++#ifdef CONFIG_NAND_ATMEL
++	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++)
++		nand_size += nand_info[i].size;
++#endif
++	lcd_printf("%ld MB SDRAM, %lld MB NAND\n",
++		   dram_size >> 20, nand_size >> 20);
++}
++#endif /* CONFIG_LCD_INFO */
++#endif /* CONFIG_LCD */
++
+ int board_early_init_f(void)
+ {
+ 	at91_periph_clk_enable(ATMEL_ID_PIOA);
+@@ -100,6 +184,10 @@ int board_init(void)
+ 	at91_gmac_hw_init();
+ 	at91_macb_hw_init();
+ #endif
++#ifdef CONFIG_LCD
++	if (has_lcdc())
++		sama5d3_xplained_lcd_hw_init();
++#endif
+ 	return 0;
+ }
+ 
+@@ -128,3 +216,85 @@ int board_mmc_init(bd_t *bis)
+ 	return 0;
+ }
+ #endif
++
++/* SPL */
++#ifdef CONFIG_SPL_BUILD
++void spl_board_init(void)
++{
++#ifdef CONFIG_SYS_USE_MMC
++	sama5d3_xplained_mci0_hw_init();
++#endif
++}
++
++static void ddr2_conf(struct atmel_mpddr *ddr2)
++{
++	ddr2->md = (ATMEL_MPDDRC_MD_DBW_32_BITS | ATMEL_MPDDRC_MD_DDR2_SDRAM);
++
++	ddr2->cr = (ATMEL_MPDDRC_CR_NC_COL_10 |
++		    ATMEL_MPDDRC_CR_NR_ROW_13 |
++		    ATMEL_MPDDRC_CR_CAS_DDR_CAS3 |
++		    ATMEL_MPDDRC_CR_ENRDM_ON |
++		    ATMEL_MPDDRC_CR_NB_8BANKS |
++		    ATMEL_MPDDRC_CR_NDQS_DISABLED |
++		    ATMEL_MPDDRC_CR_DECOD_INTERLEAVED |
++		    ATMEL_MPDDRC_CR_UNAL_SUPPORTED);
++	/*
++	 * As the DDR2-SDRAm device requires a refresh time is 7.8125us
++	 * when DDR run at 133MHz, so it needs (7.81 * 133MHz7.81) clocks
++	 */
++	ddr2->rtr = 0x40F;
++
++	ddr2->tpr0 = (6 << ATMEL_MPDDRC_TPR0_TRAS_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRCD_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TWR_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR0_TRC_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRP_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TRRD_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TWTR_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR0_TMRD_OFFSET);
++
++	ddr2->tpr1 = (2 << ATMEL_MPDDRC_TPR1_TXP_OFFSET |
++		      200 << ATMEL_MPDDRC_TPR1_TXSRD_OFFSET |
++		      19 << ATMEL_MPDDRC_TPR1_TXSNR_OFFSET |
++		      17 << ATMEL_MPDDRC_TPR1_TRFC_OFFSET);
++
++	ddr2->tpr2 = (6 << ATMEL_MPDDRC_TPR2_TFAW_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR2_TRTP_OFFSET |
++		      2 << ATMEL_MPDDRC_TPR2_TRPA_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR2_TXARDS_OFFSET |
++		      8 << ATMEL_MPDDRC_TPR2_TXARD_OFFSET);
++}
++
++void mem_init(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	struct atmel_mpddr ddr2;
++
++	ddr2_conf(&ddr2);
++
++	/* enable MPDDR clock */
++	at91_periph_clk_enable(ATMEL_ID_MPDDRC);
++	writel(0x4, &pmc->scer);
++
++	/* DDRAM2 Controller initialize */
++	ddr2_init(ATMEL_BASE_DDRCS, &ddr2);
++}
++
++void at91_pmc_init(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	u32 tmp;
++
++	tmp = AT91_PMC_PLLAR_29 |
++	      AT91_PMC_PLLXR_PLLCOUNT(0x3f) |
++	      AT91_PMC_PLLXR_MUL(43) |
++	      AT91_PMC_PLLXR_DIV(1);
++	at91_plla_init(tmp);
++
++	writel(0x3 << 8, &pmc->pllicpr);
++
++	tmp = AT91_PMC_MCKR_MDIV_4 |
++	      AT91_PMC_MCKR_CSS_PLLA;
++	at91_mck_init(tmp);
++}
++#endif
+diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
+index 91cc7d8..16f751d 100644
+--- a/include/configs/sama5d3_xplained.h
++++ b/include/configs/sama5d3_xplained.h
+@@ -21,7 +21,11 @@
+ 
+ #define CONFIG_AT91FAMILY
+ #define CONFIG_ARCH_CPU_INIT
++
++#ifndef CONFIG_SPL_BUILD
+ #define CONFIG_SKIP_LOWLEVEL_INIT
++#endif
++
+ #define CONFIG_BOARD_EARLY_INIT_F
+ #define CONFIG_DISPLAY_CPUINFO
+ 
+@@ -47,7 +51,22 @@
+  */
+ #define ATMEL_PMC_UHP			AT91SAM926x_PMC_UHP
+ 
+-#define CONFIG_BOOTDELAY		3
++/* LCD */
++#define CONFIG_LCD
++#define LCD_BPP				LCD_COLOR16
++#define LCD_OUTPUT_BPP                  24
++#define CONFIG_LCD_LOGO
++#define CONFIG_LCD_INFO
++#define CONFIG_LCD_INFO_BELOW_LOGO
++#define CONFIG_SYS_WHITE_ON_BLACK
++#define CONFIG_ATMEL_HLCD
++#define CONFIG_ATMEL_LCD_RGB565
++#define CONFIG_SYS_CONSOLE_IS_IN_ENV
++
++/* board specific (not enough SRAM) */
++#define CONFIG_SAMA5D3_LCD_BASE		0x23E00000
++
++#define CONFIG_BOOTDELAY		1
+ 
+ /*
+  * BOOTP options
+@@ -75,8 +94,12 @@
+ #define CONFIG_SYS_SDRAM_BASE           ATMEL_BASE_DDRCS
+ #define CONFIG_SYS_SDRAM_SIZE		0x10000000
+ 
++#ifdef CONFIG_SPL_BUILD
++#define CONFIG_SYS_INIT_SP_ADDR		0x310000
++#else
+ #define CONFIG_SYS_INIT_SP_ADDR \
+ 	(CONFIG_SYS_SDRAM_BASE + 4 * 1024 - GENERATED_GBL_DATA_SIZE)
++#endif
+ 
+ /* NAND flash */
+ #define CONFIG_CMD_NAND
+@@ -144,8 +167,14 @@
+ #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
+ #define CONFIG_CMD_FAT
+ #define CONFIG_FAT_WRITE
++#define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_EXT4
+ #define CONFIG_CMD_EXT4_WRITE
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ #endif
+ 
+ #define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
+@@ -164,18 +193,63 @@
+ #define CONFIG_ENV_IS_IN_MMC
+ #define CONFIG_ENV_OFFSET	0x2000
+ #define CONFIG_ENV_SIZE		0x1000
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 at91-sama5d3_xplained.dtb; " \
+-				"fatload mmc 0:1 0x22000000 zImage; " \
+-				"bootz 0x22000000 - 0x21000000"
+ #define CONFIG_SYS_MMC_ENV_DEV	0
+ #else
+ #define CONFIG_ENV_IS_NOWHERE
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"root=/dev/mmcblk0p2 rw rootwait"
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"ftdaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"fdt_file=at91-sama5d3_xplained.dtb\0" \
++	"fdt_dir=/dtbs\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"validatefdt=" \
++		"if test ! -e mmc ${mmcdev}:${mmcpart} ${fdt_dir}/${fdt_file}; then " \
++			"echo warn: unable to find: [${fdt_file}] using: [at91-sama5d3_xplained.dtb] ...;" \
++			"setenv fdt_file at91-sama5d3_xplained.dtb; " \
++		"fi; \0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_dir}/${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${ftdaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadimage ...;" \
++		"if run loadimage; then " \
++			"run validatefdt;" \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #else
+ #define CONFIG_BOOTARGS							\
+ 	"console=ttyS0,115200 earlyprintk "				\
+@@ -200,4 +274,54 @@
+ /* Size of malloc() pool */
+ #define CONFIG_SYS_MALLOC_LEN		(4 * 1024 * 1024)
+ 
++/* SPL */
++#define CONFIG_SPL
++#define CONFIG_SPL_FRAMEWORK
++#define CONFIG_SPL_TEXT_BASE		0x300000
++#define CONFIG_SPL_MAX_SIZE		0x10000
++#define CONFIG_SPL_BSS_START_ADDR	0x20000000
++#define CONFIG_SPL_BSS_MAX_SIZE		0x80000
++#define CONFIG_SYS_SPL_MALLOC_START	0x20080000
++#define CONFIG_SYS_SPL_MALLOC_SIZE	0x80000
++
++#define CONFIG_SPL_LIBCOMMON_SUPPORT
++#define CONFIG_SPL_LIBGENERIC_SUPPORT
++#define CONFIG_SPL_GPIO_SUPPORT
++#define CONFIG_SPL_SERIAL_SUPPORT
++
++#define CONFIG_SPL_BOARD_INIT
++#define CONFIG_SYS_MONITOR_LEN		(512 << 10)
++
++#ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_SPL_LDSCRIPT		arch/arm/cpu/at91-common/u-boot-spl.lds
++#define CONFIG_SPL_MMC_SUPPORT
++#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	0x400
++#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR 0x200
++#define CONFIG_SYS_MMC_SD_FAT_BOOT_PARTITION	1
++#define CONFIG_SPL_FAT_LOAD_PAYLOAD_NAME	"u-boot.img"
++#define CONFIG_SPL_FAT_SUPPORT
++#define CONFIG_SPL_LIBDISK_SUPPORT
++
++#elif CONFIG_SYS_USE_NANDFLASH
++#define CONFIG_SPL_NAND_SUPPORT
++#define CONFIG_SPL_NAND_DRIVERS
++#define CONFIG_SPL_NAND_BASE
++#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
++#define CONFIG_SYS_NAND_5_ADDR_CYCLE
++#define CONFIG_SYS_NAND_PAGE_SIZE	0x800
++#define CONFIG_SYS_NAND_PAGE_COUNT	64
++#define CONFIG_SYS_NAND_OOBSIZE		64
++#define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
++#define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
++
++#elif CONFIG_SYS_USE_SERIALFLASH
++#define CONFIG_SPL_SPI_SUPPORT
++#define CONFIG_SPL_SPI_FLASH_SUPPORT
++#define CONFIG_SPL_SPI_LOAD
++#define CONFIG_SPL_SPI_BUS		0
++#define CONFIG_SPL_SPI_CS		0
++#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x8400
++
++#endif
++
+ #endif
+-- 
+2.0.0.rc0
+
