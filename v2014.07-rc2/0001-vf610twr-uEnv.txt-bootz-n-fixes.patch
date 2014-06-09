@@ -1,15 +1,15 @@
-From c0ce46f51d590731533ff72c39c3b6363e1c280e Mon Sep 17 00:00:00 2001
+From c82a29241a382914bb690ed660d4bda049062d9f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 3 Mar 2014 11:53:34 -0600
+Date: Mon, 9 Jun 2014 16:31:28 -0500
 Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/vf610twr.h | 50 ++++++++++++++++++++++++++++++----------------
- 1 file changed, 33 insertions(+), 17 deletions(-)
+ include/configs/vf610twr.h | 56 +++++++++++++++++++++++++++++-----------------
+ 1 file changed, 36 insertions(+), 20 deletions(-)
 
 diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
-index 500fd2f..23a1fd6 100644
+index 500fd2f..5b12abb 100644
 --- a/include/configs/vf610twr.h
 +++ b/include/configs/vf610twr.h
 @@ -54,6 +54,9 @@
@@ -103,6 +103,19 @@ index 500fd2f..23a1fd6 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP		/* undef to save memory */
+@@ -177,9 +192,9 @@
+ #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
+ #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
+ 
+-#define CONFIG_CMD_MEMTEST
+-#define CONFIG_SYS_MEMTEST_START	0x80010000
+-#define CONFIG_SYS_MEMTEST_END		0x87C00000
++/* #define CONFIG_CMD_MEMTEST */
++/* #define CONFIG_SYS_MEMTEST_START	0x80010000 */
++/* #define CONFIG_SYS_MEMTEST_END		0x87C00000 */
+ 
+ #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
+ 
 @@ -214,5 +229,6 @@
  
  #define CONFIG_OF_LIBFDT
@@ -111,5 +124,5 @@ index 500fd2f..23a1fd6 100644
  
  #endif
 -- 
-1.9.0
+2.0.0
 
