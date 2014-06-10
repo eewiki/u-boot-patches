@@ -1,6 +1,6 @@
-From db1b2ae7fa0349053e7d63ee86d8e7e061128ce1 Mon Sep 17 00:00:00 2001
+From fef4842ac862e54b956cdf781da51148d31d6a51 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 23 May 2014 09:55:10 -0500
+Date: Tue, 10 Jun 2014 11:08:25 -0500
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,7 +9,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 38 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 7d96908..d875be1 100644
+index 7d96908..5057bf9 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -51,7 +51,7 @@
@@ -66,7 +66,7 @@ index 7d96908..d875be1 100644
  		"source\0" \
 -	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 -	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-+	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zimage\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
 +	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
@@ -119,5 +119,5 @@ index 7d96908..d875be1 100644
  #ifndef CONFIG_SYS_DCACHE_OFF
  #define CONFIG_CMD_CACHE
 -- 
-2.0.0.rc2
+2.0.0
 
