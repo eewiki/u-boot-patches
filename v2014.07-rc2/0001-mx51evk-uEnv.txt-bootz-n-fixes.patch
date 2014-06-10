@@ -1,15 +1,15 @@
-From 629c187793c6067bc2ddfba624253448b0ae7875 Mon Sep 17 00:00:00 2001
+From d96ac56884042d1dd4f7d800fd2ca24db40376fd Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 3 Mar 2014 11:36:09 -0600
+Date: Tue, 10 Jun 2014 14:27:04 -0500
 Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx51evk.h | 62 +++++++++++++++++++++++++++++++++--------------
- 1 file changed, 44 insertions(+), 18 deletions(-)
+ include/configs/mx51evk.h | 60 +++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 43 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
-index b389475..c679b7d 100644
+index b389475..b64225c 100644
 --- a/include/configs/mx51evk.h
 +++ b/include/configs/mx51evk.h
 @@ -79,6 +79,14 @@
@@ -35,10 +35,9 @@ index b389475..c679b7d 100644
 +	"fdt_high=0xffffffff\0" \
  	"script=boot.scr\0" \
  	"image=zImage\0" \
--	"fdt_file=imx51-babbage.dtb\0" \
+ 	"fdt_file=imx51-babbage.dtb\0" \
 -	"fdt_addr=0x91000000\0" \
 -	"boot_fdt=try\0" \
-+	"fdt_file=/dtbs/imx51-babbage.dtb\0" \
 +	"fdt_addr=0x91ff0000\0" \
 +	"boot_fdt=yes\0" \
  	"ip_dyn=yes\0" \
@@ -69,7 +68,7 @@ index b389475..c679b7d 100644
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
 +		"env import -t ${loadaddr} ${filesize}\0" \
 +	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
-+	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
  	"mmcboot=echo Booting from mmc ...; " \
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
@@ -104,5 +103,5 @@ index b389475..c679b7d 100644
  #define CONFIG_ARP_TIMEOUT	200UL
  
 -- 
-1.9.0
+2.0.0
 
