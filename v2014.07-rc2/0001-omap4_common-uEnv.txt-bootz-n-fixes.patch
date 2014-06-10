@@ -1,15 +1,15 @@
-From 716dd33b2472659ada06a92fac97e00ea1fd1deb Mon Sep 17 00:00:00 2001
+From eac8f23d359a10676857e09ab4d261b2464eab4b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 27 May 2014 12:13:20 -0500
+Date: Tue, 10 Jun 2014 16:39:34 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap4_common.h | 24 +++++++++++++++---------
- 1 file changed, 15 insertions(+), 9 deletions(-)
+ include/configs/ti_omap4_common.h | 31 +++++++++++++++----------------
+ 1 file changed, 15 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 44b3718..4115d91 100644
+index 44b3718..596ccaf 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
 @@ -47,13 +47,15 @@
@@ -69,7 +69,7 @@ index 44b3718..4115d91 100644
  	"uimageboot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootm ${loadaddr}\0" \
-@@ -129,7 +134,7 @@
+@@ -129,30 +134,24 @@
  			"setenv fdtfile omap4-duovero.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -78,7 +78,11 @@ index 44b3718..4115d91 100644
  
  #define CONFIG_BOOTCOMMAND \
  	"run findfdt; " \
-@@ -141,6 +146,7 @@
+ 	"mmc dev ${mmcdev}; if mmc rescan; then " \
+ 		"echo SD/MMC found on device ${mmcdev};" \
+-		"if run loadbootscript; then " \
+-			"run bootscript; " \
+-		"else " \
  			"if run loadbootenv; then " \
  				"run importbootenv; " \
  			"fi;" \
@@ -86,6 +90,18 @@ index 44b3718..4115d91 100644
  			"if test -n ${uenvcmd}; then " \
  				"echo Running uenvcmd ...;" \
  				"run uenvcmd;" \
+ 			"fi;" \
+-		"fi;" \
+ 		"if run loadimage; then " \
+ 			"run loadfdt;" \
+ 			"run mmcboot; " \
+ 		"fi; " \
+-		"if run loaduimage; then " \
+-			"run uimageboot;" \
+-		"fi; " \
+ 	"fi"
+ 
+ /*
 -- 
-2.0.0.rc2
+2.0.0
 
