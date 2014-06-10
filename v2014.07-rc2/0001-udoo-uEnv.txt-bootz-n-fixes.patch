@@ -1,6 +1,6 @@
-From b0962d36ad7b6eff2d1d0e256a21f8d8f1355a1d Mon Sep 17 00:00:00 2001
+From a3881f7113b30fbc23c76380238e873924da13a8 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 13 May 2014 09:41:22 -0500
+Date: Tue, 10 Jun 2014 10:12:46 -0500
 Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,8 +9,8 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/udoo/ddr-setup_dl.cfg         | 84 +++++++++++++++++++++++++++++++++++++
  board/udoo/udoo-dl.cfg              | 29 +++++++++++++
  boards.cfg                          |  1 +
- include/configs/udoo.h              | 56 +++++++++++++++++--------
- 5 files changed, 211 insertions(+), 17 deletions(-)
+ include/configs/udoo.h              | 60 ++++++++++++++++++--------
+ 5 files changed, 215 insertions(+), 17 deletions(-)
  create mode 100644 board/udoo/1066mhz_4x256mx16_dl.cfg
  create mode 100644 board/udoo/ddr-setup_dl.cfg
  create mode 100644 board/udoo/udoo-dl.cfg
@@ -205,10 +205,10 @@ index 0000000..46953c1
 +#include "1066mhz_4x256mx16_dl.cfg"
 +#include "clocks.cfg"
 diff --git a/boards.cfg b/boards.cfg
-index 9d90550..0f3e80c 100644
+index 221b7f8..d57e0c0 100644
 --- a/boards.cfg
 +++ b/boards.cfg
-@@ -305,6 +305,7 @@ Active  arm         armv7          mx5         freescale       mx53smd
+@@ -307,6 +307,7 @@ Active  arm         armv7          mx5         freescale       mx53smd
  Active  arm         armv7          mx5         genesi          mx51_efikamx        mx51_efikamx                          mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKAMX,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_mx.cfg                                -
  Active  arm         armv7          mx5         genesi          mx51_efikamx        mx51_efikasb                          mx51_efikamx:MACH_TYPE=MACH_TYPE_MX51_EFIKASB,IMX_CONFIG=board/genesi/mx51_efikamx/imximage_sb.cfg                                -
  Active  arm         armv7          mx5         ttcontrol       vision2             vision2                               vision2:IMX_CONFIG=board/ttcontrol/vision2/imximage_hynix.cfg                                                                     Stefano Babic <sbabic@denx.de>
@@ -217,10 +217,10 @@ index 9d90550..0f3e80c 100644
  Active  arm         armv7          mx6         -               wandboard           wandboard_dl                          wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024                                                  Fabio Estevam <fabio.estevam@freescale.com>
  Active  arm         armv7          mx6         -               wandboard           wandboard_quad                        wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048                                                  Fabio Estevam <fabio.estevam@freescale.com>
 diff --git a/include/configs/udoo.h b/include/configs/udoo.h
-index a0306de..da72328 100644
+index 700e9c1..1db8a78 100644
 --- a/include/configs/udoo.h
 +++ b/include/configs/udoo.h
-@@ -76,7 +76,7 @@
+@@ -78,7 +78,7 @@
  #define CONFIG_CMD_BMODE
  #define CONFIG_CMD_SETEXPR
  
@@ -229,7 +229,7 @@ index a0306de..da72328 100644
  
  #define CONFIG_SYS_MEMTEST_START	0x10000000
  #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
-@@ -94,6 +94,8 @@
+@@ -96,9 +96,15 @@
  #define CONFIG_BOUNCE_BUFFER
  #define CONFIG_CMD_EXT2
  #define CONFIG_CMD_FAT
@@ -237,8 +237,15 @@ index a0306de..da72328 100644
 +#define CONFIG_CMD_FS_GENERIC
  #define CONFIG_DOS_PARTITION
  
++#if defined(CONFIG_MX6DL) || defined(CONFIG_MX6S)
++#define CONFIG_DEFAULT_FDT_FILE		"imx6dl-udoo.dtb"
++#elif defined(CONFIG_MX6Q)
  #define CONFIG_DEFAULT_FDT_FILE		"imx6q-udoo.dtb"
-@@ -109,9 +111,12 @@
++#endif
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	"script=boot.scr\0" \
+@@ -111,9 +117,12 @@
  	"fdt_addr=0x18000000\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
@@ -252,7 +259,7 @@ index a0306de..da72328 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -127,27 +132,36 @@
+@@ -129,27 +138,36 @@
  			"fi; "	\
  		"fi\0" \
  	"mmcargs=setenv bootargs console=${console},${baudrate} " \
@@ -294,7 +301,7 @@ index a0306de..da72328 100644
  		"fi;\0" \
  	"netargs=setenv bootargs console=${console},${baudrate} " \
  		"root=/dev/nfs " \
-@@ -175,16 +189,23 @@
+@@ -177,16 +195,23 @@
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -328,7 +335,7 @@ index a0306de..da72328 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -226,6 +247,7 @@
+@@ -228,6 +253,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
@@ -337,5 +344,5 @@ index a0306de..da72328 100644
  #ifndef CONFIG_SYS_DCACHE_OFF
  #define CONFIG_CMD_CACHE
 -- 
-2.0.0.rc0
+2.0.0
 
