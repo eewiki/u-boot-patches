@@ -1,0 +1,123 @@
+From fef4842ac862e54b956cdf781da51148d31d6a51 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 10 Jun 2014 11:08:25 -0500
+Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/wandboard.h | 54 +++++++++++++++++++++++++++++++--------------
+ 1 file changed, 38 insertions(+), 16 deletions(-)
+
+diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
+index 7d96908..5057bf9 100644
+--- a/include/configs/wandboard.h
++++ b/include/configs/wandboard.h
+@@ -51,7 +51,7 @@
+ #define CONFIG_CMD_BMODE
+ #define CONFIG_CMD_SETEXPR
+ 
+-#define CONFIG_BOOTDELAY		5
++#define CONFIG_BOOTDELAY		1
+ 
+ #define CONFIG_SYS_MEMTEST_START	0x10000000
+ #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 500 * SZ_1M)
+@@ -76,6 +76,8 @@
+ #define CONFIG_BOUNCE_BUFFER
+ #define CONFIG_CMD_EXT2
+ #define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_DOS_PARTITION
+ 
+ /* Ethernet Configuration */
+@@ -127,9 +129,12 @@
+ 	"fdt_addr=0x18000000\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+-	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -145,7 +150,13 @@
+ 			"fi; "	\
+ 		"fi\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}; run videoargs\0" \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
+ 	"videoargs=" \
+ 		"setenv nextcon 0; " \
+ 		"if hdmidet; then " \
+@@ -176,10 +187,13 @@
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdt_addr};\0" \
++	"mmcbootdefault=echo Booting from mmc ...; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+ 				"bootz ${loadaddr} - ${fdt_addr}; " \
+@@ -219,16 +233,23 @@
+ 		"fi;\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loadimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadimage ...;" \
++		"if run loadimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ /* Miscellaneous configurable options */
+ #define CONFIG_SYS_LONGHELP
+@@ -269,6 +290,7 @@
+ 
+ #define CONFIG_OF_LIBFDT
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #ifndef CONFIG_SYS_DCACHE_OFF
+ #define CONFIG_CMD_CACHE
+-- 
+2.0.0
+

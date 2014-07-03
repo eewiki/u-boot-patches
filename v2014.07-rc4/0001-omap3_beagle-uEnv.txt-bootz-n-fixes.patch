@@ -1,0 +1,213 @@
+From 12051dc4ca97dc2bdd38b754e910a6db91ceedd2 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 23 May 2014 09:59:31 -0500
+Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++++++-----
+ include/configs/omap3_beagle.h | 35 +++++++++++++++++++++++------------
+ 2 files changed, 56 insertions(+), 17 deletions(-)
+
+diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
+index 0674afd..e2267a6 100644
+--- a/board/ti/beagle/beagle.c
++++ b/board/ti/beagle/beagle.c
+@@ -54,6 +54,7 @@
+ #define BBTOYS_WIFI			0x01000B00
+ #define BBTOYS_VGA			0x02000B00
+ #define BBTOYS_LCD			0x03000B00
++#define BBTOYS_ULCD			0x04000B00
+ #define BCT_BRETTL3			0x01000F00
+ #define BCT_BRETTL4			0x02000F00
+ #define LSR_COM6L_ADPT			0x01001300
+@@ -198,25 +199,25 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
+  *		bus 1 for the availability of an AT24C01B serial EEPROM.
+  *		returns the device_vendor field from the EEPROM
+  */
+-static unsigned int get_expansion_id(void)
++static unsigned int get_expansion_id(int eeprom_address)
+ {
+ 	i2c_set_bus_num(EXPANSION_EEPROM_I2C_BUS);
+ 
+ 	/* return BEAGLE_NO_EEPROM if eeprom doesn't respond */
+-	if (i2c_probe(EXPANSION_EEPROM_I2C_ADDRESS) == 1) {
++	if (i2c_probe(eeprom_address) == 1) {
+ 		i2c_set_bus_num(TWL4030_I2C_BUS);
+ 		return BEAGLE_NO_EEPROM;
+ 	}
+ 
+ 	/* read configuration data */
+-	i2c_read(EXPANSION_EEPROM_I2C_ADDRESS, 0, 1, (u8 *)&expansion_config,
++	i2c_read(eeprom_address, 0, 1, (u8 *)&expansion_config,
+ 		 sizeof(expansion_config));
+ 
+ 	/* retry reading configuration data with 16bit addressing */
+ 	if ((expansion_config.device_vendor == 0xFFFFFF00) ||
+ 	    (expansion_config.device_vendor == 0xFFFFFFFF)) {
+ 		printf("EEPROM is blank or 8bit addressing failed: retrying with 16bit:\n");
+-		i2c_read(EXPANSION_EEPROM_I2C_ADDRESS, 0, 2, (u8 *)&expansion_config,
++		i2c_read(eeprom_address, 0, 2, (u8 *)&expansion_config,
+ 			 sizeof(expansion_config));
+ 	}
+ 
+@@ -325,15 +326,18 @@ int misc_init_r(void)
+ 	case REVISION_AXBX:
+ 		printf("Beagle Rev Ax/Bx\n");
+ 		setenv("beaglerev", "AxBx");
++		setenv("musb", "musb_hdrc.fifo_mode=5");
+ 		break;
+ 	case REVISION_CX:
+ 		printf("Beagle Rev C1/C2/C3\n");
+ 		setenv("beaglerev", "Cx");
++		setenv("musb", "musb_hdrc.fifo_mode=5");
+ 		MUX_BEAGLE_C();
+ 		break;
+ 	case REVISION_C4:
+ 		printf("Beagle Rev C4\n");
+ 		setenv("beaglerev", "C4");
++		setenv("musb", "musb_hdrc.fifo_mode=5");
+ 		MUX_BEAGLE_C();
+ 		/* Set VAUX2 to 1.8V for EHCI PHY */
+ 		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+@@ -374,7 +378,7 @@ int misc_init_r(void)
+ 		generate_fake_mac = true;
+ 	}
+ 
+-	switch (get_expansion_id()) {
++	switch (get_expansion_id(EXPANSION_EEPROM_I2C_ADDRESS)) {
+ 	case TINCANTOOLS_ZIPPY:
+ 		printf("Recognized Tincantools Zippy board (rev %d %s)\n",
+ 			expansion_config.revision,
+@@ -457,6 +461,30 @@ int misc_init_r(void)
+ 	if (expansion_config.content == 1)
+ 		setenv(expansion_config.env_var, expansion_config.env_setting);
+ 
++	/* Scan 0x51 as well for loop-thru boards */
++	switch (get_expansion_id(EXPANSION_EEPROM_I2C_ADDRESS + 1)) {
++	case BBTOYS_ULCD:
++		printf("Recognized BeagleBoardToys uLCD-lite board\n");
++		setenv("buddy2", "bbtoys-ulcd");
++		setenv("defaultdisplay", "dvi");
++		setenv("dvimode", "800x480MR-16@60");
++		setenv("lcd1", "i2c mw 40 00 00; i2c mw 40 04 80; i2c mw 40 0d 05");
++		setenv("lcdcmd", "i2c dev 1 ; run lcd1; i2c dev 0");
++		setenv("kmsmode", "video=DVI-D-1:800x480");
++		break;
++	case BEAGLE_NO_EEPROM:
++		printf("No EEPROM on expansion board\n");
++		setenv("buddy2", "none");
++		break;
++	default:
++		printf("Unrecognized expansion board: %x\n",
++			expansion_config.device_vendor);
++		setenv("buddy2", "unknown");
++	}
++
++	if (expansion_config.content == 1)
++		setenv(expansion_config.env_var, expansion_config.env_setting);
++
+ 	twl4030_power_init();
+ 	switch (get_board_revision()) {
+ 	case REVISION_XM_AB:
+diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
+index 0a7df60..5d287e8 100644
+--- a/include/configs/omap3_beagle.h
++++ b/include/configs/omap3_beagle.h
+@@ -128,26 +128,28 @@
+ 							/* devices */
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+-	"loadaddr=0x80200000\0" \
++	"loadaddr=0x80300000\0" \
+ 	"rdaddr=0x81000000\0" \
+ 	"fdt_high=0xffffffff\0" \
+-	"fdtaddr=0x80f80000\0" \
++	"fdtaddr=0x815f0000\0" \
+ 	"usbtty=cdc_acm\0" \
+-	"bootfile=uImage\0" \
++	"bootfile=zImage\0" \
+ 	"ramdisk=ramdisk.gz\0" \
+-	"bootdir=/boot\0" \
+-	"bootpart=0:2\0" \
++	"bootdir=\0" \
++	"bootpart=0:1\0" \
++	"fdtdir=/dtbs\0" \
+ 	"console=ttyO2,115200n8\0" \
+ 	"mpurate=auto\0" \
+ 	"buddy=none\0" \
+ 	"optargs=\0" \
+ 	"camera=none\0" \
++	"musb=\0" \
+ 	"vram=12M\0" \
+ 	"dvimode=640x480MR-16@60\0" \
+ 	"defaultdisplay=dvi\0" \
+ 	"mmcdev=0\0" \
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext3 rootwait\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
+ 	"nandrootfstype=ubifs\0" \
+ 	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
+@@ -161,7 +163,8 @@
+ 		"omapfb.mode=dvi:${dvimode} " \
+ 		"omapdss.def_disp=${defaultdisplay} " \
+ 		"root=${mmcroot} " \
+-		"rootfstype=${mmcrootfstype}\0" \
++		"rootfstype=${mmcrootfstype} " \
++		"${musb}\0" \
+ 	"nandargs=setenv bootargs console=${console} " \
+ 		"${optargs} " \
+ 		"mpurate=${mpurate} " \
+@@ -187,12 +190,12 @@
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+ 	"validatefdt=" \
+ 		"if test $beaglerev = xMAB; then " \
+-			"if test ! -e mmc ${bootpart} ${bootdir}/${fdtfile}; then " \
++			"if test ! -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
+ 				"setenv fdtfile omap3-beagle-xm.dtb; " \
+ 			"fi; " \
+ 		"fi; \0" \
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t $loadaddr $filesize\0" \
+ 	"ramargs=setenv bootargs console=${console} " \
+@@ -206,10 +209,10 @@
+ 		"rootfstype=${ramrootfstype}\0" \
+ 	"loadramdisk=load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=run validatefdt; load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadfdt=run validatefdt; load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+-		"bootm ${loadaddr}\0" \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
+ 	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
+ 		"run mmcargs; " \
+ 		"bootz ${loadaddr} - ${fdtaddr}\0" \
+@@ -238,11 +241,19 @@
+ 			"echo Loaded environment from ${bootenv};" \
+ 			"run importbootenv;" \
+ 		"fi;" \
++		"echo Checking if lcdcmd is set ...;" \
++		"if test -n $lcdcmd; then " \
++			"echo Running lcdcmd ...;" \
++			"run lcdcmd;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
+ 		"if test -n $uenvcmd; then " \
+ 			"echo Running uenvcmd ...;" \
+ 			"run uenvcmd;" \
+ 		"fi;" \
++		"echo Running default loadimage ...;" \
+ 		"if run loadimage; then " \
++			"run loadfdt;" \
+ 			"run mmcboot;" \
+ 		"fi;" \
+ 	"fi;" \
+-- 
+2.0.0.rc2
+

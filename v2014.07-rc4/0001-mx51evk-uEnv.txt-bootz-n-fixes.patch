@@ -1,0 +1,107 @@
+From d96ac56884042d1dd4f7d800fd2ca24db40376fd Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 10 Jun 2014 14:27:04 -0500
+Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/mx51evk.h | 60 +++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 43 insertions(+), 17 deletions(-)
+
+diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
+index b389475..b64225c 100644
+--- a/include/configs/mx51evk.h
++++ b/include/configs/mx51evk.h
+@@ -79,6 +79,14 @@
+ #define CONFIG_CMD_FAT
+ #define CONFIG_DOS_PARTITION
+ 
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_FS_GENERIC
++
++/* bootz: zImage/initrd.img support */
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
++
+ /*
+  * Eth Configs
+  */
+@@ -142,23 +150,36 @@
+ #define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
+ 	"script=boot.scr\0" \
+ 	"image=zImage\0" \
+ 	"fdt_file=imx51-babbage.dtb\0" \
+-	"fdt_addr=0x91000000\0" \
+-	"boot_fdt=try\0" \
++	"fdt_addr=0x91ff0000\0" \
++	"boot_fdt=yes\0" \
+ 	"ip_dyn=yes\0" \
++	"loadaddr=0x90010000\0" \
++	"console=ttymxc0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
+ 	"mmcdev=0\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
+-	"mmcargs=setenv bootargs console=ttymxc0,${baudrate} " \
+-		"root=${mmcroot}\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
+ 	"loadbootscript=" \
+-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
++		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
++	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} /dtbs/${fdt_file}\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+@@ -202,15 +223,20 @@
+ 
+ #define CONFIG_BOOTCOMMAND \
+ 	"mmc dev ${mmcdev}; if mmc rescan; then " \
+-		"if run loadbootscript; then " \
+-			"run bootscript; " \
+-		"else " \
+-			"if run loadimage; then " \
+-				"run mmcboot; " \
+-			"else run netboot; " \
+-			"fi; " \
+-		"fi; " \
+-	"else run netboot; fi"
++		"echo SD/MMC found on device ${mmcdev} ...;" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadimage ...;" \
++		"if run loadimage; then " \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ 
+ #define CONFIG_ARP_TIMEOUT	200UL
+ 
+-- 
+2.0.0
+
