@@ -1,13 +1,13 @@
-From 12051dc4ca97dc2bdd38b754e910a6db91ceedd2 Mon Sep 17 00:00:00 2001
+From c2bf9ad8ebf362b942e96151781ffb5a93e6ad4f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 23 May 2014 09:59:31 -0500
+Date: Wed, 9 Jul 2014 08:41:29 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       | 38 +++++++++++++++++++++++++++++++++-----
- include/configs/omap3_beagle.h | 35 +++++++++++++++++++++++------------
- 2 files changed, 56 insertions(+), 17 deletions(-)
+ board/ti/beagle/beagle.c       |  38 ++++++++--
+ include/configs/omap3_beagle.h | 156 ++++++++++++++++++++++++++++++-----------
+ 2 files changed, 149 insertions(+), 45 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 0674afd..e2267a6 100644
@@ -111,7 +111,7 @@ index 0674afd..e2267a6 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 0a7df60..5d287e8 100644
+index c023483..84021ce 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -128,26 +128,28 @@
@@ -150,17 +150,18 @@ index 0a7df60..5d287e8 100644
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -161,7 +163,8 @@
+@@ -161,7 +163,9 @@
  		"omapfb.mode=dvi:${dvimode} " \
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
 -		"rootfstype=${mmcrootfstype}\0" \
 +		"rootfstype=${mmcrootfstype} " \
-+		"${musb}\0" \
++		"${musb} " \
++		"${cmdline}\0" \
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -187,12 +190,12 @@
+@@ -187,12 +191,12 @@
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
  	"validatefdt=" \
  		"if test $beaglerev = xMAB; then " \
@@ -171,43 +172,159 @@ index 0a7df60..5d287e8 100644
  		"fi; \0" \
  	"bootenv=uEnv.txt\0" \
 -	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
-+	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} ${bootenv}\0" \
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -206,10 +209,10 @@
+@@ -206,10 +210,47 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 -	"loadfdt=run validatefdt; load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
-+	"loadfdt=run validatefdt; load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
- 	"mmcboot=echo Booting from mmc ...; " \
- 		"run mmcargs; " \
+-	"mmcboot=echo Booting from mmc ...; " \
+-		"run mmcargs; " \
 -		"bootm ${loadaddr}\0" \
-+		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=run validatefdt; echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"mmcboot=mmc dev ${mmcdev}; " \
++		"if mmc rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"if run loadbootenv; then " \
++					"echo Loaded environment from /uEnv.txt;" \
++					"run importbootenv;" \
++				"fi;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n $uenvcmd; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++				"echo; echo uenvcmd was not defined in ${bootpart} /uEnv.txt ...;"\
++			"else " \
++				"for i in 1 2 3 4 5 6 7 ; do " \
++					"setenv mmcpart ${i};" \
++					"setenv bootpart ${mmcdev}:${mmcpart};" \
++					"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++					"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++						"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++						"env import -t $loadaddr $filesize;" \
++						"echo Loaded environment from /boot/uEnv.txt;" \
++						"if test -n ${dtb}; then " \
++							"setenv fdtfile ${dtb};" \
++							"echo using ${fdtfile} ...;" \
++						"fi;" \
++						"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++						"if test -n ${uname_r}; then " \
++							"if test -n ${uuid}; then " \
++								"setenv mmcroot UUID=${uuid} ro;" \
++							"fi;" \
++							"run uname_boot;" \
++						"fi;" \
++					"fi;" \
++				"done;" \
++			"fi; " \
++		"fi;\0" \
  	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
-@@ -238,11 +241,19 @@
- 			"echo Loaded environment from ${bootenv};" \
- 			"run importbootenv;" \
- 		"fi;" \
-+		"echo Checking if lcdcmd is set ...;" \
-+		"if test -n $lcdcmd; then " \
-+			"echo Running lcdcmd ...;" \
-+			"run lcdcmd;" \
-+		"fi;" \
-+		"echo Checking if uenvcmd is set ...;" \
- 		"if test -n $uenvcmd; then " \
- 			"echo Running uenvcmd ...;" \
- 			"run uenvcmd;" \
- 		"fi;" \
-+		"echo Running default loadimage ...;" \
- 		"if run loadimage; then " \
-+			"run loadfdt;" \
- 			"run mmcboot;" \
- 		"fi;" \
+@@ -223,35 +264,70 @@
+ 	"userbutton=if gpio input 173; then run userbutton_xm; " \
+ 		"else run userbutton_nonxm; fi;\0" \
+ 	"userbutton_xm=gpio input 4;\0" \
+-	"userbutton_nonxm=gpio input 7;\0"
++	"userbutton_nonxm=gpio input 7;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e mmc ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"echo; echo unable to find ${fdtfile} ...; echo booting legacy ...;"\
++										"run mmcargs;" \
++										"bootz ${loadaddr}; " \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"run mmcargs;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++			"else " \
++				"run mmcargs;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
++		"fi;\0"
+ /* "run userbutton" will return 1 (false) if pressed and 0 (true) if not */
+ #define CONFIG_BOOTCOMMAND \
+-	"run findfdt; " \
+-	"mmc dev ${mmcdev}; if mmc rescan; then " \
+-		"if run userbutton; then " \
+-			"setenv bootenv uEnv.txt;" \
+-		"else " \
+-			"setenv bootenv user.txt;" \
+-		"fi;" \
+-		"echo SD/MMC found on device ${mmcdev};" \
+-		"if run loadbootenv; then " \
+-			"echo Loaded environment from ${bootenv};" \
+-			"run importbootenv;" \
+-		"fi;" \
+-		"if test -n $uenvcmd; then " \
+-			"echo Running uenvcmd ...;" \
+-			"run uenvcmd;" \
+-		"fi;" \
+-		"if run loadimage; then " \
+-			"run mmcboot;" \
+-		"fi;" \
++	"if test -n $lcdcmd; then " \
++		"echo Running lcdcmd ...;" \
++		"run lcdcmd;" \
  	"fi;" \
+-	"run nandboot;" \
+-	"setenv bootfile zImage;" \
+-	"if run loadimage; then " \
+-		"run loadfdt;" \
+-		"run mmcbootz; " \
+-	"fi; " \
++	"run findfdt;" \
++	"run mmcboot; " \
+ 
+ /*
+  * OMAP3 has 12 GP timers, they can be driven by the system clock
 -- 
-2.0.0.rc2
+2.0.0
 
