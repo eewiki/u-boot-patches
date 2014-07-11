@@ -1,13 +1,13 @@
-From c2bf9ad8ebf362b942e96151781ffb5a93e6ad4f Mon Sep 17 00:00:00 2001
+From 18ad7339f2f80007acbdf233c7f20baa015c1303 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 9 Jul 2014 08:41:29 -0500
+Date: Fri, 11 Jul 2014 12:02:00 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c       |  38 ++++++++--
- include/configs/omap3_beagle.h | 156 ++++++++++++++++++++++++++++++-----------
- 2 files changed, 149 insertions(+), 45 deletions(-)
+ include/configs/omap3_beagle.h | 157 ++++++++++++++++++++++++++++++-----------
+ 2 files changed, 150 insertions(+), 45 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 0674afd..e2267a6 100644
@@ -111,10 +111,18 @@ index 0674afd..e2267a6 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c023483..84021ce 100644
+index c023483..7260273 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
-@@ -128,26 +128,28 @@
+@@ -28,6 +28,7 @@
+ #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
+ 
+ #include <configs/ti_omap3_common.h>
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /*
+  * Display CPU and Board information
+@@ -128,26 +129,28 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -150,7 +158,7 @@ index c023483..84021ce 100644
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -161,7 +163,9 @@
+@@ -161,7 +164,9 @@
  		"omapfb.mode=dvi:${dvimode} " \
  		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
@@ -161,7 +169,7 @@ index c023483..84021ce 100644
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -187,12 +191,12 @@
+@@ -187,12 +192,12 @@
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
  	"validatefdt=" \
  		"if test $beaglerev = xMAB; then " \
@@ -176,7 +184,7 @@ index c023483..84021ce 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -206,10 +210,47 @@
+@@ -206,10 +211,47 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -228,7 +236,7 @@ index c023483..84021ce 100644
  	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
-@@ -223,35 +264,70 @@
+@@ -223,35 +265,70 @@
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
@@ -326,5 +334,5 @@ index c023483..84021ce 100644
  /*
   * OMAP3 has 12 GP timers, they can be driven by the system clock
 -- 
-2.0.0
+2.0.1
 

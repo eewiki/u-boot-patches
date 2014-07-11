@@ -1,18 +1,26 @@
-From 79f96c6685f8b13134968089047e09dc69d9a26e Mon Sep 17 00:00:00 2001
+From 99115e16b5238642ee0be96a2b41af2dbfd5d9c6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 9 Jul 2014 08:58:10 -0500
+Date: Fri, 11 Jul 2014 12:04:20 -0500
 Subject: [PATCH] ti_omap5_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap5_common.h | 128 +++++++++++++++++++++++++++++++-------
- 1 file changed, 104 insertions(+), 24 deletions(-)
+ include/configs/ti_omap5_common.h | 129 +++++++++++++++++++++++++++++++-------
+ 1 file changed, 105 insertions(+), 24 deletions(-)
 
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index a582fa4..32cc2b6 100644
+index a582fa4..11c3515 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -71,45 +71,70 @@
+@@ -47,6 +47,7 @@
+ #include <asm/arch/omap.h>
+ 
+ #include <configs/ti_armv7_common.h>
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /*
+  * Hardware drivers
+@@ -71,45 +72,70 @@
  	DEFAULT_LINUX_BOOT_ENV \
  	"console=" CONSOLEDEV ",115200n8\0" \
  	"fdtfile=undefined\0" \
@@ -104,7 +112,7 @@ index a582fa4..32cc2b6 100644
  		"fi;\0" \
  	"findfdt="\
  		"if test $board_name = omap5_uevm; then " \
-@@ -118,14 +143,69 @@
+@@ -118,14 +144,69 @@
  			"setenv fdtfile dra7-evm.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -178,5 +186,5 @@ index a582fa4..32cc2b6 100644
  
  
 -- 
-2.0.0
+2.0.1
 

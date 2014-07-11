@@ -1,19 +1,26 @@
-From 7996bf23e3330fdade868c2296c7d483e181bd53 Mon Sep 17 00:00:00 2001
+From 29a78f802afebd23721de12140576749df48a256 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 10 Jul 2014 10:07:55 -0500
+Date: Fri, 11 Jul 2014 12:00:14 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h      | 144 +++++++++++++++++++++++++++++++++-----
- include/configs/ti_armv7_common.h |   1 +
- 2 files changed, 126 insertions(+), 19 deletions(-)
+ include/configs/am335x_evm.h | 145 +++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 126 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index a48b386..fbe7eee 100644
+index a48b386..c595c1b 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
-@@ -79,7 +79,8 @@
+@@ -17,6 +17,7 @@
+ #define __CONFIG_AM335X_EVM_H
+ 
+ #include <configs/ti_am335x_common.h>
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #ifndef CONFIG_SPL_BUILD
+ # define CONFIG_FIT
+@@ -79,7 +80,8 @@
  	DEFAULT_LINUX_BOOT_ENV \
  	"boot_fdt=try\0" \
  	"bootpart=0:2\0" \
@@ -23,7 +30,7 @@ index a48b386..fbe7eee 100644
  	"bootfile=zImage\0" \
  	"fdtfile=undefined\0" \
  	"console=ttyO0,115200n8\0" \
-@@ -87,9 +88,13 @@
+@@ -87,9 +89,13 @@
  		"uuid_disk=${uuid_gpt_disk};" \
  		"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
  	"optargs=\0" \
@@ -38,7 +45,7 @@ index a48b386..fbe7eee 100644
  	"rootpath=/export/rootfs\0" \
  	"nfsopts=nolock\0" \
  	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
-@@ -98,8 +103,11 @@
+@@ -98,8 +104,11 @@
  	"ramrootfstype=ext2\0" \
  	"mmcargs=setenv bootargs console=${console} " \
  		"${optargs} " \
@@ -51,7 +58,7 @@ index a48b386..fbe7eee 100644
  	"spiroot=/dev/mtdblock4 rw\0" \
  	"spirootfstype=jffs2\0" \
  	"spisrcaddr=0xe0000\0" \
-@@ -115,7 +123,7 @@
+@@ -115,7 +124,7 @@
  		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
  		"ip=dhcp\0" \
  	"bootenv=uEnv.txt\0" \
@@ -60,7 +67,7 @@ index a48b386..fbe7eee 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -124,7 +132,8 @@
+@@ -124,7 +133,8 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -70,7 +77,7 @@ index a48b386..fbe7eee 100644
  	"mmcloados=run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -141,18 +150,53 @@
+@@ -141,18 +151,53 @@
  		"fi;\0" \
  	"mmcboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
@@ -135,7 +142,7 @@ index a48b386..fbe7eee 100644
  		"fi;\0" \
  	"spiboot=echo Booting from spi ...; " \
  		"run spiargs; " \
-@@ -171,24 +215,86 @@
+@@ -171,24 +216,86 @@
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
@@ -225,18 +232,6 @@ index a48b386..fbe7eee 100644
  	"run mmcboot;" \
  	"run nandboot;"
  
-diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6e0bf09..ce4d5e3 100644
---- a/include/configs/ti_armv7_common.h
-+++ b/include/configs/ti_armv7_common.h
-@@ -174,6 +174,7 @@
- #define CONFIG_CMD_ASKENV
- #define CONFIG_CMD_ECHO
- #define CONFIG_CMD_BOOTZ
-+#define CONFIG_SUPPORT_RAW_INITRD
- 
- /*
-  * Common filesystems support.  When we have removable storage we
 -- 
-2.0.0
+2.0.1
 
