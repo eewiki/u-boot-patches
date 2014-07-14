@@ -1,6 +1,6 @@
-From da1e2b7a0d476c1c0786fb468670b86b7779c44a Mon Sep 17 00:00:00 2001
+From 5b9997a56fa59bda699eae53aafae098b2b4c8f6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 9 Jul 2014 08:42:39 -0500
+Date: Mon, 14 Jul 2014 10:28:37 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,7 +9,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 112 insertions(+), 33 deletions(-)
 
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 44b3718..ab66153 100644
+index 44b3718..70c8772 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
 @@ -47,13 +47,15 @@
@@ -70,6 +70,7 @@ index 44b3718..ab66153 100644
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
 +			"if test -e mmc ${bootpart} /uEnv.txt; then " \
 +				"if run loadbootenv; then " \
 +					"echo Loaded environment from /uEnv.txt;" \
@@ -80,30 +81,29 @@ index 44b3718..ab66153 100644
 +					"echo Running uenvcmd ...;" \
 +					"run uenvcmd;" \
 +				"fi;" \
-+				"echo; echo uenvcmd was not defined in ${bootpart} /uEnv.txt ...;"\
-+			"else " \
-+				"for i in 1 2 3 4 5 6 7 ; do " \
-+					"setenv mmcpart ${i};" \
-+					"setenv bootpart ${mmcdev}:${mmcpart};" \
-+					"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+					"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
-+						"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+						"env import -t $loadaddr $filesize;" \
-+						"echo Loaded environment from /boot/uEnv.txt;" \
-+						"if test -n ${dtb}; then " \
-+							"setenv fdtfile ${dtb};" \
-+							"echo using ${fdtfile} ...;" \
-+						"fi;" \
-+						"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
-+						"if test -n ${uname_r}; then " \
-+							"if test -n ${uuid}; then " \
-+								"setenv mmcroot UUID=${uuid} ro;" \
-+							"fi;" \
-+							"run uname_boot;" \
-+						"fi;" \
++			"fi;" \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t $loadaddr $filesize;" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
 +					"fi;" \
-+				"done;" \
-+			"fi; " \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"if test -n ${uuid}; then " \
++							"setenv mmcroot UUID=${uuid} ro;" \
++						"fi;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
 +		"fi;\0" \
 +	"mmc_classic_boot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
@@ -201,5 +201,5 @@ index 44b3718..ab66153 100644
  /*
   * Defines for SPL
 -- 
-2.0.0
+2.0.1
 

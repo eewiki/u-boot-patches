@@ -1,6 +1,6 @@
-From 18ad7339f2f80007acbdf233c7f20baa015c1303 Mon Sep 17 00:00:00 2001
+From c3e5df81c8272c088a2c302e079f03a2f4207cad Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 11 Jul 2014 12:02:00 -0500
+Date: Mon, 14 Jul 2014 10:15:44 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -198,6 +198,7 @@ index c023483..7260273 100644
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
 +			"if test -e mmc ${bootpart} /uEnv.txt; then " \
 +				"if run loadbootenv; then " \
 +					"echo Loaded environment from /uEnv.txt;" \
@@ -208,30 +209,29 @@ index c023483..7260273 100644
 +					"echo Running uenvcmd ...;" \
 +					"run uenvcmd;" \
 +				"fi;" \
-+				"echo; echo uenvcmd was not defined in ${bootpart} /uEnv.txt ...;"\
-+			"else " \
-+				"for i in 1 2 3 4 5 6 7 ; do " \
-+					"setenv mmcpart ${i};" \
-+					"setenv bootpart ${mmcdev}:${mmcpart};" \
-+					"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+					"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
-+						"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+						"env import -t $loadaddr $filesize;" \
-+						"echo Loaded environment from /boot/uEnv.txt;" \
-+						"if test -n ${dtb}; then " \
-+							"setenv fdtfile ${dtb};" \
-+							"echo using ${fdtfile} ...;" \
-+						"fi;" \
-+						"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
-+						"if test -n ${uname_r}; then " \
-+							"if test -n ${uuid}; then " \
-+								"setenv mmcroot UUID=${uuid} ro;" \
-+							"fi;" \
-+							"run uname_boot;" \
-+						"fi;" \
++			"fi;" \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t $loadaddr $filesize;" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
 +					"fi;" \
-+				"done;" \
-+			"fi; " \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"if test -n ${uuid}; then " \
++							"setenv mmcroot UUID=${uuid} ro;" \
++						"fi;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
 +		"fi;\0" \
  	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
  		"run mmcargs; " \

@@ -1,15 +1,15 @@
-From 29a78f802afebd23721de12140576749df48a256 Mon Sep 17 00:00:00 2001
+From e83fa740c11d6b71676e23eb420c982e779310ef Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 11 Jul 2014 12:00:14 -0500
+Date: Fri, 11 Jul 2014 14:17:26 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h | 145 +++++++++++++++++++++++++++++++++++++------
- 1 file changed, 126 insertions(+), 19 deletions(-)
+ include/configs/am335x_evm.h | 169 ++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 150 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index a48b386..c595c1b 100644
+index a48b386..603bcaf 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -67,17 +67,23 @@ index a48b386..c595c1b 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -124,7 +133,8 @@
+@@ -124,7 +133,14 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
 +	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"script=boot.scr\0" \
++	"scriptfile=${script}\0" \
++		"loadbootscript=" \
++		"load mmc ${bootpart} ${loadaddr} ${scriptfile};\0" \
++	"bootscript=echo Running bootscript from mmc ...; " \
++		"source ${loadaddr}\0" \
  	"mmcloados=run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -141,18 +151,53 @@
+@@ -141,18 +157,71 @@
  		"fi;\0" \
  	"mmcboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
@@ -95,6 +101,7 @@ index a48b386..c595c1b 100644
 -				"run mmcloados;" \
 -			"fi;" \
 +			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
 +			"if test -e mmc ${bootpart} /uEnv.txt; then " \
 +				"if run loadbootenv; then " \
 +					"gpio set 55;" \
@@ -113,36 +120,53 @@ index a48b386..c595c1b 100644
 +					"echo Running uenvcmd ...;" \
 +					"run uenvcmd;" \
 +				"fi;" \
-+				"echo; echo uenvcmd was not defined in ${bootpart} /uEnv.txt ...;"\
-+			"else " \
-+				"for i in 1 2 3 4 5 6 7 ; do " \
-+					"setenv mmcpart ${i};" \
-+					"setenv bootpart ${mmcdev}:${mmcpart};" \
-+					"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+					"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
-+						"gpio set 55;" \
-+						"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+						"env import -t $loadaddr $filesize;" \
-+						"echo Loaded environment from /boot/uEnv.txt;" \
-+						"if test -n ${dtb}; then " \
-+							"setenv fdtfile ${dtb};" \
-+							"echo using ${fdtfile} ...;" \
-+						"fi;" \
-+						"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
-+						"if test -n ${uname_r}; then " \
-+							"if test -n ${uuid}; then " \
-+								"setenv mmcroot UUID=${uuid} ro;" \
-+							"fi;" \
-+							"gpio set 56; " \
-+							"run uname_boot;" \
-+						"fi;" \
-+					"fi;" \
-+				"done;" \
 +			"fi; " \
++			"echo Checking for: /${script} ...;" \
++			"if test -e mmc ${bootpart} /${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile ${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/${script} ...;" \
++			"if test -e mmc ${bootpart} /boot/${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile /boot/${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"gpio set 55;" \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t $loadaddr $filesize;" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"if test -n ${uuid}; then " \
++							"setenv mmcroot UUID=${uuid} ro;" \
++						"fi;" \
++						"gpio set 56; " \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
  		"fi;\0" \
  	"spiboot=echo Booting from spi ...; " \
  		"run spiargs; " \
-@@ -171,24 +216,86 @@
+@@ -171,24 +240,86 @@
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
