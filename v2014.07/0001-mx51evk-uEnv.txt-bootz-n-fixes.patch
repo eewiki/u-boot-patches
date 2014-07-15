@@ -1,22 +1,22 @@
-From 249bdca9d3dac31254e7dbc3769479b4a497c1b1 Mon Sep 17 00:00:00 2001
+From db8001faf892f67e9c73247682bbc7f3485656e5 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:19:45 -0500
-Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
+Date: Tue, 15 Jul 2014 15:23:50 -0500
+Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx23_olinuxino.h | 116 +++++++++++++++++++++++++++++++++------
- 1 file changed, 100 insertions(+), 16 deletions(-)
+ include/configs/mx51evk.h | 133 +++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 114 insertions(+), 19 deletions(-)
 
-diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
-index e377fea..f5b0889 100644
---- a/include/configs/mx23_olinuxino.h
-+++ b/include/configs/mx23_olinuxino.h
-@@ -26,6 +26,14 @@
- #define CONFIG_CMD_NET
- #define CONFIG_CMD_USB
+diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
+index b389475..b3f856e 100644
+--- a/include/configs/mx51evk.h
++++ b/include/configs/mx51evk.h
+@@ -79,6 +79,14 @@
+ #define CONFIG_CMD_FAT
+ #define CONFIG_DOS_PARTITION
  
-+#define CONFIG_CMD_FAT
++#define CONFIG_CMD_EXT2
 +#define CONFIG_CMD_EXT4
 +#define CONFIG_CMD_FS_GENERIC
 +
@@ -24,57 +24,59 @@ index e377fea..f5b0889 100644
 +#define CONFIG_CMD_BOOTZ
 +#define CONFIG_SUPPORT_RAW_INITRD
 +
- /* Memory configuration */
- #define CONFIG_NR_DRAM_BANKS		1		/* 1 bank of DRAM */
- #define PHYS_SDRAM_1			0x40000000	/* Base address */
-@@ -66,7 +74,7 @@
- #endif
+ /*
+  * Eth Configs
+  */
+@@ -142,24 +150,65 @@
+ #define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
  
- /* Booting Linux */
--#define CONFIG_BOOTDELAY	3
-+#define CONFIG_BOOTDELAY	1
- #define CONFIG_BOOTFILE		"uImage"
- #define CONFIG_LOADADDR		0x42000000
- #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
-@@ -87,20 +95,58 @@
- 	"console=ttyAMA0\0" \
- 	"fdt_file=imx23-olinuxino.dtb\0" \
- 	"fdt_addr=0x41000000\0" \
-+	"fdtdir=\0" \
-+	"bootfile=\0" \
-+	"bootdir=\0" \
- 	"boot_fdt=try\0" \
+ #define CONFIG_EXTRA_ENV_SETTINGS \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
+ 	"script=boot.scr\0" \
+ 	"image=zImage\0" \
+ 	"fdt_file=imx51-babbage.dtb\0" \
+-	"fdt_addr=0x91000000\0" \
+-	"boot_fdt=try\0" \
++	"fdt_addr=0x91ff0000\0" \
++	"boot_fdt=yes\0" \
  	"ip_dyn=yes\0" \
++	"loadaddr=0x90010000\0" \
++	"rdaddr=0x92000000\0" \
++	"console=ttymxc0,115200n8\0" \
 +	"optargs=\0" \
 +	"cmdline=\0" \
  	"mmcdev=0\0" \
- 	"mmcpart=2\0" \
--	"mmcroot=/dev/mmcblk0p3 rw rootwait\0" \
-+	"mmcroot=/dev/mmcblk0p2 ro\0" \
-+	"mmcrootfstype=ext4 rootwait fixrtc\0" \
- 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
+-	"mmcargs=setenv bootargs console=ttymxc0,${baudrate} " \
 -		"root=${mmcroot}\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
 +		"${optargs} " \
 +		"root=${mmcroot} " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
-+	"loadbootenv=load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt\0" \
-+	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
-+		"env import -t ${loadaddr} ${filesize}\0" \
- 	"loadbootscript="  \
- 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
- 	"bootscript=echo Running bootscript from mmc ...; "	\
+ 	"loadbootscript=" \
+-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
++		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
  		"source\0" \
--	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 -	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 -	"mmcboot=echo Booting from mmc ...; " \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
 +	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
-+			"for i in 2 3 4 5 6 7 ; do " \
++			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
 +				"setenv bootpart ${mmcdev}:${mmcpart};" \
 +				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
@@ -100,10 +102,10 @@ index e377fea..f5b0889 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -139,19 +185,57 @@
+@@ -198,19 +247,65 @@
  			"fi; " \
  		"else " \
- 			"bootm; " \
+ 			"bootz; " \
 +		"fi;\0" \
 +	"uname_boot="\
 +		"setenv bootdir /boot; " \
@@ -149,8 +151,16 @@ index e377fea..f5b0889 100644
 +					"fi;" \
 +				"fi;" \
 +			"fi; " \
-+			"run mmcargs;" \
-+			"bootz ${loadaddr} - ${fdt_addr}; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"run mmcargs;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++			"else " \
++				"run mmcargs;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -158,7 +168,7 @@ index e377fea..f5b0889 100644
 -		"if run loadbootscript; then " \
 -			"run bootscript; " \
 -		"else " \
--			"if run loaduimage; then " \
+-			"if run loadimage; then " \
 -				"run mmcboot; " \
 -			"else run netboot; " \
 -			"fi; " \
@@ -166,8 +176,8 @@ index e377fea..f5b0889 100644
 -	"else run netboot; fi"
 +	"run mmcboot;"
  
- /* The rest of the configuration is shared */
- #include <configs/mxs.h>
+ #define CONFIG_ARP_TIMEOUT	200UL
+ 
 -- 
 2.0.1
 
