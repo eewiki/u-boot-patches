@@ -1,15 +1,15 @@
-From cb6df6d700c079ed807827a5b913b252a4b22db2 Mon Sep 17 00:00:00 2001
+From ba7d6c89e0b97e5424b331a254b1f4a41c867ecf Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 12:56:35 -0500
+Date: Tue, 15 Jul 2014 13:27:43 -0500
 Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx23_olinuxino.h | 118 +++++++++++++++++++++++++++++++++------
- 1 file changed, 102 insertions(+), 16 deletions(-)
+ include/configs/mx23_olinuxino.h | 120 +++++++++++++++++++++++++++++++++------
+ 1 file changed, 104 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
-index e377fea..09bbd7c 100644
+index e377fea..c04ee19 100644
 --- a/include/configs/mx23_olinuxino.h
 +++ b/include/configs/mx23_olinuxino.h
 @@ -26,6 +26,15 @@
@@ -37,7 +37,7 @@ index e377fea..09bbd7c 100644
  #define CONFIG_BOOTFILE		"uImage"
  #define CONFIG_LOADADDR		0x42000000
  #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
-@@ -87,20 +96,58 @@
+@@ -87,20 +96,60 @@
  	"console=ttyAMA0\0" \
  	"fdt_file=imx23-olinuxino.dtb\0" \
  	"fdt_addr=0x41000000\0" \
@@ -45,6 +45,7 @@ index e377fea..09bbd7c 100644
 +	"bootfile=\0" \
 +	"bootdir=\0" \
  	"boot_fdt=try\0" \
++	"cmdline=\0" \
  	"ip_dyn=yes\0" \
 +	"optargs=\0" \
 +	"video=\0" \
@@ -58,7 +59,8 @@ index e377fea..09bbd7c 100644
 +		"${optargs} " \
 +		"root=${mmcroot} " \
 +		"rootfstype=${mmcrootfstype} " \
-+		"video=${video}\0" \
++		"video=${video} " \
++		"${cmdline}\0" \
 +	"loadbootenv=load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt\0" \
 +	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
 +		"env import -t ${loadaddr} ${filesize}\0" \
@@ -101,7 +103,7 @@ index e377fea..09bbd7c 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -139,19 +186,58 @@
+@@ -139,19 +188,58 @@
  			"fi; " \
  		"else " \
  			"bootm; " \
