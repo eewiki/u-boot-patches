@@ -36,7 +36,7 @@ index a74508c..2d63ecd 100644
 +	"fdt_dir=/dtbs/\0" \
  	"fdt_file=imx53-qsb.dtb\0" \
  	"fdt_addr=0x71000000\0" \
-+	"rdaddr=0x72000000\0" \\0" \
++	"rdaddr=0x72000000\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
 +	"console=ttymxc0,115200\0" \

@@ -1,6 +1,6 @@
-From e83fa740c11d6b71676e23eb420c982e779310ef Mon Sep 17 00:00:00 2001
+From 9e08c07c38199eea16ca3c8306d731f7aa8d7101 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 11 Jul 2014 14:17:26 -0500
+Date: Tue, 15 Jul 2014 15:57:41 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,7 +9,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 150 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index a48b386..603bcaf 100644
+index a48b386..4a4f9df 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -143,11 +143,10 @@ index a48b386..603bcaf 100644
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
 +				"setenv bootpart ${mmcdev}:${mmcpart};" \
-+				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
 +					"gpio set 55;" \
 +					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+					"env import -t $loadaddr $filesize;" \
++					"env import -t ${loadaddr} ${filesize};" \
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdtfile ${dtb};" \
@@ -155,6 +154,7 @@ index a48b386..603bcaf 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +						"if test -n ${uuid}; then " \
 +							"setenv mmcroot UUID=${uuid} ro;" \
 +						"fi;" \

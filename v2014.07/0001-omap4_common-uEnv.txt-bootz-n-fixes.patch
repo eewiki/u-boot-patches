@@ -1,15 +1,15 @@
-From 5b9997a56fa59bda699eae53aafae098b2b4c8f6 Mon Sep 17 00:00:00 2001
+From c7ae1b1787efb7fa56a18ca832614859e7c97f08 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 14 Jul 2014 10:28:37 -0500
+Date: Tue, 15 Jul 2014 16:06:32 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap4_common.h | 145 +++++++++++++++++++++++++++++---------
- 1 file changed, 112 insertions(+), 33 deletions(-)
+ include/configs/ti_omap4_common.h | 144 +++++++++++++++++++++++++++++---------
+ 1 file changed, 112 insertions(+), 32 deletions(-)
 
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 44b3718..70c8772 100644
+index 30b02f6..941f9de 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
 @@ -47,13 +47,15 @@
@@ -29,7 +29,7 @@ index 44b3718..70c8772 100644
  
  /*
   * Hardware drivers
-@@ -90,29 +92,72 @@
+@@ -90,29 +92,73 @@
  	DEFAULT_LINUX_BOOT_ENV \
  	"console=ttyO2,115200n8\0" \
  	"fdtfile=undefined\0" \
@@ -40,7 +40,7 @@ index 44b3718..70c8772 100644
 +	"fdtdir=/dtbs\0" \
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
--	"vram=16M\0" \
+ 	"vram=16M\0" \
  	"mmcdev=0\0" \
 -	"mmcroot=/dev/mmcblk0p2 rw\0" \
 -	"mmcrootfstype=ext3 rootwait\0" \
@@ -86,10 +86,9 @@ index 44b3718..70c8772 100644
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
 +				"setenv bootpart ${mmcdev}:${mmcpart};" \
-+				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
 +					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+					"env import -t $loadaddr $filesize;" \
++					"env import -t ${loadaddr} ${filesize};" \
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdtfile ${dtb};" \
@@ -97,6 +96,7 @@ index 44b3718..70c8772 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +						"if test -n ${uuid}; then " \
 +							"setenv mmcroot UUID=${uuid} ro;" \
 +						"fi;" \
@@ -112,7 +112,7 @@ index 44b3718..70c8772 100644
  	"uimageboot=echo Booting from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootm ${loadaddr}\0" \
-@@ -129,31 +174,65 @@
+@@ -129,31 +175,65 @@
  			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \

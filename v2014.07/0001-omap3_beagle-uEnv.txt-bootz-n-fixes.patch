@@ -1,13 +1,13 @@
-From c3e5df81c8272c088a2c302e079f03a2f4207cad Mon Sep 17 00:00:00 2001
+From d7c2cf2104adcd8c53ea7b67b7a2db34e79df2a9 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 14 Jul 2014 10:15:44 -0500
+Date: Tue, 15 Jul 2014 16:03:41 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c       |  38 ++++++++--
- include/configs/omap3_beagle.h | 157 ++++++++++++++++++++++++++++++-----------
- 2 files changed, 150 insertions(+), 45 deletions(-)
+ include/configs/omap3_beagle.h | 167 ++++++++++++++++++++++++++++-------------
+ 2 files changed, 149 insertions(+), 56 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 0674afd..e2267a6 100644
@@ -111,7 +111,7 @@ index 0674afd..e2267a6 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index c023483..7260273 100644
+index 3782049..5666019 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -28,6 +28,7 @@
@@ -122,7 +122,7 @@ index c023483..7260273 100644
  
  /*
   * Display CPU and Board information
-@@ -128,26 +129,28 @@
+@@ -129,40 +130,32 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -142,14 +142,14 @@ index c023483..7260273 100644
 +	"bootpart=0:1\0" \
 +	"fdtdir=/dtbs\0" \
  	"console=ttyO2,115200n8\0" \
- 	"mpurate=auto\0" \
- 	"buddy=none\0" \
+-	"mpurate=auto\0" \
+-	"buddy=none\0" \
  	"optargs=\0" \
- 	"camera=none\0" \
+-	"camera=none\0" \
+-	"vram=12M\0" \
+-	"dvimode=640x480MR-16@60\0" \
+-	"defaultdisplay=dvi\0" \
 +	"musb=\0" \
- 	"vram=12M\0" \
- 	"dvimode=640x480MR-16@60\0" \
- 	"defaultdisplay=dvi\0" \
  	"mmcdev=0\0" \
 -	"mmcroot=/dev/mmcblk0p2 rw\0" \
 -	"mmcrootfstype=ext3 rootwait\0" \
@@ -158,9 +158,15 @@ index c023483..7260273 100644
  	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
  	"nandrootfstype=ubifs\0" \
  	"ramroot=/dev/ram0 rw ramdisk_size=65536 initrd=0x81000000,64M\0" \
-@@ -161,7 +164,9 @@
- 		"omapfb.mode=dvi:${dvimode} " \
- 		"omapdss.def_disp=${defaultdisplay} " \
+ 	"ramrootfstype=ext2\0" \
+ 	"mmcargs=setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"mpurate=${mpurate} " \
+-		"buddy=${buddy} "\
+-		"camera=${camera} "\
+-		"vram=${vram} " \
+-		"omapfb.mode=dvi:${dvimode} " \
+-		"omapdss.def_disp=${defaultdisplay} " \
  		"root=${mmcroot} " \
 -		"rootfstype=${mmcrootfstype}\0" \
 +		"rootfstype=${mmcrootfstype} " \
@@ -169,13 +175,7 @@ index c023483..7260273 100644
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -187,12 +192,12 @@
- 			"echo WARNING: Could not determine device tree to use; fi; \0" \
- 	"validatefdt=" \
- 		"if test $beaglerev = xMAB; then " \
--			"if test ! -e mmc ${bootpart} ${bootdir}/${fdtfile}; then " \
-+			"if test ! -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
- 				"setenv fdtfile omap3-beagle-xm.dtb; " \
+@@ -193,7 +186,7 @@
  			"fi; " \
  		"fi; \0" \
  	"bootenv=uEnv.txt\0" \
@@ -184,7 +184,7 @@ index c023483..7260273 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -206,10 +211,47 @@
+@@ -207,10 +200,47 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -193,7 +193,7 @@ index c023483..7260273 100644
 -		"run mmcargs; " \
 -		"bootm ${loadaddr}\0" \
 +	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=run validatefdt; echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
@@ -214,10 +214,9 @@ index c023483..7260273 100644
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
 +				"setenv bootpart ${mmcdev}:${mmcpart};" \
-+				"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
 +					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
-+					"env import -t $loadaddr $filesize;" \
++					"env import -t ${loadaddr} ${filesize};" \
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdtfile ${dtb};" \
@@ -225,6 +224,7 @@ index c023483..7260273 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +						"if test -n ${uuid}; then " \
 +							"setenv mmcroot UUID=${uuid} ro;" \
 +						"fi;" \
@@ -236,7 +236,7 @@ index c023483..7260273 100644
  	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
-@@ -223,35 +265,70 @@
+@@ -224,35 +254,70 @@
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
