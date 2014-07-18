@@ -1,15 +1,15 @@
-From 9e08c07c38199eea16ca3c8306d731f7aa8d7101 Mon Sep 17 00:00:00 2001
+From 3c58256f7f4909481bf91aed59eb538d2c145a9a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:57:41 -0500
+Date: Thu, 17 Jul 2014 10:01:09 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h | 169 ++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 150 insertions(+), 19 deletions(-)
+ include/configs/am335x_evm.h | 207 +++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 188 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index a48b386..4a4f9df 100644
+index a48b386..9b1aba4 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -45,7 +45,7 @@ index a48b386..4a4f9df 100644
  	"rootpath=/export/rootfs\0" \
  	"nfsopts=nolock\0" \
  	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
-@@ -98,8 +104,11 @@
+@@ -98,8 +104,29 @@
  	"ramrootfstype=ext2\0" \
  	"mmcargs=setenv bootargs console=${console} " \
  		"${optargs} " \
@@ -55,10 +55,28 @@ index a48b386..4a4f9df 100644
 -		"rootfstype=${mmcrootfstype}\0" \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
++	"server_ip=192.168.1.100\0" \
++	"gw_ip=192.168.1.1\0" \
++	"netmask=255.255.255.0\0" \
++	"hostname=\0" \
++	"device=eth0\0" \
++	"autoconf=off\0" \
++	"root_dir=/home/userid/targetNFS\0" \
++	"nfs_options=,vers=3\0" \
++	"nfsrootfstype=ext4 rootwait fixrtc\0" \
++	"nfsargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/nfs rw " \
++		"rootfstype=${nfsrootfstype} " \
++		"nfsroot=${nfsroot} " \
++		"ip=${ip} " \
++		"${cmdline}\0" \
  	"spiroot=/dev/mtdblock4 rw\0" \
  	"spirootfstype=jffs2\0" \
  	"spisrcaddr=0xe0000\0" \
-@@ -115,7 +124,7 @@
+@@ -115,7 +142,7 @@
  		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
  		"ip=dhcp\0" \
  	"bootenv=uEnv.txt\0" \
@@ -67,7 +85,7 @@ index a48b386..4a4f9df 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -124,7 +133,14 @@
+@@ -124,7 +151,14 @@
  		"rootfstype=${ramrootfstype}\0" \
  	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -83,7 +101,7 @@ index a48b386..4a4f9df 100644
  	"mmcloados=run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -141,18 +157,71 @@
+@@ -141,18 +175,81 @@
  		"fi;\0" \
  	"mmcboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
@@ -108,17 +126,27 @@ index a48b386..4a4f9df 100644
 +					"echo Loaded environment from ${bootenv};" \
 +					"run importbootenv;" \
 +				"fi;" \
-+				"if test -n $cape; then " \
-+					"if test -e mmc ${bootpart} ${fdtdir}/$fdtbase-$cape.dtb; then " \
-+						"setenv fdtfile $fdtbase-$cape.dtb; " \
++				"if test -n ${cape}; then " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdtbase}-${cape}.dtb; then " \
++						"setenv fdtfile ${fdtbase}-${cape}.dtb; " \
 +					"fi; " \
 +					"echo using: $fdtfile...; " \
 +				"fi; " \
 +				"echo Checking if uenvcmd is set ...;" \
-+				"if test -n $uenvcmd; then " \
++				"if test -n ${uenvcmd}; then " \
 +					"gpio set 56; " \
 +					"echo Running uenvcmd ...;" \
 +					"run uenvcmd;" \
++				"fi;" \
++				"echo Checking if client_ip is set ...;" \
++				"if test -n ${client_ip}; then " \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
++					"fi;" \
++					"gpio set 56; " \
++					"echo Running nfsboot ...;" \
++					"run nfsboot;" \
 +				"fi;" \
 +			"fi; " \
 +			"echo Checking for: /${script} ...;" \
@@ -166,7 +194,22 @@ index a48b386..4a4f9df 100644
  		"fi;\0" \
  	"spiboot=echo Booting from spi ...; " \
  		"run spiargs; " \
-@@ -171,24 +240,86 @@
+@@ -166,29 +263,101 @@
+ 		"tftp ${fdtaddr} ${fdtfile}; " \
+ 		"run netargs; " \
+ 		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"nfsboot=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${bootfile}; " \
++		"tftp ${fdtaddr} dtbs/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
+ 	"ramboot=echo Booting from ramdisk ...; " \
+ 		"run ramargs; " \
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
