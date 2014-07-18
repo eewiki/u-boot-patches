@@ -152,7 +152,7 @@ index 0342550..041f543 100644
 +				"fi;" \
 +			"fi; " \
 +			"run mmcargs;" \
-+			"bootz ${loadaddr} - ${fdtaddr}; " \
++			"bootz ${loadaddr} - ${fdt_addr}; " \
  		"fi;\0"
  
  #define CONFIG_BOOTCOMMAND \

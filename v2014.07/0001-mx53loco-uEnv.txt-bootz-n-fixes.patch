@@ -147,10 +147,10 @@ index a74508c..2d63ecd 100644
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
 +				"run mmcargs;" \
-+				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \
 +				"run mmcargs;" \
-+				"bootz ${loadaddr} - ${fdtaddr}; " \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
 +			"fi;" \
  		"fi;\0"
  
