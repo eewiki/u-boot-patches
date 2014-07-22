@@ -1,18 +1,27 @@
-From 5f37446bf137ba7a845a8e96378e2f317f933ffe Mon Sep 17 00:00:00 2001
+From 31b9b098a0a9f11a31064c978053f16fbeddc8cd Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 22 Jul 2014 08:33:47 -0500
+Date: Tue, 22 Jul 2014 16:04:07 -0500
 Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  include/configs/mx51evk.h | 146 ++++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 127 insertions(+), 19 deletions(-)
+ 1 file changed, 128 insertions(+), 18 deletions(-)
 
 diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
-index b389475..ad1ef72 100644
+index b389475..fefefb8 100644
 --- a/include/configs/mx51evk.h
 +++ b/include/configs/mx51evk.h
-@@ -79,6 +79,14 @@
+@@ -27,6 +27,8 @@
+ #define CONFIG_INITRD_TAG
+ #define CONFIG_REVISION_TAG
+ 
++#define CONFIG_SYS_GENERIC_BOARD
++
+ #define CONFIG_OF_LIBFDT
+ 
+ #define CONFIG_MACH_TYPE	MACH_TYPE_MX51_BABBAGE
+@@ -79,6 +81,14 @@
  #define CONFIG_CMD_FAT
  #define CONFIG_DOS_PARTITION
  
@@ -27,7 +36,7 @@ index b389475..ad1ef72 100644
  /*
   * Eth Configs
   */
-@@ -142,24 +150,75 @@
+@@ -142,24 +152,75 @@
  #define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -37,9 +46,8 @@ index b389475..ad1ef72 100644
  	"image=zImage\0" \
  	"fdt_file=imx51-babbage.dtb\0" \
 -	"fdt_addr=0x91000000\0" \
--	"boot_fdt=try\0" \
 +	"fdt_addr=0x91ff0000\0" \
-+	"boot_fdt=yes\0" \
+ 	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
 +	"loadaddr=0x90010000\0" \
 +	"rdaddr=0x92000000\0" \
@@ -112,7 +120,7 @@ index b389475..ad1ef72 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -198,19 +257,68 @@
+@@ -198,19 +259,68 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
