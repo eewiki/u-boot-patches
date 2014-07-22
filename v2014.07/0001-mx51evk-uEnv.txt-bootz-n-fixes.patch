@@ -1,15 +1,15 @@
-From db8001faf892f67e9c73247682bbc7f3485656e5 Mon Sep 17 00:00:00 2001
+From 5f37446bf137ba7a845a8e96378e2f317f933ffe Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:23:50 -0500
+Date: Tue, 22 Jul 2014 08:33:47 -0500
 Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx51evk.h | 133 +++++++++++++++++++++++++++++++++++++++-------
- 1 file changed, 114 insertions(+), 19 deletions(-)
+ include/configs/mx51evk.h | 146 ++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 127 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
-index b389475..b3f856e 100644
+index b389475..ad1ef72 100644
 --- a/include/configs/mx51evk.h
 +++ b/include/configs/mx51evk.h
 @@ -79,6 +79,14 @@
@@ -27,7 +27,7 @@ index b389475..b3f856e 100644
  /*
   * Eth Configs
   */
-@@ -142,24 +150,65 @@
+@@ -142,24 +150,75 @@
  #define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -75,6 +75,18 @@ index b389475..b3f856e 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -85,14 +97,12 @@ index b389475..b3f856e 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
 +						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -102,7 +112,7 @@ index b389475..b3f856e 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -198,19 +247,65 @@
+@@ -198,19 +257,68 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -155,6 +165,9 @@ index b389475..b3f856e 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \

@@ -1,15 +1,15 @@
-From 36d72356027a73f43376f80f39b03a7b58e8469c Mon Sep 17 00:00:00 2001
+From f1e752ad4209f9634aaf893c42aca55647f6365e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:36:27 -0500
+Date: Tue, 22 Jul 2014 08:45:54 -0500
 Subject: [PATCH] mx6qsabre_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx6sabre_common.h | 120 ++++++++++++++++++++++++++++++++------
- 1 file changed, 102 insertions(+), 18 deletions(-)
+ include/configs/mx6sabre_common.h | 138 +++++++++++++++++++++++++++++++++-----
+ 1 file changed, 120 insertions(+), 18 deletions(-)
 
 diff --git a/include/configs/mx6sabre_common.h b/include/configs/mx6sabre_common.h
-index e59a3b4..3b7116e 100644
+index e59a3b4..9bac1a8 100644
 --- a/include/configs/mx6sabre_common.h
 +++ b/include/configs/mx6sabre_common.h
 @@ -48,6 +48,11 @@
@@ -45,7 +45,7 @@ index e59a3b4..3b7116e 100644
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
  			"setenv get_cmd dhcp; " \
-@@ -146,15 +155,45 @@
+@@ -146,15 +155,55 @@
  			"fi; "	\
  		"fi\0" \
  	EMMC_ENV	  \
@@ -69,6 +69,18 @@ index e59a3b4..3b7116e 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -79,14 +91,12 @@ index e59a3b4..3b7116e 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
-+						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmckernel}p${mmcpart} ro;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -96,7 +106,7 @@ index e59a3b4..3b7116e 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -192,20 +231,65 @@
+@@ -192,20 +241,73 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -149,6 +159,9 @@ index e59a3b4..3b7116e 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \
@@ -169,6 +182,11 @@ index e59a3b4..3b7116e 100644
 -			"fi; " \
 -		"fi; " \
 -	"else run netboot; fi"
++	"setenv mmcdev 1;" \
++	"setenv mmckernel 0;" \
++	"run mmcboot;" \
++	"setenv mmcdev 0;" \
++	"setenv mmckernel 0;" \
 +	"run mmcboot;"
  
  #define CONFIG_ARP_TIMEOUT     200UL

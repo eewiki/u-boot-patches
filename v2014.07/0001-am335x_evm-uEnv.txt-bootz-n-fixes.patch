@@ -1,15 +1,15 @@
-From 3c58256f7f4909481bf91aed59eb538d2c145a9a Mon Sep 17 00:00:00 2001
+From 1b81addd6b36e4c4c8f1ac475ab41b736e5eba4e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 17 Jul 2014 10:01:09 -0500
+Date: Tue, 22 Jul 2014 08:57:38 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/am335x_evm.h | 207 +++++++++++++++++++++++++++++++++++++++----
- 1 file changed, 188 insertions(+), 19 deletions(-)
+ include/configs/am335x_evm.h | 208 +++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 189 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index a48b386..9b1aba4 100644
+index a48b386..6d6a239 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -101,7 +101,7 @@ index a48b386..9b1aba4 100644
  	"mmcloados=run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -141,18 +175,81 @@
+@@ -141,18 +175,79 @@
  		"fi;\0" \
  	"mmcboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
@@ -178,15 +178,13 @@ index a48b386..9b1aba4 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdtfile ${dtb};" \
-+						"echo using ${fdtfile} ...;" \
++						"echo Using: dtb=${fdtfile} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
-+						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
 +						"gpio set 56; " \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -194,7 +192,7 @@ index a48b386..9b1aba4 100644
  		"fi;\0" \
  	"spiboot=echo Booting from spi ...; " \
  		"run spiargs; " \
-@@ -166,29 +263,101 @@
+@@ -166,29 +261,104 @@
  		"tftp ${fdtaddr} ${fdtfile}; " \
  		"run netargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
@@ -272,6 +270,9 @@ index a48b386..9b1aba4 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +			"else " \

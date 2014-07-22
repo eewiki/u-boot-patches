@@ -1,15 +1,15 @@
-From 753a2a1e42dff7445464107d4102d8aecd8efa4d Mon Sep 17 00:00:00 2001
+From 483ff87ca1c074470dd95be4ccb0151f02be59a2 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:41:45 -0500
+Date: Tue, 22 Jul 2014 10:50:22 -0500
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/wandboard.h | 121 +++++++++++++++++++++++++++++++++++++-------
- 1 file changed, 102 insertions(+), 19 deletions(-)
+ include/configs/wandboard.h | 139 ++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 120 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 7d96908..21df470 100644
+index 7d96908..36b866c 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -51,7 +51,7 @@
@@ -69,7 +69,7 @@ index 7d96908..21df470 100644
  	"videoargs=" \
  		"setenv nextcon 0; " \
  		"if hdmidet; then " \
-@@ -176,9 +185,36 @@
+@@ -176,9 +185,46 @@
  		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
  	"bootscript=echo Running bootscript from mmc ...; " \
  		"source\0" \
@@ -82,6 +82,18 @@ index 7d96908..21df470 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -92,14 +104,12 @@ index 7d96908..21df470 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
-+						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmckernel}p${mmcpart} ro;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -109,7 +119,7 @@ index 7d96908..21df470 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -216,19 +252,65 @@
+@@ -216,19 +262,73 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -162,6 +172,9 @@ index 7d96908..21df470 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \
@@ -181,11 +194,16 @@ index 7d96908..21df470 100644
 -			   "fi; " \
 -		   "fi; " \
 -	   "else run netboot; fi"
++	"setenv mmcdev 0;" \
++	"setenv mmckernel 0;" \
++	"run mmcboot;" \
++	"setenv mmcdev 1;" \
++	"setenv mmckernel 0;" \
 +	"run mmcboot;"
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -269,6 +351,7 @@
+@@ -269,6 +369,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ

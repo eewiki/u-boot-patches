@@ -1,15 +1,15 @@
-From fda806aa89443914d059b4c69c2bf96971887270 Mon Sep 17 00:00:00 2001
+From aa5a22073d478d996bb1a8039c5ae53a57ece4c3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:30:29 -0500
+Date: Tue, 22 Jul 2014 08:41:33 -0500
 Subject: [PATCH] mx53loco: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx53loco.h | 121 +++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 106 insertions(+), 15 deletions(-)
+ include/configs/mx53loco.h | 138 +++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 121 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/mx53loco.h b/include/configs/mx53loco.h
-index a74508c..2d63ecd 100644
+index a74508c..d9f9b72 100644
 --- a/include/configs/mx53loco.h
 +++ b/include/configs/mx53loco.h
 @@ -45,6 +45,12 @@
@@ -25,7 +25,12 @@ index a74508c..2d63ecd 100644
  #define CONFIG_DOS_PARTITION
  
  /* Eth Configs */
-@@ -105,23 +111,62 @@
+@@ -101,27 +107,76 @@
+ 
+ #define CONFIG_ETHPRIME		"FEC0"
+ 
+-#define CONFIG_LOADADDR		0x72000000	/* loadaddr env var */
++#define CONFIG_LOADADDR		0x70010000	/* loadaddr env var */
  #define CONFIG_SYS_TEXT_BASE    0x77800000
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -35,7 +40,8 @@ index a74508c..2d63ecd 100644
  	"image=zImage\0" \
 +	"fdt_dir=/dtbs/\0" \
  	"fdt_file=imx53-qsb.dtb\0" \
- 	"fdt_addr=0x71000000\0" \
+-	"fdt_addr=0x71000000\0" \
++	"fdt_addr=0x71ff0000\0" \
 +	"rdaddr=0x72000000\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
@@ -66,6 +72,18 @@ index a74508c..2d63ecd 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -76,14 +94,12 @@ index a74508c..2d63ecd 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
 +						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -93,7 +109,7 @@ index a74508c..2d63ecd 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -160,19 +205,65 @@
+@@ -160,19 +215,68 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -146,6 +162,9 @@ index a74508c..2d63ecd 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \

@@ -1,16 +1,16 @@
-From ce2ce96b05cf99473658f7f015b73e70936baaa3 Mon Sep 17 00:00:00 2001
+From f70cadb0258dd32c1515321701f2bfc39a693b61 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:52:17 -0500
+Date: Tue, 22 Jul 2014 09:01:54 -0500
 Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/udoo/1066mhz_4x256mx16_dl.cfg |  58 +++++++++++++++++
- board/udoo/ddr-setup_dl.cfg         |  84 ++++++++++++++++++++++++
- board/udoo/udoo-dl.cfg              |  29 +++++++++
+ board/udoo/1066mhz_4x256mx16_dl.cfg |  58 +++++++++++++++
+ board/udoo/ddr-setup_dl.cfg         |  84 ++++++++++++++++++++++
+ board/udoo/udoo-dl.cfg              |  29 ++++++++
  boards.cfg                          |   1 +
- include/configs/udoo.h              | 123 ++++++++++++++++++++++++++++++------
- 5 files changed, 277 insertions(+), 18 deletions(-)
+ include/configs/udoo.h              | 136 +++++++++++++++++++++++++++++++-----
+ 5 files changed, 290 insertions(+), 18 deletions(-)
  create mode 100644 board/udoo/1066mhz_4x256mx16_dl.cfg
  create mode 100644 board/udoo/ddr-setup_dl.cfg
  create mode 100644 board/udoo/udoo-dl.cfg
@@ -217,7 +217,7 @@ index 1ba2081..7deb002 100644
  Active  arm         armv7          mx6         -               wandboard           wandboard_dl                          wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6dl.cfg,MX6DL,DDR_MB=1024                                                  Fabio Estevam <fabio.estevam@freescale.com>
  Active  arm         armv7          mx6         -               wandboard           wandboard_quad                        wandboard:IMX_CONFIG=board/boundary/nitrogen6x/nitrogen6q2g.cfg,MX6Q,DDR_MB=2048                                                  Fabio Estevam <fabio.estevam@freescale.com>
 diff --git a/include/configs/udoo.h b/include/configs/udoo.h
-index 700e9c1..6f4542b 100644
+index 700e9c1..7fca89d 100644
 --- a/include/configs/udoo.h
 +++ b/include/configs/udoo.h
 @@ -78,7 +78,7 @@
@@ -266,7 +266,7 @@ index 700e9c1..6f4542b 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -128,15 +138,45 @@
+@@ -128,15 +138,55 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -290,6 +290,18 @@ index 700e9c1..6f4542b 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -300,14 +312,12 @@ index 700e9c1..6f4542b 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
 +						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -317,7 +327,7 @@ index 700e9c1..6f4542b 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -174,19 +214,65 @@
+@@ -174,19 +224,68 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -370,6 +380,9 @@ index 700e9c1..6f4542b 100644
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
 +				"run mmcargs;" \
 +				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
 +			"else " \
@@ -393,7 +406,7 @@ index 700e9c1..6f4542b 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP
-@@ -228,6 +314,7 @@
+@@ -228,6 +327,7 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ

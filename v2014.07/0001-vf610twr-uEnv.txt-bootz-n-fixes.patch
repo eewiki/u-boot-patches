@@ -1,15 +1,15 @@
-From a69fae5d496af8cff5c0cc85465d52947047bae8 Mon Sep 17 00:00:00 2001
+From 463229a575995cb4746b5377ca3779cc063b890e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Jul 2014 15:47:42 -0500
+Date: Tue, 22 Jul 2014 09:03:37 -0500
 Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/vf610twr.h | 116 +++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 95 insertions(+), 21 deletions(-)
+ include/configs/vf610twr.h | 126 +++++++++++++++++++++++++++++++++++++--------
+ 1 file changed, 105 insertions(+), 21 deletions(-)
 
 diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
-index 0342550..041f543 100644
+index 0342550..0e661a3 100644
 --- a/include/configs/vf610twr.h
 +++ b/include/configs/vf610twr.h
 @@ -54,6 +54,9 @@
@@ -52,7 +52,7 @@ index 0342550..041f543 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -118,15 +124,44 @@
+@@ -118,15 +124,54 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -75,6 +75,18 @@ index 0342550..041f543 100644
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -85,14 +97,12 @@ index 0342550..041f543 100644
 +					"echo Loaded environment from /boot/uEnv.txt;" \
 +					"if test -n ${dtb}; then " \
 +						"setenv fdt_file ${dtb};" \
-+						"echo using ${fdt_file} ...;" \
++						"echo Using: dtb=${fdt_file} ...;" \
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
 +						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
-+						"if test -n ${uuid}; then " \
-+							"setenv mmcroot UUID=${uuid} ro;" \
-+						"fi;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
@@ -102,7 +112,7 @@ index 0342550..041f543 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -164,19 +199,57 @@
+@@ -164,19 +209,57 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -170,7 +180,7 @@ index 0342550..041f543 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-@@ -189,9 +262,9 @@
+@@ -189,9 +272,9 @@
  #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -183,7 +193,7 @@ index 0342550..041f543 100644
  
  #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
  
-@@ -226,5 +299,6 @@
+@@ -226,5 +309,6 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
