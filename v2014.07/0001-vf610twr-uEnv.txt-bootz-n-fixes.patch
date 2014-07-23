@@ -1,18 +1,27 @@
-From 463229a575995cb4746b5377ca3779cc063b890e Mon Sep 17 00:00:00 2001
+From 6f0c445c27185b739216553e98080ea5f7d6838d Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 22 Jul 2014 09:03:37 -0500
+Date: Wed, 23 Jul 2014 16:46:41 -0500
 Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/vf610twr.h | 126 +++++++++++++++++++++++++++++++++++++--------
- 1 file changed, 105 insertions(+), 21 deletions(-)
+ include/configs/vf610twr.h | 115 ++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 82 insertions(+), 33 deletions(-)
 
 diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
-index 0342550..0e661a3 100644
+index 0342550..a33967f 100644
 --- a/include/configs/vf610twr.h
 +++ b/include/configs/vf610twr.h
-@@ -54,6 +54,9 @@
+@@ -29,6 +29,8 @@
+ #define CONFIG_MXC_OCOTP
+ #endif
+ 
++#define CONFIG_SYS_GENERIC_BOARD
++
+ /* Size of malloc() pool */
+ #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 2 * 1024 * 1024)
+ 
+@@ -54,22 +56,25 @@
  #define CONFIG_CMD_MMC
  #define CONFIG_GENERIC_MMC
  #define CONFIG_CMD_FAT
@@ -21,8 +30,36 @@ index 0342550..0e661a3 100644
 +#define CONFIG_CMD_FS_GENERIC
  #define CONFIG_DOS_PARTITION
  
- #define CONFIG_CMD_PING
-@@ -86,7 +89,7 @@
+-#define CONFIG_CMD_PING
+-#define CONFIG_CMD_DHCP
+-#define CONFIG_CMD_MII
+-#define CONFIG_CMD_NET
+-#define CONFIG_FEC_MXC
+-#define CONFIG_MII
+-#define IMX_FEC_BASE			ENET_BASE_ADDR
+-#define CONFIG_FEC_XCV_TYPE		RMII
+-#define CONFIG_FEC_MXC_PHYADDR          0
+-#define CONFIG_PHYLIB
+-#define CONFIG_PHY_MICREL
++//#define CONFIG_CMD_PING
++//#define CONFIG_CMD_DHCP
++//#define CONFIG_CMD_MII
++//#define CONFIG_CMD_NET
++//#define CONFIG_FEC_MXC
++//#define CONFIG_MII
++//#define IMX_FEC_BASE			ENET_BASE_ADDR
++//#define CONFIG_FEC_XCV_TYPE		RMII
++//#define CONFIG_FEC_MXC_PHYADDR          0
++//#define CONFIG_PHYLIB
++//#define CONFIG_PHY_MICREL
+ 
+ /* QSPI Configs*/
+-#define CONFIG_FSL_QSPI
++//#define CONFIG_FSL_QSPI
+ 
+ #ifdef CONFIG_FSL_QSPI
+ #define CONFIG_CMD_SF
+@@ -86,7 +91,7 @@
  #define CONFIG_SYS_I2C_MXC
  #define CONFIG_SYS_SPD_BUS_NUM		0
  
@@ -31,7 +68,7 @@ index 0342550..0e661a3 100644
  
  #define CONFIG_LOADADDR			0x82000000
  #define CONFIG_SYS_TEXT_BASE		0x3f008000
-@@ -94,7 +97,7 @@
+@@ -94,7 +99,7 @@
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	"script=boot.scr\0" \
  	"image=zImage\0" \
@@ -40,7 +77,7 @@ index 0342550..0e661a3 100644
  	"fdt_high=0xffffffff\0" \
  	"initrd_high=0xffffffff\0" \
  	"fdt_file=vf610-twr.dtb\0" \
-@@ -103,7 +106,10 @@
+@@ -103,7 +108,10 @@
  	"ip_dyn=yes\0" \
  	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
  	"mmcpart=1\0" \
@@ -52,7 +89,7 @@ index 0342550..0e661a3 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -118,15 +124,54 @@
+@@ -118,15 +126,41 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -74,19 +111,6 @@ index 0342550..0e661a3 100644
 +	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
 +	"mmcboot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
-+			"echo SD/MMC found on device ${mmcdev};" \
-+			"setenv bootpart ${mmcdev}:1; " \
-+			"echo Checking for: /uEnv.txt ...;" \
-+			"if test -e mmc ${bootpart} /uEnv.txt; then " \
-+				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
-+				"env import -t ${loadaddr} ${filesize};" \
-+				"echo Loaded environment from /uEnv.txt;" \
-+				"echo Checking if uenvcmd is set ...;" \
-+				"if test -n ${uenvcmd}; then " \
-+					"echo Running uenvcmd ...;" \
-+					"run uenvcmd;" \
-+				"fi;" \
-+			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -112,7 +136,7 @@ index 0342550..0e661a3 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -164,19 +209,57 @@
+@@ -164,19 +198,33 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -134,30 +158,6 @@ index 0342550..0e661a3 100644
 +					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
 +					"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
 +						"run loadfdt;" \
-+					"else " \
-+						"setenv fdtdir /boot/dtb-${uname_r}; " \
-+						"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
-+							"run loadfdt;" \
-+						"else " \
-+							"setenv fdtdir /boot/dtbs; " \
-+							"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
-+								"run loadfdt;" \
-+							"else " \
-+								"setenv fdtdir /boot/dtb; " \
-+								"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
-+									"run loadfdt;" \
-+								"else " \
-+									"setenv fdtdir /boot; " \
-+									"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
-+										"run loadfdt;" \
-+									"else " \
-+										"echo; echo unable to find ${fdt_file} ...; echo booting legacy ...;"\
-+									"run mmcargs;" \
-+										"bootz ${loadaddr}; " \
-+									"fi;" \
-+								"fi;" \
-+							"fi;" \
-+						"fi;" \
 +					"fi;" \
 +				"fi;" \
 +			"fi; " \
@@ -180,20 +180,20 @@ index 0342550..0e661a3 100644
  
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-@@ -189,9 +272,9 @@
+@@ -189,9 +237,9 @@
  #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
 -#define CONFIG_CMD_MEMTEST
 -#define CONFIG_SYS_MEMTEST_START	0x80010000
 -#define CONFIG_SYS_MEMTEST_END		0x87C00000
-+/* #define CONFIG_CMD_MEMTEST */
-+/* #define CONFIG_SYS_MEMTEST_START	0x80010000 */
-+/* #define CONFIG_SYS_MEMTEST_END		0x87C00000 */
++//#define CONFIG_CMD_MEMTEST
++//#define CONFIG_SYS_MEMTEST_START	0x80010000
++//#define CONFIG_SYS_MEMTEST_END		0x87C00000
  
  #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
  
-@@ -226,5 +309,6 @@
+@@ -226,5 +274,6 @@
  
  #define CONFIG_OF_LIBFDT
  #define CONFIG_CMD_BOOTZ
