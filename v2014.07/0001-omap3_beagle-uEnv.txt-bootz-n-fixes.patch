@@ -1,13 +1,13 @@
-From 36050d2b8da860210d3dae5b00c3c7f47db00bf0 Mon Sep 17 00:00:00 2001
+From d511640d83ab8eee35ac57919c885c21b794d7e4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 22 Jul 2014 08:48:31 -0500
+Date: Mon, 28 Jul 2014 12:27:30 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |  38 ++++++++--
- include/configs/omap3_beagle.h | 167 ++++++++++++++++++++++++++++-------------
- 2 files changed, 149 insertions(+), 56 deletions(-)
+ board/ti/beagle/beagle.c       |  38 +++++++--
+ include/configs/omap3_beagle.h | 169 ++++++++++++++++++++++++++++-------------
+ 2 files changed, 150 insertions(+), 57 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 0674afd..e2267a6 100644
@@ -111,7 +111,7 @@ index 0674afd..e2267a6 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 3782049..714109a 100644
+index 3782049..78f6f67 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -28,6 +28,7 @@
@@ -127,11 +127,12 @@ index 3782049..714109a 100644
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
 -	"loadaddr=0x80200000\0" \
-+	"loadaddr=0x80300000\0" \
- 	"rdaddr=0x81000000\0" \
+-	"rdaddr=0x81000000\0" \
++	"loadaddr=0x82000000\0" \
++	"rdaddr=0x88080000\0" \
  	"fdt_high=0xffffffff\0" \
 -	"fdtaddr=0x80f80000\0" \
-+	"fdtaddr=0x815f0000\0" \
++	"fdtaddr=0x88000000\0" \
  	"usbtty=cdc_acm\0" \
 -	"bootfile=uImage\0" \
 +	"bootfile=zImage\0" \
