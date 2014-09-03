@@ -1,0 +1,256 @@
+From 83537da30ada362f21d2c69e3836fba33e6a3987 Mon Sep 17 00:00:00 2001
+From: Masahiro Yamada <yamada.m@jp.panasonic.com>
+Date: Sun, 31 Aug 2014 22:32:19 +0900
+Subject: [PATCH 1/3] kconfig: remove redundant "SPL" from
+ CONFIG_SYS_EXTRA_OPTIONS
+
+CONFIG_SPL is defined as a primary option in Kconfig.
+It should not be added to CONFIG_SYS_EXTRA_OPTIONS.
+
+Signed-off-by: Masahiro Yamada <yamada.m@jp.panasonic.com>
+Acked-by: Ian Campbell <ijc@hellion.org.uk>
+---
+ configs/A10-OLinuXino-Lime_defconfig  | 2 +-
+ configs/A10s-OLinuXino-M_defconfig    | 2 +-
+ configs/A13-OLinuXinoM_defconfig      | 2 +-
+ configs/A13-OLinuXino_defconfig       | 2 +-
+ configs/A20-OLinuXino_MICRO_defconfig | 2 +-
+ configs/Auxtek-T004_defconfig         | 2 +-
+ configs/Bananapi_defconfig            | 2 +-
+ configs/Cubieboard2_defconfig         | 2 +-
+ configs/Cubieboard_defconfig          | 2 +-
+ configs/Cubietruck_defconfig          | 2 +-
+ configs/Linksprite_pcDuino3_defconfig | 2 +-
+ configs/Mele_A1000G_defconfig         | 2 +-
+ configs/Mele_A1000_defconfig          | 2 +-
+ configs/Mini-X-1Gb_defconfig          | 2 +-
+ configs/Mini-X_defconfig              | 2 +-
+ configs/ba10_tv_box_defconfig         | 2 +-
+ configs/gwventana_defconfig           | 2 +-
+ configs/i12-tvbox_defconfig           | 2 +-
+ configs/qt840a_defconfig              | 2 +-
+ configs/r7-tv-dongle_defconfig        | 2 +-
+ 20 files changed, 20 insertions(+), 20 deletions(-)
+
+diff --git a/configs/A10-OLinuXino-Lime_defconfig b/configs/A10-OLinuXino-Lime_defconfig
+index b93ae7d..37f12b3 100644
+--- a/configs/A10-OLinuXino-Lime_defconfig
++++ b/configs/A10-OLinuXino-Lime_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="A10_OLINUXINO_L,SPL,AXP209_POWER,SUNXI_EMAC,AHCI,SATAPWR=SUNXI_GPC(3),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="A10_OLINUXINO_L,AXP209_POWER,SUNXI_EMAC,AHCI,SATAPWR=SUNXI_GPC(3),USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-olinuxino-lime.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/A10s-OLinuXino-M_defconfig b/configs/A10s-OLinuXino-M_defconfig
+index f206970..7a7d863 100644
+--- a/configs/A10s-OLinuXino-M_defconfig
++++ b/configs/A10s-OLinuXino-M_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="A10S_OLINUXINO_M,SPL,AXP152_POWER,SUNXI_EMAC,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPB(10)"
++CONFIG_SYS_EXTRA_OPTIONS="A10S_OLINUXINO_M,AXP152_POWER,SUNXI_EMAC,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPB(10)"
+ CONFIG_FTDFILE="sun5i-a10s-olinuxino-micro.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN5I=y
+diff --git a/configs/A13-OLinuXinoM_defconfig b/configs/A13-OLinuXinoM_defconfig
+index 8529dbe..61ec592 100644
+--- a/configs/A13-OLinuXinoM_defconfig
++++ b/configs/A13-OLinuXinoM_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="A13_OLINUXINOM,SPL,CONS_INDEX=2,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(11)"
++CONFIG_SYS_EXTRA_OPTIONS="A13_OLINUXINOM,CONS_INDEX=2,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(11)"
+ CONFIG_FTDFILE="sun5i-a13-olinuxino-micro.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN5I=y
+diff --git a/configs/A13-OLinuXino_defconfig b/configs/A13-OLinuXino_defconfig
+index c3a12cc..d181cc0 100644
+--- a/configs/A13-OLinuXino_defconfig
++++ b/configs/A13-OLinuXino_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="A13_OLINUXINO,SPL,CONS_INDEX=2,AXP209_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(11)"
++CONFIG_SYS_EXTRA_OPTIONS="A13_OLINUXINO,CONS_INDEX=2,AXP209_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(11)"
+ CONFIG_FTDFILE="sun5i-a13-olinuxino.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN5I=y
+diff --git a/configs/A20-OLinuXino_MICRO_defconfig b/configs/A20-OLinuXino_MICRO_defconfig
+index c91319d..89b6e37 100644
+--- a/configs/A20-OLinuXino_MICRO_defconfig
++++ b/configs/A20-OLinuXino_MICRO_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="A20_OLINUXINO_M,SPL,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="A20_OLINUXINO_M,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-olinuxino-micro.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/Auxtek-T004_defconfig b/configs/Auxtek-T004_defconfig
+index 193019c..d3c5f8e 100644
+--- a/configs/Auxtek-T004_defconfig
++++ b/configs/Auxtek-T004_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="AUXTEK_T004,SPL,AXP152_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(13)"
++CONFIG_SYS_EXTRA_OPTIONS="AUXTEK_T004,AXP152_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(13)"
+ CONFIG_FTDFILE="sun5i-a10s-auxtek-t004.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN5I=y
+diff --git a/configs/Bananapi_defconfig b/configs/Bananapi_defconfig
+index dc68469..2da2d36 100644
+--- a/configs/Bananapi_defconfig
++++ b/configs/Bananapi_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="BANANAPI,SPL,AXP209_POWER,SUNXI_GMAC,RGMII,MACPWR=SUNXI_GPH(23),AHCI,USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="BANANAPI,AXP209_POWER,SUNXI_GMAC,RGMII,MACPWR=SUNXI_GPH(23),AHCI,USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-bananapi.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/Cubieboard2_defconfig b/configs/Cubieboard2_defconfig
+index df87edc..448c767 100644
+--- a/configs/Cubieboard2_defconfig
++++ b/configs/Cubieboard2_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="CUBIEBOARD2,SPL,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="CUBIEBOARD2,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-cubieboard2.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/Cubieboard_defconfig b/configs/Cubieboard_defconfig
+index 57bf045..9c2ecf9 100644
+--- a/configs/Cubieboard_defconfig
++++ b/configs/Cubieboard_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="CUBIEBOARD,SPL,AXP209_POWER,SUNXI_EMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="CUBIEBOARD,AXP209_POWER,SUNXI_EMAC,AHCI,SATAPWR=SUNXI_GPB(8),USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-cubieboard.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/Cubietruck_defconfig b/configs/Cubietruck_defconfig
+index 4ad82e3..3fb89b8 100644
+--- a/configs/Cubietruck_defconfig
++++ b/configs/Cubietruck_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="CUBIETRUCK,SPL,AXP209_POWER,SUNXI_GMAC,RGMII,AHCI,SATAPWR=SUNXI_GPH(12),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="CUBIETRUCK,AXP209_POWER,SUNXI_GMAC,RGMII,AHCI,SATAPWR=SUNXI_GPH(12),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-cubietruck.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/Linksprite_pcDuino3_defconfig b/configs/Linksprite_pcDuino3_defconfig
+index 22d0446..d054e2c 100644
+--- a/configs/Linksprite_pcDuino3_defconfig
++++ b/configs/Linksprite_pcDuino3_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="PCDUINO3,SPL,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPH(2),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="PCDUINO3,AXP209_POWER,SUNXI_GMAC,AHCI,SATAPWR=SUNXI_GPH(2),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-pcduino3.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/Mele_A1000G_defconfig b/configs/Mele_A1000G_defconfig
+index fa47fae..59de2da 100644
+--- a/configs/Mele_A1000G_defconfig
++++ b/configs/Mele_A1000G_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="MELE_A1000G,SPL,AXP209_POWER,SUNXI_EMAC,MACPWR=SUNXI_GPH(15),AHCI,USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="MELE_A1000G,AXP209_POWER,SUNXI_EMAC,MACPWR=SUNXI_GPH(15),AHCI,USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-a1000.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/Mele_A1000_defconfig b/configs/Mele_A1000_defconfig
+index d7c156d..47a62a0 100644
+--- a/configs/Mele_A1000_defconfig
++++ b/configs/Mele_A1000_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="MELE_A1000,SPL,AXP209_POWER,SUNXI_EMAC,MACPWR=SUNXI_GPH(15),AHCI,USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="MELE_A1000,AXP209_POWER,SUNXI_EMAC,MACPWR=SUNXI_GPH(15),AHCI,USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-a1000.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/Mini-X-1Gb_defconfig b/configs/Mini-X-1Gb_defconfig
+index af0b800..9ff815e 100644
+--- a/configs/Mini-X-1Gb_defconfig
++++ b/configs/Mini-X-1Gb_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="MINI_X_1GB,SPL,AXP209_POWER,USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="MINI_X_1GB,AXP209_POWER,USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-mini-xplus.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/Mini-X_defconfig b/configs/Mini-X_defconfig
+index ea0c786..6229fb8 100644
+--- a/configs/Mini-X_defconfig
++++ b/configs/Mini-X_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="MINI_X,SPL,AXP209_POWER,USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="MINI_X,AXP209_POWER,USB_EHCI"
+ CONFIG_FTDFILE="sun4i-a10-mini-xplus.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/ba10_tv_box_defconfig b/configs/ba10_tv_box_defconfig
+index c9961bd..0719179 100644
+--- a/configs/ba10_tv_box_defconfig
++++ b/configs/ba10_tv_box_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="BA10_TV_BOX,SPL,AXP209_POWER,SUNXI_EMAC,USB_EHCI,SUNXI_USB_VBUS1_GPIO=SUNXI_GPH(12)"
++CONFIG_SYS_EXTRA_OPTIONS="BA10_TV_BOX,AXP209_POWER,SUNXI_EMAC,USB_EHCI,SUNXI_USB_VBUS1_GPIO=SUNXI_GPH(12)"
+ CONFIG_FTDFILE="sun4i-a10-ba10-tvbox.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN4I=y
+diff --git a/configs/gwventana_defconfig b/configs/gwventana_defconfig
+index 11aaab5..f185329 100644
+--- a/configs/gwventana_defconfig
++++ b/configs/gwventana_defconfig
+@@ -1,4 +1,4 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/gateworks/gw_ventana/gw_ventana.cfg,MX6QDL,SPL"
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/gateworks/gw_ventana/gw_ventana.cfg,MX6QDL"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_GW_VENTANA=y
+diff --git a/configs/i12-tvbox_defconfig b/configs/i12-tvbox_defconfig
+index b267312..f84d519 100644
+--- a/configs/i12-tvbox_defconfig
++++ b/configs/i12-tvbox_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="I12_TVBOX,SPL,AXP209_POWER,SUNXI_GMAC,MACPWR=SUNXI_GPH(21),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="I12_TVBOX,AXP209_POWER,SUNXI_GMAC,MACPWR=SUNXI_GPH(21),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-i12-tvbox.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/qt840a_defconfig b/configs/qt840a_defconfig
+index 7360212..656d3da 100644
+--- a/configs/qt840a_defconfig
++++ b/configs/qt840a_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="QT840A,SPL,AXP209_POWER,SUNXI_GMAC,MACPWR=SUNXI_GPH(21),USB_EHCI"
++CONFIG_SYS_EXTRA_OPTIONS="QT840A,AXP209_POWER,SUNXI_GMAC,MACPWR=SUNXI_GPH(21),USB_EHCI"
+ CONFIG_FTDFILE="sun7i-a20-i12-tvbox.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN7I=y
+diff --git a/configs/r7-tv-dongle_defconfig b/configs/r7-tv-dongle_defconfig
+index 35b66f0..1185d5d 100644
+--- a/configs/r7-tv-dongle_defconfig
++++ b/configs/r7-tv-dongle_defconfig
+@@ -1,5 +1,5 @@
+ CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="R7DONGLE,SPL,AXP152_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(13)"
++CONFIG_SYS_EXTRA_OPTIONS="R7DONGLE,AXP152_POWER,USB_EHCI,SUNXI_USB_VBUS0_GPIO=SUNXI_GPG(13)"
+ CONFIG_FTDFILE="sun5i-a10s-r7-tv-dongle.dtb"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_SUN5I=y
+-- 
+2.1.0
+
