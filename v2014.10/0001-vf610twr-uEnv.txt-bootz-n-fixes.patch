@@ -41,21 +41,21 @@ index 0342550..9ad15d0 100644
 -#define CONFIG_FEC_MXC_PHYADDR          0
 -#define CONFIG_PHYLIB
 -#define CONFIG_PHY_MICREL
-+//#define CONFIG_CMD_PING
-+//#define CONFIG_CMD_DHCP
-+//#define CONFIG_CMD_MII
-+//#define CONFIG_CMD_NET
-+//#define CONFIG_FEC_MXC
-+//#define CONFIG_MII
-+//#define IMX_FEC_BASE			ENET_BASE_ADDR
-+//#define CONFIG_FEC_XCV_TYPE		RMII
-+//#define CONFIG_FEC_MXC_PHYADDR          0
-+//#define CONFIG_PHYLIB
-+//#define CONFIG_PHY_MICREL
++/* #define CONFIG_CMD_PING */
++/* #define CONFIG_CMD_DHCP */
++/* #define CONFIG_CMD_MII */
++/* #define CONFIG_CMD_NET */
++/* #define CONFIG_FEC_MXC */
++/* #define CONFIG_MII */
++/* #define IMX_FEC_BASE			ENET_BASE_ADDR */
++/* #define CONFIG_FEC_XCV_TYPE		RMII */
++/* #define CONFIG_FEC_MXC_PHYADDR          0 */
++/* #define CONFIG_PHYLIB */
++/* #define CONFIG_PHY_MICREL */
  
  /* QSPI Configs*/
 -#define CONFIG_FSL_QSPI
-+//#define CONFIG_FSL_QSPI
++/* #define CONFIG_FSL_QSPI */
  
  #ifdef CONFIG_FSL_QSPI
  #define CONFIG_CMD_SF
@@ -189,9 +189,9 @@ index 0342550..9ad15d0 100644
 -#define CONFIG_CMD_MEMTEST
 -#define CONFIG_SYS_MEMTEST_START	0x80010000
 -#define CONFIG_SYS_MEMTEST_END		0x87C00000
-+//#define CONFIG_CMD_MEMTEST
-+//#define CONFIG_SYS_MEMTEST_START	0x80010000
-+//#define CONFIG_SYS_MEMTEST_END		0x87C00000
++/* #define CONFIG_CMD_MEMTEST */
++/* #define CONFIG_SYS_MEMTEST_START	0x80010000 */
++/* #define CONFIG_SYS_MEMTEST_END		0x87C00000 */
  
  #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
  
