@@ -1,0 +1,37 @@
+From da6c39d097ce373e1ea6960ccea9f8cd3fbbb15d Mon Sep 17 00:00:00 2001
+From: Bo Shen <voice.shen@atmel.com>
+Date: Tue, 16 Sep 2014 15:57:21 +0800
+Subject: [PATCH 2/2] net: macb: enable GMAC IP without GE feature support
+
+The User Register in GMAC IP is used to select interface type.
+When with GE feature, it is used to select interface between
+RGMII and GMII. If without GE feature, it is used to select
+interface between MII and RMII.
+
+Signed-off-by: Bo Shen <voice.shen@atmel.com>
+---
+ drivers/net/macb.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/macb.c b/drivers/net/macb.c
+index 375c8a4..6d48252 100644
+--- a/drivers/net/macb.c
++++ b/drivers/net/macb.c
+@@ -565,7 +565,13 @@ static int macb_init(struct eth_device *netdev, bd_t *bd)
+ 	macb_writel(macb, TBQP, macb->tx_ring_dma);
+ 
+ 	if (macb_is_gem(macb)) {
+-#ifdef CONFIG_RGMII
++		/*
++		 * When the GMAC IP with GE feature, this bit is used to
++		 * select interface between RGMII and GMII.
++		 * When the GMAC IP without GE feature, this bit is used
++		 * to select interface between RMII and MII.
++		 */
++#if defined(CONFIG_RGMII) || defined(CONFIG_RMII)
+ 		gem_writel(macb, UR, GEM_BIT(RGMII));
+ #else
+ 		gem_writel(macb, UR, 0);
+-- 
+2.1.1
+

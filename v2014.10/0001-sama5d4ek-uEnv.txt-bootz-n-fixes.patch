@@ -1,0 +1,106 @@
+From 7585cfed78fb4fcf7193c8257c5b0c80ae31a8b9 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 15 Oct 2014 10:45:27 -0500
+Subject: [PATCH] sama5d4ek: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/sama5d4ek.h | 63 ++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 56 insertions(+), 7 deletions(-)
+
+diff --git a/include/configs/sama5d4ek.h b/include/configs/sama5d4ek.h
+index d50897e..5ff0e33 100644
+--- a/include/configs/sama5d4ek.h
++++ b/include/configs/sama5d4ek.h
+@@ -38,7 +38,7 @@
+ #define CONFIG_USART_BASE		ATMEL_BASE_USART3
+ #define	CONFIG_USART_ID			ATMEL_ID_USART3
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ /*
+  * BOOTP options
+@@ -125,8 +125,19 @@
+ #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
+ #define CONFIG_CMD_FAT
+ #define CONFIG_DOS_PARTITION
++
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_EXT4_WRITE
++#define CONFIG_CMD_FS_GENERIC
++
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
++
+ #endif
+ 
++#define CONFIG_SYS_LOAD_ADDR			0x22000000 /* load address */
++
+ /* Ethernet Hardware */
+ #define CONFIG_MACB
+ #define CONFIG_RMII
+@@ -179,15 +190,53 @@
+ #define FAT_ENV_DEVICE_AND_PART	"0"
+ #define FAT_ENV_FILE		"uboot.env"
+ #define CONFIG_ENV_SIZE		0x4000
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 sama5d4ek.dtb; " \
+-				"fatload mmc 0:1 0x22000000 zImage; " \
+-				"bootz 0x22000000 - 0x21000000"
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"root=/dev/mmcblk0p2 rw rootwait"
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"ftdaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"fdt_file=/dtbs/at91-sama5d4ek.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++	"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${ftdaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadzimage ...;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #else
+ #define CONFIG_BOOTARGS							\
+ 	"console=ttyS0,115200 earlyprintk "				\
+-- 
+2.1.1
+

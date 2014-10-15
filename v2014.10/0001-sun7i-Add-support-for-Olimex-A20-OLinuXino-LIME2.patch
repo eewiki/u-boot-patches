@@ -1,0 +1,98 @@
+From 0ddf9389a655a31dd6c5efaac149ca929278466b Mon Sep 17 00:00:00 2001
+From: Iain Paton <ipaton0@gmail.com>
+Date: Sun, 28 Sep 2014 14:18:42 +0100
+Subject: [PATCH] sun7i: Add support for Olimex A20-OLinuXino-LIME2
+
+This adds support for the Olimex A20-OLinuXino-Lime2
+https://www.olimex.com/Products/OLinuXino/A20/A20-OLinuXIno-LIME2
+
+Differences to previous Lime boards are 1GB RAM and gigabit ethernet
+
+Signed-off-by: Iain Paton <ipaton0@gmail.com>
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+---
+ board/sunxi/MAINTAINERS               |  6 ++++++
+ board/sunxi/Makefile                  |  1 +
+ board/sunxi/dram_a20_olinuxino_l2.c   | 31 +++++++++++++++++++++++++++++++
+ configs/A20-OLinuXino-Lime2_defconfig |  5 +++++
+ 4 files changed, 43 insertions(+)
+ create mode 100644 board/sunxi/dram_a20_olinuxino_l2.c
+ create mode 100644 configs/A20-OLinuXino-Lime2_defconfig
+
+diff --git a/board/sunxi/MAINTAINERS b/board/sunxi/MAINTAINERS
+index 4f32195..4ed82cf 100644
+--- a/board/sunxi/MAINTAINERS
++++ b/board/sunxi/MAINTAINERS
+@@ -38,3 +38,9 @@ M:	FUKAUMI Naoki <naobsd@gmail.com>
+ S:	Maintained
+ F:	board/sunxi/dram_a20_olinuxino_l.c
+ F:	configs/A20-OLinuXino-Lime_defconfig
++
++A20-OLINUXINO-LIME2 BOARD
++M:	Iain Paton <ipaton0@gmail.com>
++S:	Maintained
++F:	board/sunxi/dram_a20_olinuxino_l2.c
++F:	configs/A20-OLinuXino-Lime2_defconfig
+diff --git a/board/sunxi/Makefile b/board/sunxi/Makefile
+index 56073a0..d63a6d2 100644
+--- a/board/sunxi/Makefile
++++ b/board/sunxi/Makefile
+@@ -16,6 +16,7 @@ obj-$(CONFIG_A10S_OLINUXINO_M)	+= dram_a10s_olinuxino_m.o
+ obj-$(CONFIG_A13_OLINUXINO)	+= dram_a13_olinuxino.o
+ obj-$(CONFIG_A13_OLINUXINOM)	+= dram_a13_oli_micro.o
+ obj-$(CONFIG_A20_OLINUXINO_L)	+= dram_a20_olinuxino_l.o
++obj-$(CONFIG_A20_OLINUXINO_L2)	+= dram_a20_olinuxino_l2.o
+ obj-$(CONFIG_A20_OLINUXINO_M)	+= dram_sun7i_384_1024_iow16.o
+ # This is not a typo, uses the same mem settings as the a10s-olinuxino-m
+ obj-$(CONFIG_AUXTEK_T004)	+= dram_a10s_olinuxino_m.o
+diff --git a/board/sunxi/dram_a20_olinuxino_l2.c b/board/sunxi/dram_a20_olinuxino_l2.c
+new file mode 100644
+index 0000000..2115d37
+--- /dev/null
++++ b/board/sunxi/dram_a20_olinuxino_l2.c
+@@ -0,0 +1,31 @@
++/* this file is generated, don't edit it yourself */
++
++#include <common.h>
++#include <asm/arch/dram.h>
++
++static struct dram_para dram_para = {
++	.clock = 480,
++	.type = 3,
++	.rank_num = 1,
++	.density = 4096,
++	.io_width = 16,
++	.bus_width = 32,
++	.cas = 9,
++	.zq = 0x7f,
++	.odt_en = 0,
++	.size = 1024,
++	.tpr0 = 0x42d899b7,
++	.tpr1 = 0xa090,
++	.tpr2 = 0x22a00,
++	.tpr3 = 0,
++	.tpr4 = 0,
++	.tpr5 = 0,
++	.emr1 = 0x4,
++	.emr2 = 0x10,
++	.emr3 = 0,
++};
++
++unsigned long sunxi_dram_init(void)
++{
++	return dramc_init(&dram_para);
++}
+diff --git a/configs/A20-OLinuXino-Lime2_defconfig b/configs/A20-OLinuXino-Lime2_defconfig
+new file mode 100644
+index 0000000..75ef872
+--- /dev/null
++++ b/configs/A20-OLinuXino-Lime2_defconfig
+@@ -0,0 +1,5 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="A20_OLINUXINO_L2,AXP209_POWER,SUNXI_GMAC,RGMII,AHCI,SATAPWR=SUNXI_GPC(3),USB_EHCI"
++CONFIG_FDTFILE="sun7i-a20-olinuxino-lime2.dtb"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_SUN7I=y
+-- 
+2.1.1
+
