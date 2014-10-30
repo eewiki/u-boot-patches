@@ -1,6 +1,6 @@
-From 553ee0a9b33b624920bf6f44ca0400fe036b9ed7 Mon Sep 17 00:00:00 2001
+From 8244b4d3358a6b96a5ddf5a02f3f7d87a21318d2 Mon Sep 17 00:00:00 2001
 From: Bo Shen <voice.shen@atmel.com>
-Date: Tue, 16 Sep 2014 15:57:22 +0800
+Date: Wed, 29 Oct 2014 13:12:06 +0800
 Subject: [PATCH 3/3] ARM: atmel: add sama5d4ek board support
 
 The code for this board supports following features:
@@ -12,20 +12,23 @@ The code for this board supports following features:
 Signed-off-by: Bo Shen <voice.shen@atmel.com>
 ---
  arch/arm/Kconfig                          |   4 +
+ arch/arm/cpu/armv7/at91/Makefile          |   1 +
+ arch/arm/cpu/armv7/at91/sama5d4_devices.c |  30 +++
  arch/arm/cpu/armv7/at91/timer.c           |   3 +-
- arch/arm/include/asm/arch-at91/at91_pmc.h |   6 +-
- arch/arm/include/asm/arch-at91/clk.h      |  29 +++
+ arch/arm/include/asm/arch-at91/at91_pmc.h |   8 +-
+ arch/arm/include/asm/arch-at91/clk.h      |  48 ++++-
  arch/arm/include/asm/arch-at91/hardware.h |   2 +
- arch/arm/include/asm/arch-at91/sama5d4.h  | 199 ++++++++++++++++++
+ arch/arm/include/asm/arch-at91/sama5d4.h  | 207 +++++++++++++++++++
  board/atmel/sama5d4ek/Kconfig             |  18 ++
  board/atmel/sama5d4ek/MAINTAINERS         |   8 +
  board/atmel/sama5d4ek/Makefile            |  15 ++
- board/atmel/sama5d4ek/sama5d4ek.c         | 322 ++++++++++++++++++++++++++++++
+ board/atmel/sama5d4ek/sama5d4ek.c         | 317 ++++++++++++++++++++++++++++++
  configs/sama5d4ek_mmc_defconfig           |   3 +
  configs/sama5d4ek_nandflash_defconfig     |   3 +
  configs/sama5d4ek_spiflash_defconfig      |   3 +
  include/configs/sama5d4ek.h               | 215 ++++++++++++++++++++
- 14 files changed, 826 insertions(+), 4 deletions(-)
+ 16 files changed, 876 insertions(+), 9 deletions(-)
+ create mode 100644 arch/arm/cpu/armv7/at91/sama5d4_devices.c
  create mode 100644 arch/arm/include/asm/arch-at91/sama5d4.h
  create mode 100644 board/atmel/sama5d4ek/Kconfig
  create mode 100644 board/atmel/sama5d4ek/MAINTAINERS
@@ -58,6 +61,54 @@ index 72558b8..f4125b1 100644
  source "board/bachmann/ot1200/Kconfig"
  source "board/balloon3/Kconfig"
  source "board/barco/titanium/Kconfig"
+diff --git a/arch/arm/cpu/armv7/at91/Makefile b/arch/arm/cpu/armv7/at91/Makefile
+index 0a2e48d..f4f35a4 100644
+--- a/arch/arm/cpu/armv7/at91/Makefile
++++ b/arch/arm/cpu/armv7/at91/Makefile
+@@ -9,6 +9,7 @@
+ #
+ 
+ obj-$(CONFIG_SAMA5D3)	+= sama5d3_devices.o
++obj-$(CONFIG_SAMA5D4)	+= sama5d4_devices.o
+ obj-y += clock.o
+ obj-y += cpu.o
+ obj-y += reset.o
+diff --git a/arch/arm/cpu/armv7/at91/sama5d4_devices.c b/arch/arm/cpu/armv7/at91/sama5d4_devices.c
+new file mode 100644
+index 0000000..2708097
+--- /dev/null
++++ b/arch/arm/cpu/armv7/at91/sama5d4_devices.c
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (C) 2014 Atmel
++ *		      Bo Shen <voice.shen@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <asm/arch/sama5d4.h>
++
++char *get_cpu_name()
++{
++	unsigned int extension_id = get_extension_chip_id();
++
++	if (cpu_is_sama5d4())
++		switch (extension_id) {
++		case ARCH_EXID_SAMA5D41:
++			return "SAMA5D41";
++		case ARCH_EXID_SAMA5D42:
++			return "SAMA5D42";
++		case ARCH_EXID_SAMA5D43:
++			return "SAMA5D43";
++		case ARCH_EXID_SAMA5D44:
++			return "SAMA5D44";
++		default:
++			return "Unknown CPU type";
++		}
++	else
++		return "Unknown CPU type";
++}
 diff --git a/arch/arm/cpu/armv7/at91/timer.c b/arch/arm/cpu/armv7/at91/timer.c
 index e3ebfe0..19bf80b 100644
 --- a/arch/arm/cpu/armv7/at91/timer.c
@@ -73,7 +124,7 @@ index e3ebfe0..19bf80b 100644
  	gd->arch.tbl = 0;
  
 diff --git a/arch/arm/include/asm/arch-at91/at91_pmc.h b/arch/arm/include/asm/arch-at91/at91_pmc.h
-index 27331ff..e81ece9 100644
+index 27331ff..7c1578c 100644
 --- a/arch/arm/include/asm/arch-at91/at91_pmc.h
 +++ b/arch/arm/include/asm/arch-at91/at91_pmc.h
 @@ -78,7 +78,7 @@ typedef struct at91_pmc {
@@ -103,67 +154,99 @@ index 27331ff..e81ece9 100644
  #define AT91_PMC_MCKR_MDIV_3		0x00000300
  #endif
  #define AT91_PMC_MCKR_MDIV_4		0x00000200
+@@ -136,6 +136,8 @@ typedef struct at91_pmc {
+ #define AT91_PMC_MCKR_PLLADIV_1		0x00000000
+ #define AT91_PMC_MCKR_PLLADIV_2		0x00001000
+ 
++#define AT91_PMC_MCKR_H32MXDIV		0x01000000
++
+ #define AT91_PMC_IXR_MOSCS		0x00000001
+ #define AT91_PMC_IXR_LOCKA		0x00000002
+ #define AT91_PMC_IXR_LOCKB		0x00000004
 diff --git a/arch/arm/include/asm/arch-at91/clk.h b/arch/arm/include/asm/arch-at91/clk.h
-index 4076a78..7615018 100644
+index 4076a78..1d45e2d 100644
 --- a/arch/arm/include/asm/arch-at91/clk.h
 +++ b/arch/arm/include/asm/arch-at91/clk.h
-@@ -50,12 +50,20 @@ static inline u32 get_pllb_init(void)
+@@ -10,6 +10,7 @@
+ #define __ASM_ARM_ARCH_CLK_H__
  
+ #include <asm/arch/hardware.h>
++#include <asm/arch/at91_pmc.h>
+ #include <asm/global_data.h>
+ 
+ static inline unsigned long get_cpu_clk_rate(void)
+@@ -48,14 +49,34 @@ static inline u32 get_pllb_init(void)
+ 	return gd->arch.at91_pllb_usb_init;
+ }
+ 
++#ifdef CPU_HAS_H32MXDIV
++static inline unsigned int get_h32mxdiv(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++
++	return readl(&pmc->mckr) & AT91_PMC_MCKR_H32MXDIV;
++}
++#else
++static inline unsigned int get_h32mxdiv(void)
++{
++	return 0;
++}
++#endif
++
  static inline unsigned long get_macb_pclk_rate(unsigned int dev_id)
  {
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
- 	return get_mck_clk_rate();
-+#endif
+-	return get_mck_clk_rate();
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
  }
  
  static inline unsigned long get_usart_clk_rate(unsigned int dev_id)
  {
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
- 	return get_mck_clk_rate();
-+#endif
+-	return get_mck_clk_rate();
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
  }
  
  static inline unsigned long get_lcdc_clk_rate(unsigned int dev_id)
-@@ -65,17 +73,38 @@ static inline unsigned long get_lcdc_clk_rate(unsigned int dev_id)
+@@ -65,17 +86,34 @@ static inline unsigned long get_lcdc_clk_rate(unsigned int dev_id)
  
  static inline unsigned long get_spi_clk_rate(unsigned int dev_id)
  {
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
- 	return get_mck_clk_rate();
-+#endif
+-	return get_mck_clk_rate();
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
  }
  
  static inline unsigned long get_twi_clk_rate(unsigned int dev_id)
  {
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
- 	return get_mck_clk_rate();
-+#endif
+-	return get_mck_clk_rate();
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
  }
  
  static inline unsigned long get_mci_clk_rate(void)
  {
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
- 	return get_mck_clk_rate();
-+#endif
+-	return get_mck_clk_rate();
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
 +}
 +
 +static inline unsigned long get_pit_clk_rate(void)
 +{
-+#ifdef CPU_HAS_H32MXDIV
-+	return get_mck_clk_rate() / H32MXDIV;
-+#else
-+	return get_mck_clk_rate();
-+#endif
++	if (get_h32mxdiv())
++		return get_mck_clk_rate() / 2;
++	else
++		return get_mck_clk_rate();
  }
  
  int at91_clock_init(unsigned long main_clock);
@@ -182,10 +265,10 @@ index d712a0d..bf0a1bd 100644
  #endif
 diff --git a/arch/arm/include/asm/arch-at91/sama5d4.h b/arch/arm/include/asm/arch-at91/sama5d4.h
 new file mode 100644
-index 0000000..12a6646
+index 0000000..6ebd38a
 --- /dev/null
 +++ b/arch/arm/include/asm/arch-at91/sama5d4.h
-@@ -0,0 +1,199 @@
+@@ -0,0 +1,207 @@
 +/*
 + * Chip-specific header file for the SAMA5D4 SoC
 + *
@@ -363,12 +446,22 @@ index 0000000..12a6646
 +#define CPU_HAS_PCR
 +#define CPU_HAS_H32MXDIV
 +
-+/*
-+ * The clock of peripheral connect to H32MX is decided by H32MXDIV
-+ * bit in MCKR, if this bit is set, the peripheral only work at half
-+ * of MCK, the MCKR address is 0xf0018030, and H32MXDIV is bit 24.
-+ */
-+#define H32MXDIV	(readl(0xF0018030) & (1 << 24) ? 2 : 1)
++/* sama5d4 series chip id definitions */
++#define ARCH_ID_SAMA5D4		0x8a5c07c0
++#define ARCH_EXID_SAMA5D41	0x00000001
++#define ARCH_EXID_SAMA5D42	0x00000002
++#define ARCH_EXID_SAMA5D43	0x00000003
++#define ARCH_EXID_SAMA5D44	0x00000004
++
++#define cpu_is_sama5d4()	(get_chip_id() == ARCH_ID_SAMA5D4)
++#define cpu_is_sama5d41()	(cpu_is_sama5d4() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D41))
++#define cpu_is_sama5d42()	(cpu_is_sama5d4() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D42))
++#define cpu_is_sama5d43()	(cpu_is_sama5d4() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D43))
++#define cpu_is_sama5d44()	(cpu_is_sama5d4() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D44))
 +
 +/*
 + * No PMECC Galois table in ROM
@@ -378,8 +471,6 @@ index 0000000..12a6646
 +#ifndef __ASSEMBLY__
 +unsigned int get_chip_id(void);
 +unsigned int get_extension_chip_id(void);
-+unsigned int has_emac(void);
-+unsigned int has_gmac(void);
 +unsigned int has_lcdc(void);
 +char *get_cpu_name(void);
 +#endif
@@ -446,10 +537,10 @@ index 0000000..d91525c
 +obj-y += sama5d4ek.o
 diff --git a/board/atmel/sama5d4ek/sama5d4ek.c b/board/atmel/sama5d4ek/sama5d4ek.c
 new file mode 100644
-index 0000000..099b924
+index 0000000..f8394f5
 --- /dev/null
 +++ b/board/atmel/sama5d4ek/sama5d4ek.c
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,317 @@
 +/*
 + * Copyright (C) 2014 Atmel
 + *		      Bo Shen <voice.shen@atmel.com>
@@ -700,11 +791,6 @@ index 0000000..099b924
 +	at91_periph_clk_enable(ATMEL_ID_GMAC0);
 +}
 +#endif
-+
-+char *get_cpu_name()
-+{
-+	return "SAMA5D4";
-+}
 +
 +static void sama5d4ek_serial3_hw_init(void)
 +{

@@ -1,6 +1,6 @@
-From da6c39d097ce373e1ea6960ccea9f8cd3fbbb15d Mon Sep 17 00:00:00 2001
+From e998aa8ddc0a65d0877bd5eebece603658a559bf Mon Sep 17 00:00:00 2001
 From: Bo Shen <voice.shen@atmel.com>
-Date: Tue, 16 Sep 2014 15:57:21 +0800
+Date: Wed, 29 Oct 2014 13:12:05 +0800
 Subject: [PATCH 2/2] net: macb: enable GMAC IP without GE feature support
 
 The User Register in GMAC IP is used to select interface type.
