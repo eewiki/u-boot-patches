@@ -1,0 +1,56 @@
+From 3c629b672d50e178249e8bc2e0e978972d0fdb58 Mon Sep 17 00:00:00 2001
+From: Guillaume GARDET <guillaume.gardet@free.fr>
+Date: Tue, 16 Dec 2014 12:00:44 +0100
+Subject: [PATCH] spl: mmc: Fix raw boot mode (related to commit
+ 4c5bbc2328a24f5e1ee990c9a9527e48e5fb3b5f)
+
+As reported by Robert Nelson, commit 4c5bbc2328a24f5e1ee990c9a9527e48e5fb3b5f
+may break MMC RAW boot mode.
+This patch fixes the check path to fix MMC Raw boot mode.
+
+Tested raw boot mode and FS boot mode on a pandaboard (rev. A3).
+
+Reported-by: Robert Nelson <robertcnelson@gmail.com>
+Signed-off-by: Guillaume GARDET <guillaume.gardet@free.fr>
+
+Cc: Tom Rini <trini@ti.com>
+Cc: Robert Nelson <robertcnelson@gmail.com>
+---
+ common/spl/spl_mmc.c | 19 ++++++++++++++++---
+ 1 file changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/common/spl/spl_mmc.c b/common/spl/spl_mmc.c
+index 7bae16b..c2e596b 100644
+--- a/common/spl/spl_mmc.c
++++ b/common/spl/spl_mmc.c
+@@ -172,11 +172,24 @@ void spl_mmc_load_image(void)
+ 		err = mmc_load_image_raw_sector(mmc,
+ 			CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR);
+ #endif
+-	} else {
++	}
++
++	switch(boot_mode){
++		case MMCSD_MODE_RAW:
++#if defined(CONFIG_SPL_FAT_SUPPORT) || defined(CONFIG_SPL_EXT_SUPPORT)
++		case MMCSD_MODE_FS:
++#endif
++#ifdef CONFIG_SUPPORT_EMMC_BOOT
++		case MMCSD_MODE_EMMCBOOT:
++#endif
++			/* Boot mode is ok. Nothing to do. */
++			break;
++		case MMCSD_MODE_UNDEFINED:
++		default:
+ #ifdef CONFIG_SPL_LIBCOMMON_SUPPORT
+-		puts("spl: wrong MMC boot mode\n");
++			puts("spl: wrong MMC boot mode\n");
+ #endif
+-		hang();
++			hang();
+ 	}
+ 
+ 	if (err)
+-- 
+2.1.3
+
