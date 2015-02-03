@@ -1,0 +1,33 @@
+From 82279f8e407b9a34c3434b35b6f63d339a521a78 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 3 Feb 2015 09:41:07 -0600
+Subject: [PATCH] config_distro_defaults: enable CONFIG_CMD_PART
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/config_distro_defaults.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/config_distro_defaults.h b/include/config_distro_defaults.h
+index 1ecc0bb..ee1e8ca 100644
+--- a/include/config_distro_defaults.h
++++ b/include/config_distro_defaults.h
+@@ -40,6 +40,7 @@
+ #define CONFIG_CMD_FS_GENERIC
+ #define CONFIG_CMD_MII
+ #define CONFIG_CMD_NET
++#define CONFIG_CMD_PART
+ #define CONFIG_CMD_PING
+ #define CONFIG_CMD_PXE
+ 
+@@ -50,6 +51,7 @@
+ #define CONFIG_MENU
+ #define CONFIG_DOS_PARTITION
+ #define CONFIG_EFI_PARTITION
++#define CONFIG_PARTITION_UUIDS
+ #define CONFIG_SUPPORT_RAW_INITRD
+ #define CONFIG_SYS_HUSH_PARSER
+ 
+-- 
+2.1.4
+
