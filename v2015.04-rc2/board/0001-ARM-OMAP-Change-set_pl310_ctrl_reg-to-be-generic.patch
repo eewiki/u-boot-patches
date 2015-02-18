@@ -1,0 +1,84 @@
+From 3965f04a329127276061571941b6e183855888ed Mon Sep 17 00:00:00 2001
+From: Nishanth Menon <nm@ti.com>
+Date: Tue, 17 Feb 2015 17:14:53 -0600
+Subject: [PATCH 1/4] ARM: OMAP: Change set_pl310_ctrl_reg to be generic
+
+set_pl310_ctrl_reg does use the Secure Monitor Call (SMC) to setup
+PL310 control register, however, that is something that is generic
+enough to be used for OMAP5 generation of processors as well. The
+only difference being the service being invoked for the function.
+
+So, convert the service to a macro and use a generic name (same as
+that used in Linux for some consistency). While at that, also add
+a data barrier which is necessary as per recommendation.
+
+Signed-off-by: Nishanth Menon <nm@ti.com>
+---
+ arch/arm/cpu/armv7/omap-common/lowlevel_init.S | 8 +++++---
+ arch/arm/cpu/armv7/omap4/hwinit.c              | 4 ++--
+ arch/arm/include/asm/arch-omap4/sys_proto.h    | 5 ++++-
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/omap-common/lowlevel_init.S b/arch/arm/cpu/armv7/omap-common/lowlevel_init.S
+index e19c7ae..4fc4af0 100644
+--- a/arch/arm/cpu/armv7/omap-common/lowlevel_init.S
++++ b/arch/arm/cpu/armv7/omap-common/lowlevel_init.S
+@@ -22,11 +22,13 @@ ENTRY(save_boot_params)
+ 	b	save_boot_params_ret
+ ENDPROC(save_boot_params)
+ 
+-ENTRY(set_pl310_ctrl_reg)
++ENTRY(omap_smc1)
+ 	PUSH	{r4-r11, lr}	@ save registers - ROM code may pollute
+ 				@ our registers
+-	LDR	r12, =0x102	@ Set PL310 control register - value in R0
++	MOV	r12, r0		@ Service
++	MOV	r0, r1		@ Argument
++	DSB
+ 	.word	0xe1600070	@ SMC #0 - hand assembled because -march=armv5
+ 				@ call ROM Code API to set control register
+ 	POP	{r4-r11, pc}
+-ENDPROC(set_pl310_ctrl_reg)
++ENDPROC(omap_smc1)
+diff --git a/arch/arm/cpu/armv7/omap4/hwinit.c b/arch/arm/cpu/armv7/omap4/hwinit.c
+index db16548..9792761 100644
+--- a/arch/arm/cpu/armv7/omap4/hwinit.c
++++ b/arch/arm/cpu/armv7/omap4/hwinit.c
+@@ -159,11 +159,11 @@ void init_omap_revision(void)
+ #ifndef CONFIG_SYS_L2CACHE_OFF
+ void v7_outer_cache_enable(void)
+ {
+-	set_pl310_ctrl_reg(1);
++	omap_smc1(OMAP4_SERVICE_PL310_CONTROL_REG_SET, 1);
+ }
+ 
+ void v7_outer_cache_disable(void)
+ {
+-	set_pl310_ctrl_reg(0);
++	omap_smc1(OMAP4_SERVICE_PL310_CONTROL_REG_SET, 0);
+ }
+ #endif /* !CONFIG_SYS_L2CACHE_OFF */
+diff --git a/arch/arm/include/asm/arch-omap4/sys_proto.h b/arch/arm/include/asm/arch-omap4/sys_proto.h
+index e19975e..f425e3a 100644
+--- a/arch/arm/include/asm/arch-omap4/sys_proto.h
++++ b/arch/arm/include/asm/arch-omap4/sys_proto.h
+@@ -37,7 +37,7 @@ void do_set_mux(u32 base, struct pad_conf_entry const *array, int size);
+ void set_muxconf_regs_essential(void);
+ u32 wait_on_value(u32, u32, void *, u32);
+ void sdelay(unsigned long);
+-void set_pl310_ctrl_reg(u32 val);
++void omap_smc1(u32 service, u32 val);
+ void setup_clocks_for_console(void);
+ void prcm_init(void);
+ void bypass_dpll(u32 const base);
+@@ -57,4 +57,7 @@ int omap_vc_bypass_send_value(u8 sa, u8 reg_addr, u8 reg_data);
+ u32 warm_reset(void);
+ void force_emif_self_refresh(void);
+ void setup_warmreset_time(void);
++
++#define OMAP4_SERVICE_PL310_CONTROL_REG_SET	0x102
++
+ #endif
+-- 
+2.1.4
+

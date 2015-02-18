@@ -1,0 +1,75 @@
+From d7fae3f0e3420e8d3f1f3c910e1f27a758258034 Mon Sep 17 00:00:00 2001
+From: Nishanth Menon <nm@ti.com>
+Date: Tue, 17 Feb 2015 17:14:54 -0600
+Subject: [PATCH 2/4] ARM: OMAP5 / DRA7: Setup L2 Aux Control Register with
+ recommended configuration
+
+Update to existing recommendation for L2ACTLR configuration to prevent
+system instability and optimize performance.
+
+These apply to both OMAP5 and DRA7.
+
+Reported-by: Vivek Chengalvala <vchengalvala@ti.com>
+Signed-off-by: Nishanth Menon <nm@ti.com>
+---
+ arch/arm/cpu/armv7/omap5/hwinit.c           | 16 ++++++++++++++++
+ arch/arm/include/asm/arch-omap5/sys_proto.h |  4 ++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/omap5/hwinit.c b/arch/arm/cpu/armv7/omap5/hwinit.c
+index a8a474a..632df4f 100644
+--- a/arch/arm/cpu/armv7/omap5/hwinit.c
++++ b/arch/arm/cpu/armv7/omap5/hwinit.c
+@@ -304,6 +304,21 @@ void config_data_eye_leveling_samples(u32 emif_base)
+ 		       (*ctrl)->control_emif2_sdram_config_ext);
+ }
+ 
++void init_cpu_configuration(void)
++{
++	u32 l2actlr;
++
++	asm volatile("mrc p15, 1, %0, c15, c0, 0" : "=r"(l2actlr));
++	/*
++	 * L2ACTLR: Ensure to enable the following:
++	 * 3: Disable clean/evict push to external
++	 * 4: Disable WriteUnique and WriteLineUnique transactions from master
++	 * 8: Disable DVM/CMO message broadcast
++	 */
++	l2actlr |= 0x118;
++	omap_smc1(OMAP5_SERVICE_L2ACTLR_SET, l2actlr);
++}
++
+ void init_omap_revision(void)
+ {
+ 	/*
+@@ -342,6 +357,7 @@ void init_omap_revision(void)
+ 	default:
+ 		*omap_si_rev = OMAP5430_SILICON_ID_INVALID;
+ 	}
++	init_cpu_configuration();
+ }
+ 
+ void reset_cpu(ulong ignored)
+diff --git a/arch/arm/include/asm/arch-omap5/sys_proto.h b/arch/arm/include/asm/arch-omap5/sys_proto.h
+index 1038303..e2e1868 100644
+--- a/arch/arm/include/asm/arch-omap5/sys_proto.h
++++ b/arch/arm/include/asm/arch-omap5/sys_proto.h
+@@ -56,6 +56,7 @@ void force_emif_self_refresh(void);
+ void get_ioregs(const struct ctrl_ioregs **regs);
+ void srcomp_enable(void);
+ void setup_warmreset_time(void);
++void omap_smc1(u32 service, u32 val);
+ 
+ static inline u32 div_round_up(u32 num, u32 den)
+ {
+@@ -66,4 +67,7 @@ static inline u32 usec_to_32k(u32 usec)
+ {
+ 	return div_round_up(32768 * usec, 1000000);
+ }
++
++#define OMAP5_SERVICE_L2ACTLR_SET    0x104
++
+ #endif
+-- 
+2.1.4
+

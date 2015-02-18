@@ -1,0 +1,33 @@
+From 74c0b3500a245d01a05a3a958dae266de3d2a15f Mon Sep 17 00:00:00 2001
+From: Angela Stegmaier <angelabaker@ti.com>
+Date: Tue, 17 Feb 2015 17:14:56 -0600
+Subject: [PATCH 4/4] configs: ti_omap5_common: Enable workaround for ARM
+ errata 798870
+
+Enable the workaround for ARM errata 798870 for OMAP5
+and DRA7xx since they are Coretx-A15 r2.
+
+Signed-off-by: Angela Stegmaier <angelabaker@ti.com>
+Signed-off-by: Nishanth Menon <nm@ti.com>
+---
+ include/configs/ti_omap5_common.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
+index 925cb42..bce9a50 100644
+--- a/include/configs/ti_omap5_common.h
++++ b/include/configs/ti_omap5_common.h
+@@ -21,6 +21,10 @@
+ #define CONFIG_DISPLAY_BOARDINFO
+ #define CONFIG_ARCH_CPU_INIT
+ 
++/* Common ARM Erratas */
++#define CONFIG_ARM_ARCH_CP15_ERRATA
++#define CONFIG_ARM_ERRATA_798870
++
+ #define CONFIG_SYS_CACHELINE_SIZE	64
+ 
+ /* Use General purpose timer 1 */
+-- 
+2.1.4
+
