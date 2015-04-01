@@ -1,0 +1,358 @@
+From b1aedd7462b3661f05e3c981a70cb3530d1bcb39 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 18 Mar 2015 11:03:55 -0500
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/am335x_evm_defconfig |   3 +-
+ include/configs/am335x_evm.h | 231 ++++++++++++++++++++++++++++++++++++++-----
+ 2 files changed, 210 insertions(+), 24 deletions(-)
+
+diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
+index 968d041..3406926 100644
+--- a/configs/am335x_evm_defconfig
++++ b/configs/am335x_evm_defconfig
+@@ -1,7 +1,6 @@
+ CONFIG_SPL=y
+ CONFIG_SPL_STACK_R=y
+ CONFIG_SPL_STACK_R_ADDR=0x82000000
+-CONFIG_SYS_EXTRA_OPTIONS="NAND"
+-CONFIG_CONS_INDEX=1
++CONFIG_SYS_EXTRA_OPTIONS="SERIAL1,CONS_INDEX=1"
+ CONFIG_ARM=y
+ CONFIG_TARGET_AM335X_EVM=y
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index a87059c..62e317f 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -17,6 +17,7 @@
+ #define __CONFIG_AM335X_EVM_H
+ 
+ #include <configs/ti_am335x_common.h>
++#define CONFIG_ENV_IS_NOWHERE
+ 
+ #ifndef CONFIG_SPL_BUILD
+ #ifndef CONFIG_FIT
+@@ -72,7 +73,8 @@
+ 	DEFAULT_LINUX_BOOT_ENV \
+ 	"boot_fdt=try\0" \
+ 	"bootpart=0:2\0" \
+-	"bootdir=/boot\0" \
++	"bootdir=\0" \
++	"fdtdir=/dtbs\0" \
+ 	"bootfile=zImage\0" \
+ 	"fdtfile=undefined\0" \
+ 	"console=ttyO0,115200n8\0" \
+@@ -80,9 +82,13 @@
+ 		"uuid_disk=${uuid_gpt_disk};" \
+ 		"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
+ 	"optargs=\0" \
++	"cape_disable=\0" \
++	"cape_enable=\0" \
++	"cmdline=\0" \
+ 	"mmcdev=0\0" \
++	"mmcpart=1\0" \
+ 	"mmcroot=/dev/mmcblk0p2 ro\0" \
+-	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"rootpath=/export/rootfs\0" \
+ 	"nfsopts=nolock\0" \
+ 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
+@@ -91,8 +97,29 @@
+ 	"ramrootfstype=ext2\0" \
+ 	"mmcargs=setenv bootargs console=${console} " \
+ 		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
+ 		"root=${mmcroot} " \
+-		"rootfstype=${mmcrootfstype}\0" \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"server_ip=192.168.1.100\0" \
++	"gw_ip=192.168.1.1\0" \
++	"netmask=255.255.255.0\0" \
++	"hostname=\0" \
++	"device=eth0\0" \
++	"autoconf=off\0" \
++	"root_dir=/home/userid/targetNFS\0" \
++	"nfs_options=,vers=3\0" \
++	"nfsrootfstype=ext4 rootwait fixrtc\0" \
++	"nfsargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/nfs rw " \
++		"rootfstype=${nfsrootfstype} " \
++		"nfsroot=${nfsroot} " \
++		"ip=${ip} " \
++		"${cmdline}\0" \
+ 	"spiroot=/dev/mtdblock4 rw\0" \
+ 	"spirootfstype=jffs2\0" \
+ 	"spisrcaddr=0xe0000\0" \
+@@ -108,10 +135,12 @@
+ 		"nfsroot=${serverip}:${rootpath},${nfsopts} rw " \
+ 		"ip=dhcp\0" \
+ 	"bootenv=uEnv.txt\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++	"script=boot.scr\0" \
++	"scriptfile=${script}\0" \
++	"loadbootscript=load mmc ${bootpart} ${loadaddr} ${scriptfile};\0" \
++	"bootscript=echo Running bootscript from mmc${bootpart} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc ...; " \
+ 		"env import -t -r $loadaddr $filesize\0" \
+ 	"ramargs=setenv bootargs console=${console} " \
+@@ -120,7 +149,10 @@
+ 		"rootfstype=${ramrootfstype}\0" \
+ 	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
++		"ums 0 mmc ${umsmedia};\0" \
+ 	"mmcloados=run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+@@ -137,22 +169,85 @@
+ 		"fi;\0" \
+ 	"mmcboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
+-			"echo SD/MMC found on device ${mmcdev};" \
+-			"if run loadbootscript; then " \
+-				"run bootscript;" \
+-			"else " \
++			"gpio set 54;" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"if test -e mmc ${bootpart} /etc/fstab; then " \
++				"setenv mmcpart 1;" \
++			"fi; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
+ 				"if run loadbootenv; then " \
++					"gpio set 55;" \
+ 					"echo Loaded environment from ${bootenv};" \
+ 					"run importbootenv;" \
+ 				"fi;" \
+-				"if test -n $uenvcmd; then " \
++				"if test -n ${cape}; then " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdtbase}-${cape}.dtb; then " \
++						"setenv fdtfile ${fdtbase}-${cape}.dtb; " \
++					"fi; " \
++					"echo using: $fdtfile...; " \
++				"fi; " \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"gpio set 56; " \
+ 					"echo Running uenvcmd ...;" \
+ 					"run uenvcmd;" \
+ 				"fi;" \
+-				"if run loadimage; then " \
+-					"run mmcloados;" \
++				"echo Checking if client_ip is set ...;" \
++				"if test -n ${client_ip}; then " \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
++					"fi;" \
++					"gpio set 56; " \
++					"if test -n ${uname_r}; then " \
++						"echo Running nfsboot_uname_r ...;" \
++						"run nfsboot_uname_r;" \
++					"fi;" \
++					"echo Running nfsboot ...;" \
++					"run nfsboot;" \
+ 				"fi;" \
+-			"fi ;" \
++			"fi; " \
++			"echo Checking for: /${script} ...;" \
++			"if test -e mmc ${bootpart} /${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile ${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/${script} ...;" \
++			"if test -e mmc ${bootpart} /boot/${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile /boot/${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"gpio set 55;" \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"gpio set 56; " \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
+ 		"fi;\0" \
+ 	"spiboot=echo Booting from spi ...; " \
+ 		"run spiargs; " \
+@@ -166,31 +261,124 @@
+ 		"tftp ${fdtaddr} ${fdtfile}; " \
+ 		"run netargs; " \
+ 		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"nfsboot=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${bootfile}; " \
++		"tftp ${fdtaddr} dtbs/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"nfsboot_uname_r=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} vmlinuz-${uname_r}; " \
++		"tftp ${fdtaddr} dtbs/${uname_r}/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
+ 	"ramboot=echo Booting from ramdisk ...; " \
+ 		"run ramargs; " \
+ 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
+ 	"findfdt="\
+ 		"if test $board_name = A335BONE; then " \
+-			"setenv fdtfile am335x-bone.dtb; fi; " \
++			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
+ 		"if test $board_name = A335BNLT; then " \
+-			"setenv fdtfile am335x-boneblack.dtb; fi; " \
++			"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; setenv umsmedia 1; fi; " \
+ 		"if test $board_name = A33515BB; then " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
+ 		"if test $board_name = A335X_SK; then " \
+ 			"setenv fdtfile am335x-evmsk.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e mmc ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e mmc ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"if test -e mmc ${bootpart} ${fdtfile}; then " \
++											"run loadfdt;" \
++										"else " \
++											"echo; echo unable to find [dtb=${fdtfile}] did you name it correctly? ...; " \
++											"run failumsboot;" \
++										"fi;" \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++			"else " \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
++		"fi;\0" \
+ 	NANDARGS \
+ 	DFUARGS
+ #endif
+ 
+ #define CONFIG_BOOTCOMMAND \
++	"setenv umsmedia 0; "\
++	"gpio set 53; " \
++	"i2c mw 0x24 1 0x3e; " \
+ 	"run findfdt; " \
++	"setenv mmcdev 0; " \
++	"setenv bootpart 0:1; " \
+ 	"run mmcboot;" \
++	"gpio clear 56; " \
++	"gpio clear 55; " \
++	"gpio clear 54; " \
+ 	"setenv mmcdev 1; " \
+-	"setenv bootpart 1:2; " \
++	"setenv bootpart 1:1; " \
+ 	"run mmcboot;" \
+-	"run nandboot;"
++	"run failumsboot;"
+ 
+ /* NS16550 Configuration */
+ #define CONFIG_SYS_NS16550_COM1		0x44e09000	/* Base EVM has UART0 */
+@@ -329,9 +517,8 @@
+ #endif
+ 
+ #ifdef CONFIG_MUSB_GADGET
+-#define CONFIG_USB_ETHER
+-#define CONFIG_USB_ETH_RNDIS
+-#define CONFIG_USBNET_HOST_ADDR	"de:ad:be:af:00:00"
++#define CONFIG_CMD_USB_MASS_STORAGE
++#define CONFIG_USB_GADGET_MASS_STORAGE
+ 
+ /* USB TI's IDs */
+ #define CONFIG_G_DNL_VENDOR_NUM 0x0451
+-- 
+2.1.4
+
