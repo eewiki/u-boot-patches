@@ -1,0 +1,38 @@
+From aed61602127a74c578c48140366d1f742c9e1cb4 Mon Sep 17 00:00:00 2001
+From: Tom Rini <trini@konsulko.com>
+Date: Thu, 2 Apr 2015 16:01:33 -0400
+Subject: [PATCH] am33xx/ddr.c: Fix regression on DDR2 platforms
+
+Back in fc46bae a "clean up" was introduced that intended to reconcile
+some of the AM335x codepaths based on how AM43xx operates.
+Unfortunately this introduced a regression on the DDR2 platforms.  This
+was un-noticed on DDR3 (everything except for Beaglebone White) as we
+had already populated sdram_config correctly in sequence.  This change
+brings us back to the older behavior and is fine on all platforms.
+
+Tested on Beaglebone White, Beaglebone Black and AM335x GP EVM
+
+Reported-by: Matt Ranostay <mranostay@gmail.com>
+Signed-off-by: Tom Rini <trini@konsulko.com>
+---
+ arch/arm/cpu/armv7/am33xx/ddr.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv7/am33xx/ddr.c b/arch/arm/cpu/armv7/am33xx/ddr.c
+index 85cceae..f5b16b4 100644
+--- a/arch/arm/cpu/armv7/am33xx/ddr.c
++++ b/arch/arm/cpu/armv7/am33xx/ddr.c
+@@ -164,9 +164,9 @@ void config_sdram(const struct emif_regs *regs, int nr)
+ 		writel(regs->ref_ctrl, &emif_reg[nr]->emif_sdram_ref_ctrl);
+ 		writel(regs->ref_ctrl, &emif_reg[nr]->emif_sdram_ref_ctrl_shdw);
+ 	}
+-	writel(regs->sdram_config, &emif_reg[nr]->emif_sdram_config);
+ 	writel(regs->ref_ctrl, &emif_reg[nr]->emif_sdram_ref_ctrl);
+ 	writel(regs->ref_ctrl, &emif_reg[nr]->emif_sdram_ref_ctrl_shdw);
++	writel(regs->sdram_config, &emif_reg[nr]->emif_sdram_config);
+ }
+ 
+ /**
+-- 
+2.1.4
+
