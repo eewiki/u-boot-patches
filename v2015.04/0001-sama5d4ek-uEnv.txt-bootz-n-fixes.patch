@@ -1,0 +1,111 @@
+From 28a0cfb195507d91084ba5a614157221b3b26fcf Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 1 Apr 2015 13:03:32 -0500
+Subject: [PATCH] sama5d4ek: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/at91-sama5_common.h | 49 ++++++++++++++++++++++++++++++++++---
+ include/configs/sama5d4ek.h         | 12 ++++++---
+ 2 files changed, 54 insertions(+), 7 deletions(-)
+
+diff --git a/include/configs/at91-sama5_common.h b/include/configs/at91-sama5_common.h
+index dedb785..f4733f4 100644
+--- a/include/configs/at91-sama5_common.h
++++ b/include/configs/at91-sama5_common.h
+@@ -35,7 +35,7 @@
+ /* general purpose I/O */
+ #define CONFIG_AT91_GPIO
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ /*
+  * BOOTP options
+@@ -57,9 +57,50 @@
+ #define CONFIG_CMD_SETEXPR
+ 
+ #ifdef CONFIG_SYS_USE_MMC
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"root=/dev/mmcblk0p2 rw rootwait"
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"loadaddr=0x22000000\0" \
++	"ftdaddr=0x21000000\0" \
++	"bootfile=zImage\0" \
++	"fdt_file=/dtbs/at91-sama5d4ek.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++	"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t $loadaddr $filesize\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${ftdaddr} ${fdt_file}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${ftdaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadzimage ...;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #else
+ #define CONFIG_BOOTARGS							\
+ 	"console=ttyS0,115200 earlyprintk "				\
+diff --git a/include/configs/sama5d4ek.h b/include/configs/sama5d4ek.h
+index 546d7a3..5d8185f 100644
+--- a/include/configs/sama5d4ek.h
++++ b/include/configs/sama5d4ek.h
+@@ -95,6 +95,15 @@
+ #if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
+ #define CONFIG_CMD_FAT
+ #define CONFIG_DOS_PARTITION
++
++#define CONFIG_CMD_EXT2
++#define CONFIG_CMD_EXT4
++#define CONFIG_CMD_EXT4_WRITE
++#define CONFIG_CMD_FS_GENERIC
++
++#define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
++
+ #endif
+ 
+ /* Ethernet Hardware */
+@@ -149,9 +158,6 @@
+ #define FAT_ENV_DEVICE_AND_PART	"0"
+ #define FAT_ENV_FILE		"uboot.env"
+ #define CONFIG_ENV_SIZE		0x4000
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 0:1 0x21000000 sama5d4ek.dtb; " \
+-				"fatload mmc 0:1 0x22000000 zImage; " \
+-				"bootz 0x22000000 - 0x21000000"
+ #endif
+ 
+ /* SPL */
+-- 
+2.1.4
+
