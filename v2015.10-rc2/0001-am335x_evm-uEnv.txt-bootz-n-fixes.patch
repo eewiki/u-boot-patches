@@ -1,15 +1,52 @@
-From 7d9e03e2708c83b08c806f16fea4814a08647595 Mon Sep 17 00:00:00 2001
+From c062cb45a0bc8a18c777f88bc2b8797fd63cf935 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Aug 2015 16:56:31 -0500
+Date: Tue, 18 Aug 2015 13:41:42 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c      |  29 +++++-
- configs/am335x_evm_defconfig |   1 -
- include/configs/am335x_evm.h | 236 +++++++++++++++++++++++++++++++++++++++----
- 3 files changed, 240 insertions(+), 26 deletions(-)
+ arch/arm/cpu/armv7/am33xx/board.c |  24 +++-
+ board/ti/am335x/board.c           |  29 ++++-
+ configs/am335x_evm_defconfig      |   1 -
+ include/configs/am335x_evm.h      | 236 ++++++++++++++++++++++++++++++++++----
+ 4 files changed, 263 insertions(+), 27 deletions(-)
 
+diff --git a/arch/arm/cpu/armv7/am33xx/board.c b/arch/arm/cpu/armv7/am33xx/board.c
+index a1cb4ec..5b1eb18 100644
+--- a/arch/arm/cpu/armv7/am33xx/board.c
++++ b/arch/arm/cpu/armv7/am33xx/board.c
+@@ -70,8 +70,30 @@ U_BOOT_DEVICES(am33xx_uarts) = {
+ };
+ #endif
+ 
++#ifdef CONFIG_DM_GPIO
++static const struct omap_gpio_platdata am33xx_gpio[] = {
++	{ 0, AM33XX_GPIO0_BASE, METHOD_GPIO_24XX },
++	{ 1, AM33XX_GPIO1_BASE, METHOD_GPIO_24XX },
++	{ 2, AM33XX_GPIO2_BASE, METHOD_GPIO_24XX },
++	{ 3, AM33XX_GPIO3_BASE, METHOD_GPIO_24XX },
++#ifdef CONFIG_AM43XX
++	{ 4, AM33XX_GPIO4_BASE, METHOD_GPIO_24XX },
++	{ 5, AM33XX_GPIO5_BASE, METHOD_GPIO_24XX },
++#endif
++};
++
++U_BOOT_DEVICES(am33xx_gpios) = {
++	{ "gpio_omap", &am33xx_gpio[0] },
++	{ "gpio_omap", &am33xx_gpio[1] },
++	{ "gpio_omap", &am33xx_gpio[2] },
++	{ "gpio_omap", &am33xx_gpio[3] },
++#ifdef CONFIG_AM43XX
++	{ "gpio_omap", &am33xx_gpio[4] },
++	{ "gpio_omap", &am33xx_gpio[5] },
++#endif
++};
+ 
+-#ifndef CONFIG_DM_GPIO
++#else
+ static const struct gpio_bank gpio_bank_am33xx[] = {
+ 	{ (void *)AM33XX_GPIO0_BASE, METHOD_GPIO_24XX },
+ 	{ (void *)AM33XX_GPIO1_BASE, METHOD_GPIO_24XX },
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index 1dc2ed0..e6c5ed6 100644
 --- a/board/ti/am335x/board.c
@@ -70,7 +107,7 @@ index 96599c6..9e8c010 100644
  # CONFIG_CMD_FLASH is not set
  # CONFIG_CMD_SETEXPR is not set
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index e89c49e..fba94bf 100644
+index e89c49e..fd21736 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
