@@ -1,0 +1,972 @@
+From 294901b99865283f12b2ec6ebc92216e344ca349 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 4 Aug 2015 13:12:50 -0500
+Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/Kconfig                 |   1 +
+ board/udoo/1066mhz_4x256mx16.cfg |  55 --------
+ board/udoo/MAINTAINERS           |   2 +-
+ board/udoo/Makefile              |   2 +-
+ board/udoo/clocks.cfg            |  32 -----
+ board/udoo/ddr-setup.cfg         |  87 -------------
+ board/udoo/udoo.c                |  95 ++++++++------
+ board/udoo/udoo.cfg              |  29 -----
+ board/udoo/udoo_spl.c            | 271 +++++++++++++++++++++++++++++++++++++++
+ configs/udoo_defconfig           |   6 +
+ configs/udoo_quad_defconfig      |   5 -
+ include/configs/udoo.h           | 152 +++++++++++++++++++---
+ 12 files changed, 467 insertions(+), 270 deletions(-)
+ delete mode 100644 board/udoo/1066mhz_4x256mx16.cfg
+ delete mode 100644 board/udoo/clocks.cfg
+ delete mode 100644 board/udoo/ddr-setup.cfg
+ delete mode 100644 board/udoo/udoo.cfg
+ create mode 100644 board/udoo/udoo_spl.c
+ create mode 100644 configs/udoo_defconfig
+ delete mode 100644 configs/udoo_quad_defconfig
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 32fa2dd..5d54604 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -511,6 +511,7 @@ config TARGET_VISION2
+ config TARGET_UDOO
+ 	bool "Support udoo"
+ 	select CPU_V7
++	select SUPPORT_SPL
+ 
+ config TARGET_WANDBOARD
+ 	bool "Support wandboard"
+diff --git a/board/udoo/1066mhz_4x256mx16.cfg b/board/udoo/1066mhz_4x256mx16.cfg
+deleted file mode 100644
+index 1ac0aec..0000000
+--- a/board/udoo/1066mhz_4x256mx16.cfg
++++ /dev/null
+@@ -1,55 +0,0 @@
+-/*
+- * Copyright (C) 2013 Boundary Devices
+- *
+- * SPDX-License-Identifier:	GPL-2.0+
+- */
+-
+-DATA 4, MX6_MMDC_P0_MDPDC, 0x00020036
+-DATA 4, MX6_MMDC_P0_MDOTC, 0x09444040
+-
+-DATA 4, MX6_MMDC_P0_MDCFG0, 0x54597955
+-DATA 4, MX6_MMDC_P0_MDCFG1, 0xFF328F64
+-DATA 4, MX6_MMDC_P0_MDCFG2, 0x01FF00DB
+-
+-DATA 4, MX6_MMDC_P0_MDMISC, 0x00001740
+-DATA 4, MX6_MMDC_P0_MDSCR,  0x00008000
+-DATA 4, MX6_MMDC_P0_MDRWD,  0x000026D2
+-
+-DATA 4, MX6_MMDC_P0_MDOR,  0x00591023
+-DATA 4, MX6_MMDC_P0_MDASP, 0x00000027
+-DATA 4, MX6_MMDC_P0_MDCTL, 0x831A0000
+-
+-DATA 4, MX6_MMDC_P0_MDSCR, 0x04088032
+-DATA 4, MX6_MMDC_P0_MDSCR, 0x00008033
+-
+-DATA 4, MX6_MMDC_P0_MDSCR, 	0x00048031
+-DATA 4, MX6_MMDC_P0_MDSCR,	0x09408030
+-DATA 4, MX6_MMDC_P0_MDSCR, 	0x04008040
+-DATA 4, MX6_MMDC_P0_MPZQHWCTRL, 0xA1380003
+-DATA 4, MX6_MMDC_P1_MPZQHWCTRL, 0xA1380003
+-DATA 4, MX6_MMDC_P0_MDREF, 	0x00005800
+-DATA 4, MX6_MMDC_P0_MPODTCTRL, 	0x00011117
+-DATA 4, MX6_MMDC_P1_MPODTCTRL, 	0x00011117
+-
+-DATA 4, MX6_MMDC_P0_MPDGCTRL0, 0x43510360
+-DATA 4, MX6_MMDC_P0_MPDGCTRL1, 0x0342033F
+-DATA 4, MX6_MMDC_P1_MPDGCTRL0, 0x033F033F
+-DATA 4, MX6_MMDC_P1_MPDGCTRL1, 0x03290266
+-
+-DATA 4, MX6_MMDC_P0_MPRDDLCTL, 0x4B3E4141
+-DATA 4, MX6_MMDC_P1_MPRDDLCTL, 0x47413B4A
+-DATA 4, MX6_MMDC_P0_MPWRDLCTL, 0x42404843
+-DATA 4, MX6_MMDC_P1_MPWRDLCTL, 0x4C3F4C45
+-
+-DATA 4, MX6_MMDC_P0_MPWLDECTRL0, 0x00350035
+-DATA 4, MX6_MMDC_P0_MPWLDECTRL1, 0x001F001F
+-DATA 4, MX6_MMDC_P1_MPWLDECTRL0, 0x00010001
+-DATA 4, MX6_MMDC_P1_MPWLDECTRL1, 0x00010001
+-
+-DATA 4, MX6_MMDC_P0_MPMUR0, 0x00000800
+-DATA 4, MX6_MMDC_P1_MPMUR0, 0x00000800
+-
+-DATA 4, MX6_MMDC_P0_MDPDC, 0x00025576
+-DATA 4, MX6_MMDC_P0_MAPSR, 0x00011006
+-DATA 4, MX6_MMDC_P0_MDSCR, 0x00000000
+-
+diff --git a/board/udoo/MAINTAINERS b/board/udoo/MAINTAINERS
+index ee8b61e..789e98f 100644
+--- a/board/udoo/MAINTAINERS
++++ b/board/udoo/MAINTAINERS
+@@ -3,4 +3,4 @@ M:	Fabio Estevam <fabio.estevam@freescale.com>
+ S:	Maintained
+ F:	board/udoo/
+ F:	include/configs/udoo.h
+-F:	configs/udoo_quad_defconfig
++F:	configs/udoo_defconfig
+diff --git a/board/udoo/Makefile b/board/udoo/Makefile
+index 80efada..1d6d9f8 100644
+--- a/board/udoo/Makefile
++++ b/board/udoo/Makefile
+@@ -4,4 +4,4 @@
+ # SPDX-License-Identifier:	GPL-2.0+
+ #
+ 
+-obj-y  := udoo.o
++obj-y  := udoo.o udoo_spl.o
+diff --git a/board/udoo/clocks.cfg b/board/udoo/clocks.cfg
+deleted file mode 100644
+index 9cd1af1..0000000
+--- a/board/udoo/clocks.cfg
++++ /dev/null
+@@ -1,32 +0,0 @@
+-/*
+- * Copyright (C) 2013 Boundary Devices
+- *
+- * SPDX-License-Identifier:	GPL-2.0+
+- *
+- * Device Configuration Data (DCD)
+- *
+- * Each entry must have the format:
+- * Addr-type           Address        Value
+- *
+- * where:
+- *      Addr-type register length (1,2 or 4 bytes)
+- *      Address   absolute address of the register
+- *      value     value to be stored in the register
+- */
+-
+-/* set the default clock gate to save power */
+-DATA 4, CCM_CCGR0, 0x00C03F3F
+-DATA 4, CCM_CCGR1, 0x0030FC03
+-DATA 4, CCM_CCGR2, 0x0FFFC000
+-DATA 4, CCM_CCGR3, 0x3FF00000
+-DATA 4, CCM_CCGR4, 0x00FFF300
+-DATA 4, CCM_CCGR5, 0x0F0000C3
+-DATA 4, CCM_CCGR6, 0x000003FF
+-
+-/* enable AXI cache for VDOA/VPU/IPU */
+-DATA 4, MX6_IOMUXC_GPR4, 0xF00000FF
+-
+-/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */
+-DATA 4, MX6_IOMUXC_GPR6, 0x007F007F
+-DATA 4, MX6_IOMUXC_GPR7, 0x007F007F
+-
+diff --git a/board/udoo/ddr-setup.cfg b/board/udoo/ddr-setup.cfg
+deleted file mode 100644
+index 78cbe17..0000000
+--- a/board/udoo/ddr-setup.cfg
++++ /dev/null
+@@ -1,87 +0,0 @@
+-/*
+- * Copyright (C) 2013 Boundary Devices
+- *
+- * SPDX-License-Identifier:	GPL-2.0+
+- *
+- * Device Configuration Data (DCD)
+- *
+- * Each entry must have the format:
+- * Addr-type           Address        Value
+- *
+- * where:
+- *      Addr-type register length (1,2 or 4 bytes)
+- *      Address   absolute address of the register
+- *      value     value to be stored in the register
+- */
+-
+-/*
+- * DDR3 settings
+- * MX6Q    ddr is limited to 1066 Mhz	currently 1056 MHz(528 MHz clock),
+- *	   memory bus width: 64 bits	x16/x32/x64
+- * MX6DL   ddr is limited to 800 MHz(400 MHz clock)
+- *	   memory bus width: 64 bits	x16/x32/x64
+- * MX6SOLO ddr is limited to 800 MHz(400 MHz clock)
+- *	   memory bus width: 32 bits	x16/x32
+- */
+-DATA 4, MX6_IOM_DRAM_SDQS0, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS1, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS2, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS3, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS4, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS5, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS6, 0x00000030
+-DATA 4, MX6_IOM_DRAM_SDQS7, 0x00000030
+-
+-DATA 4, MX6_IOM_GRP_B0DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B1DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B2DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B3DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B4DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B5DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B6DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_B7DS, 0x00000030
+-DATA 4, MX6_IOM_GRP_ADDDS, 0x00000030
+-/* 40 Ohm drive strength for cs0/1,sdba2,cke0/1,sdwe */
+-DATA 4, MX6_IOM_GRP_CTLDS, 0x00000030
+-
+-DATA 4, MX6_IOM_DRAM_DQM0, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM1, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM2, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM3, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM4, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM5, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM6, 0x00020030
+-DATA 4, MX6_IOM_DRAM_DQM7, 0x00020030
+-
+-DATA 4, MX6_IOM_DRAM_CAS, 0x00020030
+-DATA 4, MX6_IOM_DRAM_RAS, 0x00020030
+-DATA 4, MX6_IOM_DRAM_SDCLK_0, 0x00020030
+-DATA 4, MX6_IOM_DRAM_SDCLK_1, 0x00020030
+-
+-DATA 4, MX6_IOM_DRAM_RESET, 0x00020030
+-DATA 4, MX6_IOM_DRAM_SDCKE0, 0x00003000
+-DATA 4, MX6_IOM_DRAM_SDCKE1, 0x00003000
+-
+-DATA 4, MX6_IOM_DRAM_SDODT0, 0x00003030
+-DATA 4, MX6_IOM_DRAM_SDODT1, 0x00003030
+-
+-/* (differential input) */
+-DATA 4, MX6_IOM_DDRMODE_CTL, 0x00020000
+-/* (differential input) */
+-DATA 4, MX6_IOM_GRP_DDRMODE, 0x00020000
+-/* disable ddr pullups */
+-DATA 4, MX6_IOM_GRP_DDRPKE, 0x00000000
+-DATA 4, MX6_IOM_DRAM_SDBA2, 0x00000000
+-/* 40 Ohm drive strength for cs0/1,sdba2,cke0/1,sdwe */
+-DATA 4, MX6_IOM_GRP_DDR_TYPE, 0x000C0000
+-
+-/* Read data DQ Byte0-3 delay */
+-DATA 4, MX6_MMDC_P0_MPRDDQBY0DL, 0x33333333
+-DATA 4, MX6_MMDC_P0_MPRDDQBY1DL, 0x33333333
+-DATA 4, MX6_MMDC_P0_MPRDDQBY2DL, 0x33333333
+-DATA 4, MX6_MMDC_P0_MPRDDQBY3DL, 0x33333333
+-DATA 4, MX6_MMDC_P1_MPRDDQBY0DL, 0x33333333
+-DATA 4, MX6_MMDC_P1_MPRDDQBY1DL, 0x33333333
+-DATA 4, MX6_MMDC_P1_MPRDDQBY2DL, 0x33333333
+-DATA 4, MX6_MMDC_P1_MPRDDQBY3DL, 0x33333333
+-
+diff --git a/board/udoo/udoo.c b/board/udoo/udoo.c
+index e9236d4..a8bd90a 100644
+--- a/board/udoo/udoo.c
++++ b/board/udoo/udoo.c
+@@ -42,28 +42,28 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ int dram_init(void)
+ {
+-	gd->ram_size = (phys_size_t)CONFIG_DDR_MB * 1024 * 1024;
++	gd->ram_size = imx_ddr_size();
+ 
+ 	return 0;
+ }
+ 
+ static iomux_v3_cfg_t const uart2_pads[] = {
+-	MX6_PAD_EIM_D26__UART2_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+-	MX6_PAD_EIM_D27__UART2_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
++	IOMUX_PADS(PAD_EIM_D26__UART2_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
++	IOMUX_PADS(PAD_EIM_D27__UART2_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
+ };
+ 
+ static iomux_v3_cfg_t const usdhc3_pads[] = {
+-	MX6_PAD_SD3_CLK__SD3_CLK    | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+-	MX6_PAD_SD3_CMD__SD3_CMD    | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+-	MX6_PAD_SD3_DAT0__SD3_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+-	MX6_PAD_SD3_DAT1__SD3_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+-	MX6_PAD_SD3_DAT2__SD3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+-	MX6_PAD_SD3_DAT3__SD3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
++	IOMUX_PADS(PAD_SD3_CLK__SD3_CLK    | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
++	IOMUX_PADS(PAD_SD3_CMD__SD3_CMD    | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
++	IOMUX_PADS(PAD_SD3_DAT0__SD3_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
++	IOMUX_PADS(PAD_SD3_DAT1__SD3_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
++	IOMUX_PADS(PAD_SD3_DAT2__SD3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
++	IOMUX_PADS(PAD_SD3_DAT3__SD3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL)),
+ };
+ 
+ static iomux_v3_cfg_t const wdog_pads[] = {
+-	MX6_PAD_EIM_A24__GPIO5_IO04 | MUX_PAD_CTRL(NO_PAD_CTRL),
+-	MX6_PAD_EIM_D19__GPIO3_IO19,
++	IOMUX_PADS(PAD_EIM_A24__GPIO5_IO04 | MUX_PAD_CTRL(NO_PAD_CTRL)),
++	IOMUX_PADS(PAD_EIM_D19__GPIO3_IO19),
+ };
+ 
+ int mx6_rgmii_rework(struct phy_device *phydev)
+@@ -96,43 +96,43 @@ int mx6_rgmii_rework(struct phy_device *phydev)
+ }
+ 
+ static iomux_v3_cfg_t const enet_pads1[] = {
+-	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TXC__RGMII_TXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TD0__RGMII_TD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TD1__RGMII_TD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TD2__RGMII_TD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TD3__RGMII_TD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_RXC__RGMII_RXC	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	IOMUX_PADS(PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TXC__RGMII_TXC	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TD0__RGMII_TD0	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TD1__RGMII_TD1	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TD2__RGMII_TD2	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TD3__RGMII_TD3	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_ENET_REF_CLK__ENET_TX_CLK	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_RXC__RGMII_RXC	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
+ 	/* RGMII reset */
+-	MX6_PAD_EIM_D23__GPIO3_IO23		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_EIM_D23__GPIO3_IO23		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* Ethernet power supply */
+-	MX6_PAD_EIM_EB3__GPIO2_IO31		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_EIM_EB3__GPIO2_IO31		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* pin 32 - 1 - (MODE0) all */
+-	MX6_PAD_RGMII_RD0__GPIO6_IO25		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RD0__GPIO6_IO25		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* pin 31 - 1 - (MODE1) all */
+-	MX6_PAD_RGMII_RD1__GPIO6_IO27		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RD1__GPIO6_IO27		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* pin 28 - 1 - (MODE2) all */
+-	MX6_PAD_RGMII_RD2__GPIO6_IO28		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RD2__GPIO6_IO28		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* pin 27 - 1 - (MODE3) all */
+-	MX6_PAD_RGMII_RD3__GPIO6_IO29		| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RD3__GPIO6_IO29		| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ 	/* pin 33 - 1 - (CLK125_EN) 125Mhz clockout enabled */
+-	MX6_PAD_RGMII_RX_CTL__GPIO6_IO24	| MUX_PAD_CTRL(NO_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RX_CTL__GPIO6_IO24	| MUX_PAD_CTRL(NO_PAD_CTRL)),
+ };
+ 
+ static iomux_v3_cfg_t const enet_pads2[] = {
+-	MX6_PAD_RGMII_RD0__RGMII_RD0	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_RD1__RGMII_RD1	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_RD2__RGMII_RD2	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_RD3__RGMII_RD3	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+-	MX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
++	IOMUX_PADS(PAD_RGMII_RD0__RGMII_RD0	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_RD1__RGMII_RD1	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_RD2__RGMII_RD2	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_RD3__RGMII_RD3	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
++	IOMUX_PADS(PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL)),
+ };
+ 
+ static void setup_iomux_enet(void)
+ {
+-	imx_iomux_v3_setup_multiple_pads(enet_pads1, ARRAY_SIZE(enet_pads1));
++	SETUP_IOMUX_PADS(enet_pads1);
+ 	udelay(20);
+ 	gpio_direction_output(IMX_GPIO_NR(2, 31), 1); /* Power supply on */
+ 
+@@ -156,17 +156,17 @@ static void setup_iomux_enet(void)
+ 	gpio_free(IMX_GPIO_NR(6, 28));
+ 	gpio_free(IMX_GPIO_NR(6, 29));
+ 
+-	imx_iomux_v3_setup_multiple_pads(enet_pads2, ARRAY_SIZE(enet_pads2));
++	SETUP_IOMUX_PADS(enet_pads2);
+ }
+ 
+ static void setup_iomux_uart(void)
+ {
+-	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
++	SETUP_IOMUX_PADS(uart2_pads);
+ }
+ 
+ static void setup_iomux_wdog(void)
+ {
+-	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
++	SETUP_IOMUX_PADS(wdog_pads);
+ 	gpio_direction_output(WDT_TRG, 0);
+ 	gpio_direction_output(WDT_EN, 1);
+ 	gpio_direction_input(WDT_TRG);
+@@ -212,7 +212,7 @@ int board_eth_init(bd_t *bis)
+ 
+ int board_mmc_init(bd_t *bis)
+ {
+-	imx_iomux_v3_setup_multiple_pads(usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
++	SETUP_IOMUX_PADS(usdhc3_pads);
+ 	usdhc_cfg.sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
+ 	usdhc_cfg.max_bus_width = 4;
+ 
+@@ -242,14 +242,29 @@ int board_init(void)
+ 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+ 
+ #ifdef CONFIG_CMD_SATA
+-	setup_sata();
++	if (is_cpu_type(MXC_CPU_MX6Q))
++		setup_sata();
++#endif
++	return 0;
++}
++
++int board_late_init(void)
++{
++#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
++	if (is_cpu_type(MXC_CPU_MX6Q))
++		setenv("board_rev", "MX6Q");
++	else
++		setenv("board_rev", "MX6DL");
+ #endif
+ 	return 0;
+ }
+ 
+ int checkboard(void)
+ {
+-	puts("Board: Udoo\n");
++	if (is_cpu_type(MXC_CPU_MX6Q))
++		puts("Board: Udoo Quad\n");
++	else
++		puts("Board: Udoo DualLite\n");
+ 
+ 	return 0;
+ }
+diff --git a/board/udoo/udoo.cfg b/board/udoo/udoo.cfg
+deleted file mode 100644
+index 8d7ff25..0000000
+--- a/board/udoo/udoo.cfg
++++ /dev/null
+@@ -1,29 +0,0 @@
+-/*
+- * Copyright (C) 2013 Boundary Devices
+- *
+- * SPDX-License-Identifier:	GPL-2.0+
+- *
+- * Refer doc/README.imximage for more details about how-to configure
+- * and create imximage boot image
+- *
+- * The syntax is taken as close as possible with the kwbimage
+- */
+-
+-/* image version */
+-IMAGE_VERSION 2
+-
+-/*
+- * Boot Device : one of
+- * spi, sd (the board has no nand neither onenand)
+- */
+-BOOT_FROM      sd
+-
+-#define __ASSEMBLY__
+-#include <config.h>
+-#include "asm/arch/mx6-ddr.h"
+-#include "asm/arch/iomux.h"
+-#include "asm/arch/crm_regs.h"
+-
+-#include "ddr-setup.cfg"
+-#include "1066mhz_4x256mx16.cfg"
+-#include "clocks.cfg"
+diff --git a/board/udoo/udoo_spl.c b/board/udoo/udoo_spl.c
+new file mode 100644
+index 0000000..a1154ed
+--- /dev/null
++++ b/board/udoo/udoo_spl.c
+@@ -0,0 +1,271 @@
++/*
++ * Copyright (C) 2015 Udoo
++ * Author: Tungyi Lin <tungyilin1127@gmail.com>
++ *         Richard Hu <hakahu@gmail.com>
++ * Based on board/wandboard/spl.c
++ * SPDX-License-Identifier:     GPL-2.0+
++ */
++
++#include <asm/arch/clock.h>
++#include <asm/arch/imx-regs.h>
++#include <asm/arch/iomux.h>
++#include <asm/arch/mx6-pins.h>
++#include <asm/errno.h>
++#include <asm/gpio.h>
++#include <asm/imx-common/iomux-v3.h>
++#include <asm/imx-common/video.h>
++#include <mmc.h>
++#include <fsl_esdhc.h>
++#include <asm/arch/crm_regs.h>
++#include <asm/io.h>
++#include <asm/arch/sys_proto.h>
++#include <spl.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#if defined(CONFIG_SPL_BUILD)
++#include <asm/arch/mx6-ddr.h>
++
++/*
++ * Driving strength:
++ *   0x30 == 40 Ohm
++ *   0x28 == 48 Ohm
++ */
++#define IMX6DQ_DRIVE_STRENGTH		0x30
++#define IMX6SDL_DRIVE_STRENGTH	0x28
++
++/* configure MX6Q/DUAL mmdc DDR io registers */
++static struct mx6dq_iomux_ddr_regs mx6dq_ddr_ioregs = {
++	.dram_sdclk_0 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdclk_1 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_cas = IMX6DQ_DRIVE_STRENGTH,
++	.dram_ras = IMX6DQ_DRIVE_STRENGTH,
++	.dram_reset = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdcke0 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdcke1 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdba2 = 0x00000000,
++	.dram_sdodt0 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdodt1 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs0 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs1 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs2 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs3 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs4 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs5 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs6 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_sdqs7 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm0 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm1 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm2 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm3 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm4 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm5 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm6 = IMX6DQ_DRIVE_STRENGTH,
++	.dram_dqm7 = IMX6DQ_DRIVE_STRENGTH,
++};
++
++/* configure MX6Q/DUAL mmdc GRP io registers */
++static struct mx6dq_iomux_grp_regs mx6dq_grp_ioregs = {
++	.grp_ddr_type = 0x000c0000,
++	.grp_ddrmode_ctl = 0x00020000,
++	.grp_ddrpke = 0x00000000,
++	.grp_addds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_ctlds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_ddrmode = 0x00020000,
++	.grp_b0ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b1ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b2ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b3ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b4ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b5ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b6ds = IMX6DQ_DRIVE_STRENGTH,
++	.grp_b7ds = IMX6DQ_DRIVE_STRENGTH,
++};
++
++/* configure MX6SOLO/DUALLITE mmdc DDR io registers */
++struct mx6sdl_iomux_ddr_regs mx6sdl_ddr_ioregs = {
++	.dram_sdclk_0 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdclk_1 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_cas = IMX6SDL_DRIVE_STRENGTH,
++	.dram_ras = IMX6SDL_DRIVE_STRENGTH,
++	.dram_reset = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdcke0 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdcke1 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdba2 = 0x00000000,
++	.dram_sdodt0 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdodt1 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs0 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs1 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs2 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs3 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs4 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs5 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs6 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_sdqs7 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm0 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm1 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm2 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm3 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm4 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm5 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm6 = IMX6SDL_DRIVE_STRENGTH,
++	.dram_dqm7 = IMX6SDL_DRIVE_STRENGTH,
++};
++
++/* configure MX6SOLO/DUALLITE mmdc GRP io registers */
++struct mx6sdl_iomux_grp_regs mx6sdl_grp_ioregs = {
++	.grp_ddr_type = 0x000c0000,
++	.grp_ddrmode_ctl = 0x00020000,
++	.grp_ddrpke = 0x00000000,
++	.grp_addds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_ctlds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_ddrmode = 0x00020000,
++	.grp_b0ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b1ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b2ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b3ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b4ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b5ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b6ds = IMX6SDL_DRIVE_STRENGTH,
++	.grp_b7ds = IMX6SDL_DRIVE_STRENGTH,
++};
++
++/* MT41K128M16JT-125 */
++static struct mx6_ddr3_cfg mt41k128m16jt_125 = {
++	/* quad = 1066, duallite = 800 */
++	.mem_speed = 1066,
++	.density = 2,
++	.width = 16,
++	.banks = 8,
++	.rowaddr = 14,
++	.coladdr = 10,
++	.pagesz = 2,
++	.trcd = 1375,
++	.trcmin = 4875,
++	.trasmin = 3500,
++	.SRT = 0,
++};
++
++static struct mx6_mmdc_calibration mx6q_1g_mmdc_calib = {
++	.p0_mpwldectrl0 = 0x00350035,
++	.p0_mpwldectrl1 = 0x001F001F,
++	.p1_mpwldectrl0 = 0x00010001,
++	.p1_mpwldectrl1 = 0x00010001,
++	.p0_mpdgctrl0 = 0x43510360,
++	.p0_mpdgctrl1 = 0x0342033F,
++	.p1_mpdgctrl0 = 0x033F033F,
++	.p1_mpdgctrl1 = 0x03290266,
++	.p0_mprddlctl = 0x4B3E4141,
++	.p1_mprddlctl = 0x47413B4A,
++	.p0_mpwrdlctl = 0x42404843,
++	.p1_mpwrdlctl = 0x4C3F4C45,
++};
++
++static struct mx6_mmdc_calibration mx6dl_1g_mmdc_calib = {
++	.p0_mpwldectrl0 = 0x002F0038,
++	.p0_mpwldectrl1 = 0x001F001F,
++	.p1_mpwldectrl0 = 0x001F001F,
++	.p1_mpwldectrl1 = 0x001F001F,
++	.p0_mpdgctrl0 = 0x425C0251,
++	.p0_mpdgctrl1 = 0x021B021E,
++	.p1_mpdgctrl0 = 0x021B021E,
++	.p1_mpdgctrl1 = 0x01730200,
++	.p0_mprddlctl = 0x45474C45,
++	.p1_mprddlctl = 0x44464744,
++	.p0_mpwrdlctl = 0x3F3F3336,
++	.p1_mpwrdlctl = 0x32383630,
++};
++
++/* DDR 64bit 1GB */
++static struct mx6_ddr_sysinfo mem_qdl = {
++	.dsize = 2,
++	.cs1_mirror = 0,
++	/* config for full 4GB range so that get_mem_size() works */
++	.cs_density = 32,
++	.ncs = 1,
++	.bi_on = 1,
++	/* quad = 2, duallite = 1 */
++	.rtt_nom = 2,
++	/* quad = 2, duallite = 1 */
++	.rtt_wr = 2,
++	.ralat = 5,
++	.walat = 0,
++	.mif3_mode = 3,
++	.rst_to_cke = 0x23,
++	.sde_to_rst = 0x10,
++};
++
++static void ccgr_init(void)
++{
++	struct mxc_ccm_reg *ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
++
++	/* set the default clock gate to save power */
++	writel(0x00C03F3F, &ccm->CCGR0);
++	writel(0x0030FC03, &ccm->CCGR1);
++	writel(0x0FFFC000, &ccm->CCGR2);
++	writel(0x3FF00000, &ccm->CCGR3);
++	writel(0x00FFF300, &ccm->CCGR4);
++	writel(0x0F0000C3, &ccm->CCGR5);
++	writel(0x000003FF, &ccm->CCGR6);
++}
++
++static void gpr_init(void)
++{
++	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
++
++	/* enable AXI cache for VDOA/VPU/IPU */
++	writel(0xF00000FF, &iomux->gpr[4]);
++	/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */
++	writel(0x007F007F, &iomux->gpr[6]);
++	writel(0x007F007F, &iomux->gpr[7]);
++}
++
++static void spl_dram_init(void)
++{
++	if (is_cpu_type(MXC_CPU_MX6DL)) {
++		mt41k128m16jt_125.mem_speed = 800;
++		mem_qdl.rtt_nom = 1;
++		mem_qdl.rtt_wr = 1;
++
++		mx6sdl_dram_iocfg(64, &mx6sdl_ddr_ioregs, &mx6sdl_grp_ioregs);
++		mx6_dram_cfg(&mem_qdl, &mx6dl_1g_mmdc_calib, &mt41k128m16jt_125);
++	} else if (is_cpu_type(MXC_CPU_MX6Q)) {
++		mt41k128m16jt_125.mem_speed = 1066;
++		mem_qdl.rtt_nom = 2;
++		mem_qdl.rtt_wr = 2;
++
++		mx6dq_dram_iocfg(64, &mx6dq_ddr_ioregs, &mx6dq_grp_ioregs);
++		mx6_dram_cfg(&mem_qdl, &mx6q_1g_mmdc_calib, &mt41k128m16jt_125);
++	}
++
++	udelay(100);
++}
++
++void board_init_f(ulong dummy)
++{
++	ccgr_init();
++
++	/* setup AIPS and disable watchdog */
++	arch_cpu_init();
++
++	gpr_init();
++
++	/* iomux */
++	board_early_init_f();
++
++	/* setup GP timer */
++	timer_init();
++
++	/* UART clocks enabled and gd valid - init serial console */
++	preloader_console_init();
++
++	/* DDR initialization */
++	spl_dram_init();
++
++	/* Clear the BSS. */
++	memset(__bss_start, 0, __bss_end - __bss_start);
++
++	/* load/boot image from boot device */
++	board_init_r(NULL, 0);
++}
++#endif
+diff --git a/configs/udoo_defconfig b/configs/udoo_defconfig
+new file mode 100644
+index 0000000..9fe30d3
+--- /dev/null
++++ b/configs/udoo_defconfig
+@@ -0,0 +1,6 @@
++CONFIG_SPL=y
++CONFIG_ARM=y
++CONFIG_DM=y
++CONFIG_DM_THERMAL=y
++CONFIG_TARGET_UDOO=y
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=arch/arm/imx-common/spl_sd.cfg,MX6QDL"
+diff --git a/configs/udoo_quad_defconfig b/configs/udoo_quad_defconfig
+deleted file mode 100644
+index 42c21c6..0000000
+--- a/configs/udoo_quad_defconfig
++++ /dev/null
+@@ -1,5 +0,0 @@
+-CONFIG_ARM=y
+-CONFIG_TARGET_UDOO=y
+-CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/udoo/udoo.cfg,MX6Q,DDR_MB=1024"
+-# CONFIG_CMD_IMLS is not set
+-# CONFIG_CMD_FLASH is not set
+diff --git a/include/configs/udoo.h b/include/configs/udoo.h
+index 910bf01..145ac3d 100644
+--- a/include/configs/udoo.h
++++ b/include/configs/udoo.h
+@@ -11,6 +11,10 @@
+ 
+ #include "mx6_common.h"
+ 
++#define CONFIG_SPL_LIBCOMMON_SUPPORT
++#define CONFIG_SPL_MMC_SUPPORT
++#include "imx6_spl.h"
++
+ #define MACH_TYPE_UDOO		4800
+ #define CONFIG_MACH_TYPE	MACH_TYPE_UDOO
+ 
+@@ -18,6 +22,7 @@
+ #define CONFIG_SYS_MALLOC_LEN		(2 * SZ_1M)
+ 
+ #define CONFIG_BOARD_EARLY_INIT_F
++#define CONFIG_BOARD_LATE_INIT
+ 
+ #define CONFIG_MXC_UART
+ #define CONFIG_MXC_UART_BASE		UART2_BASE
+@@ -58,22 +63,26 @@
+ /* MMC Configuration */
+ #define CONFIG_SYS_FSL_ESDHC_ADDR	0
+ 
+-#define CONFIG_DEFAULT_FDT_FILE		"imx6q-udoo.dtb"
++#define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	"script=boot.scr\0" \
+ 	"image=zImage\0" \
+-	"console=ttymxc1\0" \
++	"console=ttymxc1,115200\0" \
+ 	"splashpos=m,m\0" \
+ 	"fdt_high=0xffffffff\0" \
+ 	"initrd_high=0xffffffff\0" \
+-	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
++	"fdt_file=undefined\0" \
+ 	"fdt_addr=0x18000000\0" \
++	"rdaddr=0x12A00000\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
++	"optargs=\0" \
++	"cmdline=\0" \
+ 	"mmcdev=0\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -88,15 +97,55 @@
+ 				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
+ 			"fi; "	\
+ 		"fi\0" \
+-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
+ 	"loadbootscript=" \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+-	"mmcboot=echo Booting from mmc ...; " \
++	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
++	"mmcboot=mmc dev ${mmcdev}; " \
++		"if mmc rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e mmc ${bootpart} /uEnv.txt; then " \
++				"load mmc ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdt_file ${dtb};" \
++						"echo Using: dtb=${fdt_file} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++	"mmcboot_old=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+@@ -134,19 +183,82 @@
+ 			"fi; " \
+ 		"else " \
+ 			"bootz; " \
+-		"fi;\0"
++		"fi;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e mmc ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++										"run loadfdt;" \
++									"else " \
++										"echo; echo unable to find ${fdt_file} ...; echo booting legacy ...;"\
++										"run mmcargs;" \
++										"echo debug: [${bootargs}] ... ;" \
++										"echo debug: [bootz ${loadaddr}] ... ;" \
++										"bootz ${loadaddr}; " \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
++			"else " \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
++			"fi;" \
++		"fi;\0" \
++		"findfdt=" \
++			"if test $board_rev = MX6Q ; then " \
++				"setenv fdt_file imx6q-udoo.dtb; fi; " \
++			"if test $board_rev = MX6DL ; then " \
++				"setenv fdt_file imx6dl-udoo.dtb; fi; " \
++			"if test $fdt_file = undefined; then " \
++				"echo WARNING: Could not determine dtb to use; fi; \0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loadimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	   "run findfdt; " \
++	   "run mmcboot; "
+ 
+ /* Print Buffer Size */
+ #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
+-- 
+2.4.6
+
