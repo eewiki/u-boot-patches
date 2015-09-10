@@ -32,7 +32,7 @@ index de5f12e..bea4624 100644
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\
 -	"root=/dev/mmcblk0p2 rw rootwait"
-+	"root=/dev/mmcblk0p2 ro rootfstype=ext4 rootwait"
++	"root=/dev/mmcblk0p2 ro rootwait"
  #else
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\

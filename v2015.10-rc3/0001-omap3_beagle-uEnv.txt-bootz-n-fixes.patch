@@ -1,16 +1,17 @@
-From 369718d9a4e35887bdb9e669b3b00d89cb4d646d Mon Sep 17 00:00:00 2001
+From a41e1d07264518029a2936227295ca526cc84016 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Nov 2014 15:37:42 -0600
+Date: Thu, 10 Sep 2015 10:02:46 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c       |  38 +++++++--
- include/configs/omap3_beagle.h | 178 ++++++++++++++++++++++++++++-------------
- 2 files changed, 155 insertions(+), 61 deletions(-)
+ board/ti/beagle/beagle.c          |  38 ++++++--
+ include/configs/omap3_beagle.h    | 178 ++++++++++++++++++++++++++------------
+ include/configs/ti_armv7_common.h |   3 -
+ 3 files changed, 155 insertions(+), 64 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
-index 4c5e381..d50818b 100644
+index 3b0a9e7..b885b93 100644
 --- a/board/ti/beagle/beagle.c
 +++ b/board/ti/beagle/beagle.c
 @@ -56,6 +56,7 @@
@@ -111,10 +112,10 @@ index 4c5e381..d50818b 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index f25a940..b4413da 100644
+index f309b2e..c89135d 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
-@@ -129,40 +129,32 @@
+@@ -127,40 +127,32 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -168,7 +169,7 @@ index f25a940..b4413da 100644
  	"nandargs=setenv bootargs console=${console} " \
  		"${optargs} " \
  		"mpurate=${mpurate} " \
-@@ -193,7 +185,7 @@
+@@ -191,7 +183,7 @@
  			"fi; " \
  		"fi; \0" \
  	"bootenv=uEnv.txt\0" \
@@ -177,7 +178,7 @@ index f25a940..b4413da 100644
  	"importbootenv=echo Importing environment from mmc ...; " \
  		"env import -t -r $loadaddr $filesize\0" \
  	"ramargs=setenv bootargs console=${console} " \
-@@ -210,10 +202,44 @@
+@@ -208,10 +200,44 @@
  	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
@@ -226,7 +227,7 @@ index f25a940..b4413da 100644
  	"mmcbootz=echo Booting with DT from mmc${mmcdev} ...; " \
  		"run mmcargs; " \
  		"bootz ${loadaddr} - ${fdtaddr}\0" \
-@@ -227,39 +253,79 @@
+@@ -225,39 +251,79 @@
  	"userbutton=if gpio input 173; then run userbutton_xm; " \
  		"else run userbutton_nonxm; fi;\0" \
  	"userbutton_xm=gpio input 4;\0" \
@@ -336,6 +337,22 @@ index f25a940..b4413da 100644
  
  /*
   * OMAP3 has 12 GP timers, they can be driven by the system clock
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 18fca02..1356782 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -230,11 +230,8 @@
+ #define CONFIG_SPL_LIBDISK_SUPPORT
+ #define CONFIG_SPL_MMC_SUPPORT
+ #define CONFIG_SPL_FAT_SUPPORT
+-#define CONFIG_SPL_EXT_SUPPORT
+ #endif
+ 
+-#define CONFIG_SYS_THUMB_BUILD
+-
+ /* General parts of the framework, required. */
+ #define CONFIG_SPL_I2C_SUPPORT
+ #define CONFIG_SPL_LIBCOMMON_SUPPORT
 -- 
-2.1.1
+2.5.1
 
