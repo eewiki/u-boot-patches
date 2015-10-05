@@ -1,19 +1,19 @@
-From ec200f09a25038489cbc2d4af0718768721e6699 Mon Sep 17 00:00:00 2001
+From f568f4c6d1430ea3dafd1751493c227e280bf635 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 5 Oct 2015 12:33:41 -0500
+Date: Mon, 5 Oct 2015 12:49:23 -0500
 Subject: [PATCH] ti_omap5_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_armv7_common.h | 119 +++++++++++++++++++++++++++++++++++++-
- include/configs/ti_omap5_common.h |  14 +++--
- 2 files changed, 124 insertions(+), 9 deletions(-)
+ include/configs/ti_armv7_common.h | 138 +++++++++++++++++++++++++++++++++++++-
+ include/configs/ti_omap5_common.h |  14 ++--
+ 2 files changed, 143 insertions(+), 9 deletions(-)
 
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..d5c856a 100644
+index 6dc6515..15ff4bb 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,124 @@
+@@ -61,11 +61,143 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -29,6 +29,11 @@ index 6dc6515..d5c856a 100644
 +	"args_mmc_uuid=setenv bootargs console=${console} " \
 +		"${optargs} " \
 +		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0"
 +
@@ -118,6 +123,14 @@ index 6dc6515..d5c856a 100644
 +			"fi; " \
 +			"setenv rdfile initrd.img-${uname_r}; " \
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"if test -n ${uenv_root}; then " \
++					"echo loading ${bootdir}/${rdfile} ...; "\
++					"run loadrd;" \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
 +				"if test -n ${uuid}; then " \
 +					"echo loading ${bootdir}/${rdfile} ...; "\
 +					"run loadrd;" \
@@ -132,6 +145,12 @@ index 6dc6515..d5c856a 100644
 +					"bootz ${loadaddr} - ${fdtaddr}; " \
 +				"fi;" \
 +			"else " \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
 +				"run args_mmc;" \
 +				"echo debug: [${bootargs}] ... ;" \
 +				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
