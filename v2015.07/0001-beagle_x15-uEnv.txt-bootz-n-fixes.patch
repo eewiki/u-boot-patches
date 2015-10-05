@@ -1,18 +1,18 @@
-From 57a5e881dacb53a21ba6bd87737f04b2efaeb78b Mon Sep 17 00:00:00 2001
+From 81aab8e8e0622e494a4bb41f5aa4053924aac292 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 31 Aug 2015 12:26:19 -0500
+Date: Mon, 5 Oct 2015 10:28:38 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap5_common.h | 233 ++++++++++++++++++++++++++++++++------
- 1 file changed, 200 insertions(+), 33 deletions(-)
+ include/configs/ti_omap5_common.h | 221 ++++++++++++++++++++++++++++++++++----
+ 1 file changed, 202 insertions(+), 19 deletions(-)
 
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index fa58aa4..70537c6 100644
+index f10ac2c..dcec898 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -133,42 +133,70 @@
+@@ -133,30 +133,70 @@
  #define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
  #define CONFIG_EXTRA_ENV_SETTINGS \
  	DEFAULT_LINUX_BOOT_ENV \
@@ -43,30 +43,20 @@ index fa58aa4..70537c6 100644
 +	"loadbootscript=load ${interface} ${bootpart} ${loadaddr} boot.scr\0" \
 +	"bootscript=echo Running bootscript from ${interface}${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
- 	"bootenv=uEnv.txt\0" \
--	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
--	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
-+	"loadbootenv=load ${interface} ${bootpart} ${loadaddr} ${bootenv}\0" \
-+	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
- 		"env import -t ${loadaddr} ${filesize}\0" \
 -	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 -	"mmcboot=mmc dev ${mmcdev}; " \
 -		"if mmc rescan; then " \
 -			"echo SD/MMC found on device ${mmcdev};" \
--			"if run loadbootenv; then " \
--				"echo Loaded environment from ${bootenv};" \
--				"run importbootenv;" \
--			"fi;" \
--			"if test -n $uenvcmd; then " \
--				"echo Running uenvcmd ...;" \
--				"run uenvcmd;" \
--			"fi;" \
 -			"if run loadimage; then " \
 -				"run loadfdt; " \
 -				"echo Booting from mmc${mmcdev} ...; " \
 -				"run args_mmc; " \
 -				"bootz ${loadaddr} - ${fdtaddr}; " \
 -			"fi;" \
++	"bootenv=uEnv.txt\0" \
++	"loadbootenv=load ${interface} ${bootpart} ${loadaddr} ${bootenv}\0" \
++	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
 +	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 +	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
@@ -108,7 +98,7 @@ index fa58aa4..70537c6 100644
  		"fi;\0" \
  	"findfdt="\
  		"if test $board_name = omap5_uevm; then " \
-@@ -181,22 +209,161 @@
+@@ -169,7 +209,147 @@
  			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -257,14 +247,11 @@ index fa58aa4..70537c6 100644
  	DFUARGS \
  	NETARGS \
  
- 
- #define CONFIG_BOOTCOMMAND \
--	"if test ${dofastboot} -eq 1; then " \
--		"echo Boot fastboot requested, resetting dofastboot ...;" \
--		"setenv dofastboot 0; saveenv;" \
--		"echo Booting into fastboot ...; fastboot;" \
--	"fi;" \
+@@ -181,11 +361,14 @@
+ 		"echo Booting into fastboot ...; fastboot;" \
+ 	"fi;" \
  	"run findfdt; " \
+-	"run envboot; " \
 +	"setenv mmcdev 0; " \
 +	"setenv interface usb; " \
 +	"run usbboot;" \
@@ -279,5 +266,5 @@ index fa58aa4..70537c6 100644
  	""
  #endif
 -- 
-2.5.0
+2.5.3
 
