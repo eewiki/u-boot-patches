@@ -1,19 +1,19 @@
-From ade5372b3280699bfd2b49857755d8efec6298ba Mon Sep 17 00:00:00 2001
+From 95acd3d33dd79ca761c0763aee2e8e9c376cb804 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Nov 2014 15:38:54 -0600
+Date: Mon, 5 Oct 2015 14:25:22 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_armv7_common.h |  12 +++-
- include/configs/ti_omap4_common.h | 134 ++++++++++++++++++++++++++++++--------
- 2 files changed, 116 insertions(+), 30 deletions(-)
+ include/configs/ti_armv7_common.h | 138 +++++++++++++++++++++++++++++++++++++-
+ include/configs/ti_omap4_common.h |  36 ++++------
+ 2 files changed, 147 insertions(+), 27 deletions(-)
 
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..5bf81b3 100644
+index 6dc6515..15ff4bb 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,17 @@
+@@ -61,11 +61,143 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -30,49 +30,15 @@ index 6dc6515..5bf81b3 100644
 +		"${optargs} " \
 +		"root=UUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0"
- 
- /*
-  * Default to a quick boot delay.
-diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 1cd7dae..55642bc 100644
---- a/include/configs/ti_omap4_common.h
-+++ b/include/configs/ti_omap4_common.h
-@@ -46,7 +46,8 @@
-  * the timings to use or use pre-determined timings (based on using the
-  * dynamic method.  Default to the static timing infomation.
-  */
--#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-+/* Yet another panda (A4) with "new" memory... */
-+/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
- #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
- #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
- #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
-@@ -86,20 +87,59 @@
- 	DEFAULT_MMC_TI_ARGS \
- 	"console=ttyO2,115200n8\0" \
- 	"fdtfile=undefined\0" \
--	"bootpart=0:2\0" \
--	"bootdir=/boot\0" \
-+	"bootpart=0:1\0" \
-+	"bootdir=\0" \
-+	"fdtdir=/dtbs\0" \
- 	"bootfile=zImage\0" \
- 	"usbtty=cdc_acm\0" \
- 	"vram=16M\0" \
- 	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
- 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
- 		"source ${loadaddr}\0" \
--	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
-+	"loadbootenv=load mmc ${bootpart} ${loadaddr} uEnv.txt\0" \
- 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
- 		"env import -t ${loadaddr} ${filesize}\0" \
- 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
- 	"loaduimage=load mmc ${mmcdev} ${loadaddr} uImage\0" \
--	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
-+	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
-+	"mmcboot=mmc dev ${mmcdev}; " \
++
++#define EEWIKI_BOOT \
++	"boot=mmc dev ${mmcdev}; " \
 +		"if mmc rescan; then " \
 +			"echo SD/MMC found on device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
@@ -102,21 +68,13 @@ index 1cd7dae..55642bc 100644
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
 +						"echo Running uname_boot ...;" \
-+						"echo Running uname_boot ...;" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
 +			"done;" \
 +		"fi;\0" \
-+	"mmc_classic_boot=echo Booting from mmc${mmcdev} ...; " \
- 		"run args_mmc; " \
- 		"bootz ${loadaddr} - ${fdtaddr}\0" \
- 	"uimageboot=echo Booting from mmc${mmcdev} ...; " \
-@@ -118,31 +158,71 @@
- 			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
- 		"if test $fdtfile = undefined; then " \
- 			"echo WARNING: Could not determine device tree to use; fi; \0" \
--	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++
++#define EEWIKI_UNAME_BOOT \
 +	"uname_boot="\
 +		"setenv bootdir /boot; " \
 +		"setenv bootfile vmlinuz-${uname_r}; " \
@@ -165,19 +123,80 @@ index 1cd7dae..55642bc 100644
 +			"fi; " \
 +			"setenv rdfile initrd.img-${uname_r}; " \
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
-+				"echo loading ${bootdir}/${rdfile} ...; "\
-+				"run loadrd;" \
-+				"run args_mmc_uuid;" \
-+				"echo debug: [${bootargs}] ... ;" \
-+				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
-+				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"if test -n ${uenv_root}; then " \
++					"echo loading ${bootdir}/${rdfile} ...; "\
++					"run loadrd;" \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uuid}; then " \
++					"echo loading ${bootdir}/${rdfile} ...; "\
++					"run loadrd;" \
++					"run args_mmc_uuid;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"else " \
++					"run args_mmc;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
 +			"else " \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
 +				"run args_mmc;" \
 +				"echo debug: [${bootargs}] ... ;" \
 +				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +				"bootz ${loadaddr} - ${fdtaddr}; " \
 +			"fi;" \
 +		"fi;\0" \
+ 
+ /*
+  * Default to a quick boot delay.
+diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
+index 1cd7dae..ca09473 100644
+--- a/include/configs/ti_omap4_common.h
++++ b/include/configs/ti_omap4_common.h
+@@ -46,7 +46,8 @@
+  * the timings to use or use pre-determined timings (based on using the
+  * dynamic method.  Default to the static timing infomation.
+  */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* Yet another panda (A4) with "new" memory... */
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
+ #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
+ #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
+@@ -94,10 +95,12 @@
+ 	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadbootenv=load mmc ${mmcdev} ${loadaddr} uEnv.txt\0" \
++	"bootenv=uEnv.txt\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} ${bootenv}\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+ 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
+ 	"loaduimage=load mmc ${mmcdev} ${loadaddr} uImage\0" \
+ 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
+ 		"run args_mmc; " \
+@@ -118,31 +121,16 @@
+ 			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	EEWIKI_BOOT \
++	EEWIKI_UNAME_BOOT \
++
  
  #define CONFIG_BOOTCOMMAND \
  	"run findfdt; " \
@@ -202,7 +221,9 @@ index 1cd7dae..55642bc 100644
 -			"run uimageboot;" \
 -		"fi; " \
 -	"fi"
-+	"run mmcboot;"
++	"setenv mmcdev 0; " \
++	"run boot;" \
++	""
  
  /*
   * Defines for SPL
