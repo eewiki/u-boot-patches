@@ -1,18 +1,18 @@
-From 5322154fdbb69a5d281b7b298387f0c1d81e7ad7 Mon Sep 17 00:00:00 2001
+From 431ef3103225f6b6673a30cd93f76e749c85e428 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 10 Apr 2015 14:06:19 -0500
+Date: Wed, 7 Oct 2015 14:25:39 -0500
 Subject: [PATCH 2/2] NFM: Production: eeprom: assume device is BeagleBone
  Black
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/am335x/board.c      | 17 +++++++++++------
- board/ti/am335x/mux.c        |  8 ++++++--
+ board/ti/am335x/mux.c        |  7 +++++--
  include/configs/am335x_evm.h |  2 ++
- 3 files changed, 19 insertions(+), 8 deletions(-)
+ 3 files changed, 18 insertions(+), 8 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 0739e60..2b565a3 100644
+index e6c5ed6..0a3f166 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -40,6 +40,11 @@ DECLARE_GLOBAL_DATA_PTR;
@@ -63,7 +63,7 @@ index 0739e60..2b565a3 100644
  		config_ddr(400, &ioregs_bonelt,
  			   &ddr3_beagleblack_data,
  			   &ddr3_beagleblack_cmd_ctrl_data,
-@@ -614,10 +619,10 @@ int board_eth_init(bd_t *bis)
+@@ -637,10 +642,10 @@ int board_eth_init(bd_t *bis)
  	}
  
  	if (read_eeprom(&header) < 0)
@@ -77,10 +77,10 @@ index 0739e60..2b565a3 100644
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
  				PHY_INTERFACE_MODE_MII;
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 680f656..f24d34e 100644
+index fd3da58..57a8a73 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
-@@ -367,7 +367,11 @@ void enable_board_pin_mux(struct am335x_baseboard_id *header)
+@@ -365,7 +365,10 @@ void enable_board_pin_mux(struct am335x_baseboard_id *header)
  		configure_module_pin_mux(mmc1_pin_mux);
  #endif
  	} else {
@@ -88,25 +88,24 @@ index 680f656..f24d34e 100644
 -		hang();
 +		puts("Unknown board: assuming BeagleBone Black.");
 +		/* Beaglebone LT pinmux */
-+		configure_module_pin_mux(i2c1_pin_mux);
 +		configure_module_pin_mux(mii1_pin_mux);
 +		configure_module_pin_mux(mmc0_pin_mux);
 +		configure_module_pin_mux(mmc1_pin_mux);
  	}
  }
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 2cb613d..1300a05 100644
+index 7230fbf..d8b9e11 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
-@@ -368,6 +368,8 @@
- 	"setenv umsmedia 0; "\
+@@ -180,6 +180,8 @@
+ #define CONFIG_BOOTCOMMAND \
  	"gpio set 53; " \
  	"run findfdt; " \
 +	"setenv fdtfile am335x-boneblack.dtb; "\
 +	"setenv fdtbase am335x-boneblack; "\
  	"setenv mmcdev 0; " \
  	"setenv bootpart 0:1; " \
- 	"run mmcboot;" \
+ 	"run boot;" \
 -- 
-2.1.4
+2.5.3
 

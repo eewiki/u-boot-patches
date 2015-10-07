@@ -5,15 +5,15 @@ Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_armv7_common.h | 138 +++++++++++++++++++++++++++++++++++++-
+ include/configs/ti_armv7_common.h | 142 +++++++++++++++++++++++++++++++++++++-
  include/configs/ti_omap4_common.h |  36 ++++------
- 2 files changed, 147 insertions(+), 27 deletions(-)
+ 2 files changed, 151 insertions(+), 27 deletions(-)
 
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..15ff4bb 100644
+index 6dc6515..27862b3 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,143 @@
+@@ -61,11 +61,147 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -24,6 +24,11 @@ index 6dc6515..15ff4bb 100644
 -		"root=PARTUUID=${uuid} rw " \
 -		"rootfstype=${mmcrootfstype}\0"
 +		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${oldroot} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
 +	"args_mmc_uuid=setenv bootargs console=${console} " \
@@ -67,6 +72,7 @@ index 6dc6515..15ff4bb 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
 +						"echo Running uname_boot ...;" \
 +						"run uname_boot;" \
 +					"fi;" \
@@ -123,26 +129,24 @@ index 6dc6515..15ff4bb 100644
 +			"fi; " \
 +			"setenv rdfile initrd.img-${uname_r}; " \
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
 +				"if test -n ${uenv_root}; then " \
-+					"echo loading ${bootdir}/${rdfile} ...; "\
-+					"run loadrd;" \
 +					"run args_uenv_root;" \
 +					"echo debug: [${bootargs}] ... ;" \
 +					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"fi;" \
 +				"if test -n ${uuid}; then " \
-+					"echo loading ${bootdir}/${rdfile} ...; "\
-+					"run loadrd;" \
 +					"run args_mmc_uuid;" \
 +					"echo debug: [${bootargs}] ... ;" \
 +					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"else " \
-+					"run args_mmc;" \
++					"run args_mmc_old;" \
 +					"echo debug: [${bootargs}] ... ;" \
-+					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
-+					"bootz ${loadaddr} - ${fdtaddr}; " \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"fi;" \
 +			"else " \
 +				"if test -n ${uenv_root}; then " \
@@ -151,7 +155,7 @@ index 6dc6515..15ff4bb 100644
 +					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} - ${fdtaddr}; " \
 +				"fi;" \
-+				"run args_mmc;" \
++				"run args_mmc_old;" \
 +				"echo debug: [${bootargs}] ... ;" \
 +				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +				"bootz ${loadaddr} - ${fdtaddr}; " \
