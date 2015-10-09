@@ -1,6 +1,6 @@
-From 3b7781b3e7b710ebe08110c982e210dcb85d83b7 Mon Sep 17 00:00:00 2001
+From 398e2b760e23c2611aa9a1b0e4b12905a7493279 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 9 Oct 2015 14:30:17 -0500
+Date: Fri, 9 Oct 2015 15:05:44 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -112,7 +112,7 @@ index 3b0a9e7..b885b93 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index bf986f8..0fd90ac 100644
+index bf986f8..bee90e4 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
 @@ -126,137 +126,55 @@
@@ -247,7 +247,7 @@ index bf986f8..0fd90ac 100644
 -	"userbutton_xm=gpio input 4;\0" \
 -	"userbutton_nonxm=gpio input 7;\0"
 -/* "run userbutton" will return 1 (false) if pressed and 0 (true) if not */
-++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	EEWIKI_BOOT \
 +	EEWIKI_UNAME_BOOT \
