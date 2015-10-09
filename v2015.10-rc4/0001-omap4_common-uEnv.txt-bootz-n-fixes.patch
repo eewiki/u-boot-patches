@@ -6,11 +6,11 @@ Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  include/configs/ti_armv7_common.h | 142 +++++++++++++++++++++++++++++++++++++-
- include/configs/ti_omap4_common.h |  36 ++++------
- 2 files changed, 151 insertions(+), 27 deletions(-)
+ include/configs/ti_omap4_common.h |  37 ++++------
+ 2 files changed, 152 insertions(+), 27 deletions(-)
 
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..27862b3 100644
+index 6dc6515..f2ed427 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -61,11 +61,147 @@
@@ -72,7 +72,7 @@ index 6dc6515..27862b3 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
-+						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
++						"setenv oldroot /dev/mmcblk${mmcblk}p${mmcpart};" \
 +						"echo Running uname_boot ...;" \
 +						"run uname_boot;" \
 +					"fi;" \
@@ -165,7 +165,7 @@ index 6dc6515..27862b3 100644
  /*
   * Default to a quick boot delay.
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 1cd7dae..ca09473 100644
+index 1cd7dae..bd4e3e9 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
 @@ -46,7 +46,8 @@
@@ -178,7 +178,7 @@ index 1cd7dae..ca09473 100644
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
  #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
-@@ -94,10 +95,12 @@
+@@ -94,7 +95,8 @@
  	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
@@ -188,15 +188,12 @@ index 1cd7dae..ca09473 100644
  	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
  		"env import -t ${loadaddr} ${filesize}\0" \
  	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
- 	"loaduimage=load mmc ${mmcdev} ${loadaddr} uImage\0" \
- 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
- 		"run args_mmc; " \
-@@ -118,31 +121,16 @@
+@@ -118,31 +120,18 @@
  			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	EEWIKI_BOOT \
 +	EEWIKI_UNAME_BOOT \
@@ -225,6 +222,7 @@ index 1cd7dae..ca09473 100644
 -			"run uimageboot;" \
 -		"fi; " \
 -	"fi"
++	"setenv mmcblk 0; " \
 +	"setenv mmcdev 0; " \
 +	"run boot;" \
 +	""
@@ -232,5 +230,5 @@ index 1cd7dae..ca09473 100644
  /*
   * Defines for SPL
 -- 
-2.5.3
+2.6.1
 

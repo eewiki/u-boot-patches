@@ -1,14 +1,14 @@
-From 4f0464bf6e4f809f642668af95c7620fa12057d1 Mon Sep 17 00:00:00 2001
+From 3b7781b3e7b710ebe08110c982e210dcb85d83b7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 5 Oct 2015 14:42:32 -0500
+Date: Fri, 9 Oct 2015 14:30:17 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c          |  38 +++++++--
- include/configs/omap3_beagle.h    | 157 +++++++++-----------------------------
- include/configs/ti_armv7_common.h | 141 ++++++++++++++++++++++++++++++++--
- 3 files changed, 205 insertions(+), 131 deletions(-)
+ include/configs/omap3_beagle.h    | 158 +++++++++-----------------------------
+ include/configs/ti_armv7_common.h | 145 ++++++++++++++++++++++++++++++++--
+ 3 files changed, 210 insertions(+), 131 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 3b0a9e7..b885b93 100644
@@ -112,10 +112,10 @@ index 3b0a9e7..b885b93 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index bf986f8..3656802 100644
+index bf986f8..0fd90ac 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
-@@ -126,137 +126,54 @@
+@@ -126,137 +126,55 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -180,7 +180,6 @@ index bf986f8..3656802 100644
 +	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
 +		"env import -t ${loadaddr} ${filesize}\0" \
 +	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loaduimage=load mmc ${mmcdev} ${loadaddr} uImage\0" \
 +	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
 +		"run args_mmc; " \
@@ -248,6 +247,7 @@ index bf986f8..3656802 100644
 -	"userbutton_xm=gpio input 4;\0" \
 -	"userbutton_nonxm=gpio input 7;\0"
 -/* "run userbutton" will return 1 (false) if pressed and 0 (true) if not */
+++	"loadrd=load mmc ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load mmc ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	EEWIKI_BOOT \
 +	EEWIKI_UNAME_BOOT \
@@ -284,6 +284,7 @@ index bf986f8..3656802 100644
 -		"run loadfdt;" \
 -		"run mmcbootz; " \
 -	"fi; " \
++	"setenv mmcblk 0; " \
 +	"setenv mmcdev 0; " \
 +	"run boot;" \
 +	""
@@ -291,10 +292,10 @@ index bf986f8..3656802 100644
  /*
   * OMAP3 has 12 GP timers, they can be driven by the system clock
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..475b415 100644
+index 6dc6515..91b407b 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,143 @@
+@@ -61,11 +61,147 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -305,6 +306,11 @@ index 6dc6515..475b415 100644
 -		"root=PARTUUID=${uuid} rw " \
 -		"rootfstype=${mmcrootfstype}\0"
 +		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${musb} ${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${oldroot} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${musb} ${cmdline}\0" \
 +	"args_mmc_uuid=setenv bootargs console=${console} " \
@@ -348,6 +354,7 @@ index 6dc6515..475b415 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
++						"setenv oldroot /dev/mmcblk${mmcblk}p${mmcpart};" \
 +						"echo Running uname_boot ...;" \
 +						"run uname_boot;" \
 +					"fi;" \
@@ -404,26 +411,24 @@ index 6dc6515..475b415 100644
 +			"fi; " \
 +			"setenv rdfile initrd.img-${uname_r}; " \
 +			"if test -e mmc ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
 +				"if test -n ${uenv_root}; then " \
-+					"echo loading ${bootdir}/${rdfile} ...; "\
-+					"run loadrd;" \
 +					"run args_uenv_root;" \
 +					"echo debug: [${bootargs}] ... ;" \
 +					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"fi;" \
 +				"if test -n ${uuid}; then " \
-+					"echo loading ${bootdir}/${rdfile} ...; "\
-+					"run loadrd;" \
 +					"run args_mmc_uuid;" \
 +					"echo debug: [${bootargs}] ... ;" \
 +					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"else " \
-+					"run args_mmc;" \
++					"run args_mmc_old;" \
 +					"echo debug: [${bootargs}] ... ;" \
-+					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
-+					"bootz ${loadaddr} - ${fdtaddr}; " \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"fi;" \
 +			"else " \
 +				"if test -n ${uenv_root}; then " \
@@ -432,7 +437,7 @@ index 6dc6515..475b415 100644
 +					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +					"bootz ${loadaddr} - ${fdtaddr}; " \
 +				"fi;" \
-+				"run args_mmc;" \
++				"run args_mmc_old;" \
 +				"echo debug: [${bootargs}] ... ;" \
 +				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +				"bootz ${loadaddr} - ${fdtaddr}; " \
@@ -441,7 +446,7 @@ index 6dc6515..475b415 100644
  
  /*
   * Default to a quick boot delay.
-@@ -239,11 +371,8 @@
+@@ -239,11 +375,8 @@
  #define CONFIG_SPL_LIBDISK_SUPPORT
  #define CONFIG_SPL_MMC_SUPPORT
  #define CONFIG_SPL_FAT_SUPPORT
@@ -454,5 +459,5 @@ index 6dc6515..475b415 100644
  #define CONFIG_SPL_I2C_SUPPORT
  #define CONFIG_SPL_LIBCOMMON_SUPPORT
 -- 
-2.5.3
+2.6.1
 
