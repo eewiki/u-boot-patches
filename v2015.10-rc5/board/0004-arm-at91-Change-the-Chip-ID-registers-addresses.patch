@@ -1,0 +1,89 @@
+From ec3176529e0ae77c68785d5ffca14f2a588c41ca Mon Sep 17 00:00:00 2001
+From: Wenyou Yang <wenyou.yang@atmel.com>
+Date: Tue, 8 Sep 2015 14:38:26 +0800
+Subject: [PATCH 4/4] arm: at91: Change the Chip ID registers' addresses
+
+Provide the specific addresses for the Chip ID and Chip ID Extension
+registers, instead of the offset, which make it use on other chips.
+
+Signed-off-by: Wenyou Yang <wenyou.yang@atmel.com>
+---
+ arch/arm/mach-at91/armv7/cpu.c             | 7 ++++---
+ arch/arm/mach-at91/include/mach/at91_dbu.h | 4 ----
+ arch/arm/mach-at91/include/mach/sama5d3.h  | 3 +++
+ arch/arm/mach-at91/include/mach/sama5d4.h  | 3 +++
+ 4 files changed, 10 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/mach-at91/armv7/cpu.c b/arch/arm/mach-at91/armv7/cpu.c
+index 8d86f97..7843aed 100644
+--- a/arch/arm/mach-at91/armv7/cpu.c
++++ b/arch/arm/mach-at91/armv7/cpu.c
+@@ -12,7 +12,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch/hardware.h>
+-#include <asm/arch/at91_dbu.h>
+ #include <asm/arch/at91_pmc.h>
+ #include <asm/arch/at91_pit.h>
+ #include <asm/arch/at91_gpbr.h>
+@@ -65,12 +64,14 @@ void enable_caches(void)
+ 	dcache_enable();
+ }
+ 
++#define ATMEL_CHIPID_CIDR_VERSION	0x1f
++
+ unsigned int get_chip_id(void)
+ {
+-	return readl(ATMEL_BASE_DBGU + AT91_DBU_CIDR) & ~AT91_DBU_CIDR_MASK;
++	return readl(ATMEL_CHIPID_CIDR) & ~ATMEL_CHIPID_CIDR_VERSION;
+ }
+ 
+ unsigned int get_extension_chip_id(void)
+ {
+-	return readl(ATMEL_BASE_DBGU + AT91_DBU_EXID);
++	return readl(ATMEL_CHIPID_EXID);
+ }
+diff --git a/arch/arm/mach-at91/include/mach/at91_dbu.h b/arch/arm/mach-at91/include/mach/at91_dbu.h
+index 7346fc0..3181138 100644
+--- a/arch/arm/mach-at91/include/mach/at91_dbu.h
++++ b/arch/arm/mach-at91/include/mach/at91_dbu.h
+@@ -35,8 +35,4 @@ typedef struct at91_dbu {
+ #define AT91_DBU_CID_ARCH_9xx		0x01900000
+ #define AT91_DBU_CID_ARCH_9XExx	0x02900000
+ 
+-#define AT91_DBU_CIDR_MASK		0x1f
+-#define AT91_DBU_CIDR			0x40
+-#define AT91_DBU_EXID			0x44
+-
+ #endif
+diff --git a/arch/arm/mach-at91/include/mach/sama5d3.h b/arch/arm/mach-at91/include/mach/sama5d3.h
+index b749cb3..33f6c97 100644
+--- a/arch/arm/mach-at91/include/mach/sama5d3.h
++++ b/arch/arm/mach-at91/include/mach/sama5d3.h
+@@ -158,6 +158,9 @@
+ #define ATMEL_BASE_RTC		0xfffffeb0
+ /* Reserved:	0xfffffee0 - 0xffffffff */
+ 
++#define ATMEL_CHIPID_CIDR	0xffffee40
++#define ATMEL_CHIPID_EXID	0xffffee44
++
+ /*
+  * Internal Memory.
+  */
+diff --git a/arch/arm/mach-at91/include/mach/sama5d4.h b/arch/arm/mach-at91/include/mach/sama5d4.h
+index 7773ace..3da8aff 100644
+--- a/arch/arm/mach-at91/include/mach/sama5d4.h
++++ b/arch/arm/mach-at91/include/mach/sama5d4.h
+@@ -144,6 +144,9 @@
+ #define ATMEL_BASE_PIOE		0xfc06d000
+ #define ATMEL_BASE_AIC		0xfc06e000
+ 
++#define ATMEL_CHIPID_CIDR	0xfc069040
++#define ATMEL_CHIPID_EXID	0xfc069044
++
+ /*
+  * Internal Memory.
+  */
+-- 
+2.5.3
+

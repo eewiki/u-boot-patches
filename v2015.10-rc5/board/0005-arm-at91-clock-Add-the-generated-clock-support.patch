@@ -1,0 +1,138 @@
+From f058222fa4071e51dc1b9a49dcbaaf338f991e2a Mon Sep 17 00:00:00 2001
+From: Wenyou Yang <wenyou.yang@atmel.com>
+Date: Wed, 9 Sep 2015 10:29:39 +0800
+Subject: [PATCH 5/5] arm: at91: clock: Add the generated clock support
+
+Some peripherals may need a second clock source that may be different
+from the system clock. This second clock is the generated clock (GCK)
+and is managed by the PMC via PMC_PCR.
+
+For simplicity, the source of the GCK is fixed to PLLA_CLK.
+
+Signed-off-by: Wenyou Yang <wenyou.yang@atmel.com>
+---
+ arch/arm/mach-at91/armv7/clock.c           | 57 ++++++++++++++++++++++++++++++
+ arch/arm/mach-at91/include/mach/at91_pmc.h | 13 +++++++
+ arch/arm/mach-at91/include/mach/clk.h      |  3 ++
+ 3 files changed, 73 insertions(+)
+
+diff --git a/arch/arm/mach-at91/armv7/clock.c b/arch/arm/mach-at91/armv7/clock.c
+index 0bf453e..84418a3 100644
+--- a/arch/arm/mach-at91/armv7/clock.c
++++ b/arch/arm/mach-at91/armv7/clock.c
+@@ -5,6 +5,7 @@
+  * Copyright (C) 2005 Ivan Kokshaysky
+  * Copyright (C) 2009 Jean-Christophe PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
+  * Copyright (C) 2013 Bo Shen <voice.shen@atmel.com>
++ * Copyright (C) 2015 Wenyou Yang <wenyou.yang@atmel.com>
+  *
+  * SPDX-License-Identifier:	GPL-2.0+
+  */
+@@ -173,3 +174,59 @@ void at91_periph_clk_disable(int id)
+ 
+ 	writel(regval, &pmc->pcr);
+ }
++
++void at91_enable_periph_generated_clk(u32 id)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	u32 regval;
++
++	if (id > AT91_PMC_PCR_PID_MASK)
++		return;
++
++	writel(id, &pmc->pcr);
++	regval = readl(&pmc->pcr);
++	regval &= ~AT91_PMC_PCR_GCKCSS;
++	regval &= ~AT91_PMC_PCR_GCKDIV;
++	regval |= AT91_PMC_PCR_GCKCSS_PLLA_CLK |
++		  AT91_PMC_PCR_CMD_WRITE |
++		  AT91_PMC_PCR_GCKDIV_(1) |
++		  AT91_PMC_PCR_GCKEN;
++
++	writel(regval, &pmc->pcr);
++
++	while (!(readl(&pmc->sr) & AT91_PMC_GCKRDY))
++		;
++}
++
++u32 at91_get_periph_generated_clk(u32 id)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++	u32 regval, clk_source, div;
++	u32 freq = 0;
++
++	if (id > AT91_PMC_PCR_PID_MASK)
++		return 0;
++
++	writel(id, &pmc->pcr);
++	regval = readl(&pmc->pcr);
++
++	clk_source = regval & AT91_PMC_PCR_GCKCSS;
++	switch (clk_source) {
++	case AT91_PMC_PCR_GCKCSS_SLOW_CLK:
++		freq = CONFIG_SYS_AT91_SLOW_CLOCK;
++		break;
++	case AT91_PMC_PCR_GCKCSS_MAIN_CLK:
++		freq = gd->arch.main_clk_rate_hz;
++		break;
++	case AT91_PMC_PCR_GCKCSS_PLLA_CLK:
++		freq = gd->arch.plla_rate_hz;
++		break;
++	default:
++		break;
++	}
++
++	div = ((regval & AT91_PMC_PCR_GCKDIV) >> AT91_PMC_PCR_GCKDIV_OFFSET);
++	div += 1;
++
++	return freq / div;
++}
+diff --git a/arch/arm/mach-at91/include/mach/at91_pmc.h b/arch/arm/mach-at91/include/mach/at91_pmc.h
+index 4b2b1ac..917e8ea 100644
+--- a/arch/arm/mach-at91/include/mach/at91_pmc.h
++++ b/arch/arm/mach-at91/include/mach/at91_pmc.h
+@@ -152,8 +152,20 @@ typedef struct at91_pmc {
+ #define AT91_PMC_IXR_MOSCSELS		0x00010000
+ 
+ #define AT91_PMC_PCR_PID_MASK		(0x3f)
++#define AT91_PMC_PCR_GCKCSS		(0x7 << 8)
++#define		AT91_PMC_PCR_GCKCSS_SLOW_CLK	(0x0 << 8)
++#define		AT91_PMC_PCR_GCKCSS_MAIN_CLK	(0x1 << 8)
++#define		AT91_PMC_PCR_GCKCSS_PLLA_CLK	(0x2 << 8)
++#define		AT91_PMC_PCR_GCKCSS_UPLL_CLK	(0x3 << 8)
++#define		AT91_PMC_PCR_GCKCSS_MCK_CLK	(0x4 << 8)
++#define		AT91_PMC_PCR_GCKCSS_AUDIO_CLK	(0x5 << 8)
+ #define AT91_PMC_PCR_CMD_WRITE		(0x1 << 12)
++#define AT91_PMC_PCR_DIV		(0x3 << 16)
++#define AT91_PMC_PCR_GCKDIV		(0xff << 20)
++#define		AT91_PMC_PCR_GCKDIV_(x)		((x) << 20)
++#define		AT91_PMC_PCR_GCKDIV_OFFSET	20
+ #define AT91_PMC_PCR_EN			(0x1 << 28)
++#define AT91_PMC_PCR_GCKEN		(0x1 << 29)
+ 
+ #define		AT91_PMC_PCK		(1 <<  0)		/* Processor Clock */
+ #define		AT91RM9200_PMC_UDP	(1 <<  1)		/* USB Devcice Port Clock [AT91RM9200 only] */
+@@ -235,6 +247,7 @@ typedef struct at91_pmc {
+ #define		AT91_PMC_PCK1RDY	(1 <<  9)		/* Programmable Clock 1 */
+ #define		AT91_PMC_PCK2RDY	(1 << 10)		/* Programmable Clock 2 */
+ #define		AT91_PMC_PCK3RDY	(1 << 11)		/* Programmable Clock 3 */
++#define		AT91_PMC_GCKRDY		(1 << 24)
+ 
+ #define		AT91_PMC_PROTKEY	0x504d4301	/* Activation Code */
+ #endif
+diff --git a/arch/arm/mach-at91/include/mach/clk.h b/arch/arm/mach-at91/include/mach/clk.h
+index 1d45e2d..dd1ed96 100644
+--- a/arch/arm/mach-at91/include/mach/clk.h
++++ b/arch/arm/mach-at91/include/mach/clk.h
+@@ -119,4 +119,7 @@ static inline unsigned long get_pit_clk_rate(void)
+ int at91_clock_init(unsigned long main_clock);
+ void at91_periph_clk_enable(int id);
+ void at91_periph_clk_disable(int id);
++void at91_enable_periph_generated_clk(u32 id);
++u32 at91_get_periph_generated_clk(u32 id);
++
+ #endif /* __ASM_ARM_ARCH_CLK_H__ */
+-- 
+2.5.3
+

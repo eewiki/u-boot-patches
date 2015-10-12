@@ -1,0 +1,1013 @@
+From 9d5a5adfdd769a3f2a640c0a188e07a75029aaba Mon Sep 17 00:00:00 2001
+From: Wenyou Yang <wenyou.yang@atmel.com>
+Date: Tue, 22 Sep 2015 15:59:13 +0800
+Subject: [PATCH 1/4] arm: atmel: Add SAMA5D2 Xplained board
+
+The board supports following features:
+ - Boot media support: SD card/e.MMC/SPI flash,
+ - Support LCD display (optional, disabled by default),
+ - Support ethernet,
+ - Support USB mass storage.
+
+Signed-off-by: Wenyou Yang <wenyou.yang@atmel.com>
+---
+ arch/arm/mach-at91/Kconfig                       |   5 +
+ arch/arm/mach-at91/armv7/Makefile                |   1 +
+ arch/arm/mach-at91/armv7/sama5d2_devices.c       |  59 +++++
+ arch/arm/mach-at91/include/mach/at91_pmc.h       |   7 +-
+ arch/arm/mach-at91/include/mach/atmel_usba_udc.h |   3 +-
+ arch/arm/mach-at91/include/mach/hardware.h       |   2 +
+ arch/arm/mach-at91/include/mach/sama5d2.h        | 228 ++++++++++++++++++
+ board/atmel/sama5d2_xplained/Kconfig             |  15 ++
+ board/atmel/sama5d2_xplained/MAINTAINERS         |   7 +
+ board/atmel/sama5d2_xplained/Makefile            |   8 +
+ board/atmel/sama5d2_xplained/sama5d2_xplained.c  | 294 +++++++++++++++++++++++
+ configs/sama5d2_xplained_mmc_defconfig           |  10 +
+ configs/sama5d2_xplained_spiflash_defconfig      |  10 +
+ include/configs/sama5d2_xplained.h               | 192 +++++++++++++++
+ 14 files changed, 836 insertions(+), 5 deletions(-)
+ create mode 100644 arch/arm/mach-at91/armv7/sama5d2_devices.c
+ create mode 100644 arch/arm/mach-at91/include/mach/sama5d2.h
+ create mode 100644 board/atmel/sama5d2_xplained/Kconfig
+ create mode 100644 board/atmel/sama5d2_xplained/MAINTAINERS
+ create mode 100644 board/atmel/sama5d2_xplained/Makefile
+ create mode 100644 board/atmel/sama5d2_xplained/sama5d2_xplained.c
+ create mode 100644 configs/sama5d2_xplained_mmc_defconfig
+ create mode 100644 configs/sama5d2_xplained_spiflash_defconfig
+ create mode 100644 include/configs/sama5d2_xplained.h
+
+diff --git a/arch/arm/mach-at91/Kconfig b/arch/arm/mach-at91/Kconfig
+index fdaf328..c333647 100644
+--- a/arch/arm/mach-at91/Kconfig
++++ b/arch/arm/mach-at91/Kconfig
+@@ -71,6 +71,10 @@ config TARGET_AT91SAM9X5EK
+ 	select CPU_ARM926EJS
+ 	select SUPPORT_SPL
+ 
++config TARGET_SAMA5D2_XPLAINED
++	bool "SAMA5D2 Xplained board"
++	select CPU_V7
++
+ config TARGET_SAMA5D3_XPLAINED
+ 	bool "SAMA5D3 Xplained board"
+ 	select CPU_V7
+@@ -123,6 +127,7 @@ source "board/atmel/at91sam9m10g45ek/Kconfig"
+ source "board/atmel/at91sam9n12ek/Kconfig"
+ source "board/atmel/at91sam9rlek/Kconfig"
+ source "board/atmel/at91sam9x5ek/Kconfig"
++source "board/atmel/sama5d2_xplained/Kconfig"
+ source "board/atmel/sama5d3_xplained/Kconfig"
+ source "board/atmel/sama5d3xek/Kconfig"
+ source "board/atmel/sama5d4_xplained/Kconfig"
+diff --git a/arch/arm/mach-at91/armv7/Makefile b/arch/arm/mach-at91/armv7/Makefile
+index f4f35a4..de4a1e0 100644
+--- a/arch/arm/mach-at91/armv7/Makefile
++++ b/arch/arm/mach-at91/armv7/Makefile
+@@ -10,6 +10,7 @@
+ 
+ obj-$(CONFIG_SAMA5D3)	+= sama5d3_devices.o
+ obj-$(CONFIG_SAMA5D4)	+= sama5d4_devices.o
++obj-$(CONFIG_SAMA5D2)	+= sama5d2_devices.o
+ obj-y += clock.o
+ obj-y += cpu.o
+ obj-y += reset.o
+diff --git a/arch/arm/mach-at91/armv7/sama5d2_devices.c b/arch/arm/mach-at91/armv7/sama5d2_devices.c
+new file mode 100644
+index 0000000..11e0fed
+--- /dev/null
++++ b/arch/arm/mach-at91/armv7/sama5d2_devices.c
+@@ -0,0 +1,59 @@
++/*
++ * Copyright (C) 2015 Atmel Corporation
++ *		      Wenyou Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/clk.h>
++#include <asm/arch/sama5d2.h>
++
++char *get_cpu_name()
++{
++	unsigned int extension_id = get_extension_chip_id();
++
++	if (cpu_is_sama5d2()) {
++		switch (extension_id) {
++		case ARCH_EXID_SAMA5D21CU:
++			return "SAMA5D21";
++		case ARCH_EXID_SAMA5D22CU:
++			return "SAMA5D22-CU";
++		case ARCH_EXID_SAMA5D22CN:
++			return "SAMA5D22-CN";
++		case ARCH_EXID_SAMA5D23CU:
++			return "SAMA5D23-CU";
++		case ARCH_EXID_SAMA5D24CX:
++			return "SAMA5D24-CX";
++		case ARCH_EXID_SAMA5D24CU:
++			return "SAMA5D24-CU";
++		case ARCH_EXID_SAMA5D26CU:
++			return "SAMA5D26-CU";
++		case ARCH_EXID_SAMA5D27CU:
++			return "SAMA5D27-CU";
++		case ARCH_EXID_SAMA5D27CN:
++			return "SAMA5D27-CN";
++		case ARCH_EXID_SAMA5D28CU:
++			return "SAMA5D28-CU";
++		case ARCH_EXID_SAMA5D28CN:
++			return "SAMA5D28-CN";
++		default:
++			return "Unknown CPU type";
++		}
++	} else {
++		return "Unknown CPU type";
++	}
++}
++
++#ifdef CONFIG_USB_GADGET_ATMEL_USBA
++void at91_udp_hw_init(void)
++{
++	struct at91_pmc *pmc = (struct at91_pmc *)ATMEL_BASE_PMC;
++
++	writel(AT91_PMC_UPLLEN | AT91_PMC_BIASEN, &pmc->uckr);
++
++	at91_periph_clk_enable(ATMEL_ID_UDPHS);
++}
++#endif
+diff --git a/arch/arm/mach-at91/include/mach/at91_pmc.h b/arch/arm/mach-at91/include/mach/at91_pmc.h
+index 8a3fb94..4b2b1ac 100644
+--- a/arch/arm/mach-at91/include/mach/at91_pmc.h
++++ b/arch/arm/mach-at91/include/mach/at91_pmc.h
+@@ -78,7 +78,8 @@ typedef struct at91_pmc {
+ #define AT91_PMC_PLLXR_DIV(x)		(x & 0xFF)
+ #define AT91_PMC_PLLXR_PLLCOUNT(x)	((x & 0x3F) << 8)
+ #define AT91_PMC_PLLXR_OUT(x)		((x & 0x03) << 14)
+-#if defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4)
++#if defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4) || \
++	defined(CONFIG_SAMA5D2)
+ #define AT91_PMC_PLLXR_MUL(x)		((x & 0x7F) << 18)
+ #else
+ #define AT91_PMC_PLLXR_MUL(x)		((x & 0x7FF) << 16)
+@@ -98,6 +99,7 @@ typedef struct at91_pmc {
+ #define AT91_PMC_MCKR_CSS_MASK		0x00000003
+ 
+ #if defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4) || \
++	defined(CONFIG_SAMA5D2) || \
+ 	defined(CONFIG_AT91SAM9X5) || defined(CONFIG_AT91SAM9N12)
+ #define AT91_PMC_MCKR_PRES_1		0x00000000
+ #define AT91_PMC_MCKR_PRES_2		0x00000010
+@@ -127,10 +129,7 @@ typedef struct at91_pmc {
+ #else
+ #define AT91_PMC_MCKR_MDIV_1		0x00000000
+ #define AT91_PMC_MCKR_MDIV_2		0x00000100
+-#if defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4) || \
+-	defined(CONFIG_AT91SAM9X5) || defined(CONFIG_AT91SAM9N12)
+ #define AT91_PMC_MCKR_MDIV_3		0x00000300
+-#endif
+ #define AT91_PMC_MCKR_MDIV_4		0x00000200
+ #define AT91_PMC_MCKR_MDIV_MASK		0x00000300
+ #endif
+diff --git a/arch/arm/mach-at91/include/mach/atmel_usba_udc.h b/arch/arm/mach-at91/include/mach/atmel_usba_udc.h
+index 38b5012..ae564fa 100644
+--- a/arch/arm/mach-at91/include/mach/atmel_usba_udc.h
++++ b/arch/arm/mach-at91/include/mach/atmel_usba_udc.h
+@@ -31,7 +31,8 @@ static struct usba_ep_data usba_udc_ep[] = {
+ 	EP("ep5", 5, 1024, 3, 1, 1),
+ 	EP("ep6", 6, 1024, 3, 1, 1),
+ };
+-#elif defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4)
++#elif defined(CONFIG_SAMA5D3) || defined(CONFIG_SAMA5D4) || \
++	defined(CONFIG_SAMA5D2)
+ static struct usba_ep_data usba_udc_ep[] = {
+ 	EP("ep0", 0, 64, 1, 0, 0),
+ 	EP("ep1", 1, 1024, 3, 1, 0),
+diff --git a/arch/arm/mach-at91/include/mach/hardware.h b/arch/arm/mach-at91/include/mach/hardware.h
+index ff6b71b..0c0e8af 100644
+--- a/arch/arm/mach-at91/include/mach/hardware.h
++++ b/arch/arm/mach-at91/include/mach/hardware.h
+@@ -27,6 +27,8 @@
+ # include <asm/arch/sama5d3.h>
+ #elif defined(CONFIG_SAMA5D4)
+ # include <asm/arch/sama5d4.h>
++#elif defined(CONFIG_SAMA5D2)
++# include <asm/arch/sama5d2.h>
+ #else
+ # error "Unsupported AT91 processor"
+ #endif
+diff --git a/arch/arm/mach-at91/include/mach/sama5d2.h b/arch/arm/mach-at91/include/mach/sama5d2.h
+new file mode 100644
+index 0000000..3dc39df
+--- /dev/null
++++ b/arch/arm/mach-at91/include/mach/sama5d2.h
+@@ -0,0 +1,228 @@
++/*
++ * Chip-specific header file for the SAMA5D2 SoC
++ *
++ * Copyright (C) 2015 Atmel
++ *		      Wenyou Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#ifndef __SAMA5D2_H
++#define __SAMA5D2_H
++
++/*
++ * defines to be used in other places
++ */
++#define CONFIG_AT91FAMILY	/* It's a member of AT91 */
++
++/*
++ * Peripheral identifiers/interrupts.
++ */
++#define ATMEL_ID_FIQ		0	/* FIQ Interrupt ID */
++/* 1 */
++#define ATMEL_ID_ARM		2	/* Performance Monitor Unit */
++#define ATMEL_ID_PIT		3	/* Periodic Interval Timer Interrupt */
++#define ATMEL_ID_WDT		4	/* Watchdog Timer Interrupt */
++#define ATMEL_ID_GMAC		5	/* Ethernet MAC */
++#define ATMEL_ID_XDMAC0		6	/* DMA Controller 0 */
++#define ATMEL_ID_XDMAC1		7	/* DMA Controller 1 */
++#define ATMEL_ID_ICM		8	/* Integrity Check Monitor */
++#define ATMEL_ID_AES		9	/* Advanced Encryption Standard */
++#define ATMEL_ID_AESB		10	/* AES bridge */
++#define ATMEL_ID_TDES		11	/* Triple Data Encryption Standard */
++#define ATMEL_ID_SHA		12	/* SHA Signature */
++#define ATMEL_ID_MPDDRC		13	/* MPDDR Controller */
++#define ATMEL_ID_MATRIX1	14	/* H32MX, 32-bit AHB Matrix */
++#define ATMEL_ID_MATRIX0	15	/* H64MX, 64-bit AHB Matrix */
++#define ATMEL_ID_SECUMOD	16	/* Secure Module */
++#define ATMEL_ID_HSMC		17	/* Multi-bit ECC interrupt */
++#define ATMEL_ID_PIOA		18	/* Parallel I/O Controller A */
++#define ATMEL_ID_FLEXCOM0	19	/* FLEXCOM0 */
++#define ATMEL_ID_FLEXCOM1	20	/* FLEXCOM1 */
++#define ATMEL_ID_FLEXCOM2	21	/* FLEXCOM2 */
++#define ATMEL_ID_FLEXCOM3	22	/* FLEXCOM3 */
++#define ATMEL_ID_FLEXCOM4	23	/* FLEXCOM4 */
++#define ATMEL_ID_UART0		24	/* UART0 */
++#define ATMEL_ID_UART1		25	/* UART1 */
++#define ATMEL_ID_UART2		26	/* UART2 */
++#define ATMEL_ID_UART3		27	/* UART3 */
++#define ATMEL_ID_UART4		28	/* UART4 */
++#define ATMEL_ID_TWIHS0		29	/* Two-wire Interface 0 */
++#define ATMEL_ID_TWIHS1		30	/* Two-wire Interface 1 */
++#define ATMEL_ID_SDHCI0		31	/* SDMMC Controller 0 */
++#define ATMEL_ID_SDHCI1		32	/* SDMCC Controller 1 */
++#define ATMEL_ID_SPI0		33	/* Serial Peripheral Interface 0 */
++#define ATMEL_ID_SPI1		34	/* Serial Peripheral Interface 1 */
++#define ATMEL_ID_TC0		35	/* Timer Counter 0 (ch.0,1,2) */
++#define ATMEL_ID_TC1		36	/* Timer Counter 1 (ch.3,4,5) */
++/* 37 */
++#define ATMEL_ID_PWM		38	/* PWMController0 (ch. 0,1,2,3) */
++/* 39 */
++#define ATMEL_ID_ADC		40	/* Touch Screen ADC Controller */
++#define ATMEL_ID_UHPHS		41	/* USB Host High Speed */
++#define ATMEL_ID_UDPHS		42	/* USB Device High Speed */
++#define ATMEL_ID_SSC0		43	/* Serial Synchronous Controller 0 */
++#define ATMEL_ID_SSC1		44	/* Serial Synchronous Controller 1 */
++#define ATMEL_ID_LCDC		45	/* LCD Controller */
++#define ATMEL_ID_ISI		46	/* Image Sensor Interface */
++#define ATMEL_ID_TRNG		47	/* True Random Number Generator */
++#define ATMEL_ID_PDMIC		48	/* PDM Interface Controller */
++#define ATMEL_ID_IRQ		49	/* IRQ Interrupt ID */
++#define ATMEL_ID_SFC		50	/* Fuse Controller */
++#define ATMEL_ID_SECURAM	51	/* Secure RAM */
++#define ATMEL_ID_QSPI0		52	/* QSPI0 */
++#define ATMEL_ID_QSPI1		53	/* QSPI1 */
++#define ATMEL_ID_I2SC0		54	/* Inter-IC Sound Controller 0 */
++#define ATMEL_ID_I2SC1		55	/* Inter-IC Sound Controller 1 */
++#define ATMEL_ID_CAN0_INT0	56	/* MCAN 0 Interrupt0 */
++#define ATMEL_ID_CAN1_INT0	57	/* MCAN 1 Interrupt0 */
++#define ATMEL_ID_PTC		58	/* Peripheral Touch Controller */
++#define ATMEL_ID_CLASSD		59	/* Audio Class D Amplifier */
++#define ATMEL_ID_SFR		60	/* Special Function Register */
++#define ATMEL_ID_SAIC		61	/* Secured AIC */
++#define ATMEL_ID_AIC		62	/* Advanced Interrupt Controller */
++#define ATMEL_ID_L2CC		63	/* L2 Cache Controller */
++#define ATMEL_ID_CAN0_INT1	64	/* MCAN 0 Interrupt1 */
++#define ATMEL_ID_CAN1_INT1	65	/* MCAN 1 Interrupt1 */
++#define ATMEL_ID_GMAC_Q1	66	/* GMAC Queue 1 Interrupt */
++#define ATMEL_ID_GMAC_Q2	67	/* GMAC Queue 2 Interrupt */
++#define ATMEL_ID_PIOB		68	/* Parallel I/O Controller B */
++#define ATMEL_ID_PIOC		69	/* Parallel I/O Controller C */
++#define ATMEL_ID_PIOD		70	/* Parallel I/O Controller D */
++#define ATMEL_ID_SDHCI0_TIMER	71	/* SDMCC Controller 0 */
++#define ATMEL_ID_SDHCI1_TIMER	72	/* SDMCC Controller 1 */
++/* 73 */
++#define ATMEL_ID_SYS		74	/* System Controller Interrupt */
++#define ATMEL_ID_ACC		75	/* Analog Comparator */
++#define ATMEL_ID_RXLP		76	/* UART Low-Power */
++#define ATMEL_ID_SFRBU		77	/* Special Function Register BackUp */
++#define ATMEL_ID_CHIPID		78	/* Chip ID */
++
++/*
++ * User Peripherals physical base addresses.
++ */
++#define ATMEL_BASE_LCDC		0xf0000000
++#define ATMEL_BASE_XDMAC1	0xf0004000
++#define ATMEL_BASE_MPDDRC	0xf000c000
++#define ATMEL_BASE_XDMAC0	0xf0010000
++#define ATMEL_BASE_PMC		0xf0014000
++#define ATMEL_BASE_QSPI0	0xf0020000
++#define ATMEL_BASE_QSPI1	0xf0024000
++#define ATMEL_BASE_SPI0		0xf8000000
++#define ATMEL_BASE_GMAC		0xf8008000
++#define ATMEL_BASE_TC0		0xf800c000
++#define ATMEL_BASE_TC1		0xf8010000
++#define ATMEL_BASE_UART0	0xf801c000
++#define ATMEL_BASE_UART1	0xf8020000
++#define ATMEL_BASE_UART2	0xf8024000
++#define ATMEL_BASE_TWI0		0xf8028000
++#define ATMEL_BASE_SYSC		0xf8048000
++#define ATMEL_BASE_SPI1		0xfc000000
++#define ATMEL_BASE_UART3	0xfc008000
++#define ATMEL_BASE_UART4	0xfc00c000
++#define ATMEL_BASE_TWI1		0xfc028000
++#define ATMEL_BASE_UDPHS	0xfc02c000
++
++#define ATMEL_BASE_PIOA		0xfc038000
++
++#define ATMEL_CHIPID_CIDR	0xfc069000
++#define ATMEL_CHIPID_EXID	0xfc069004
++
++/*
++ * Address Memory Space
++ */
++#define ATMEL_BASE_DDRCS		0x20000000
++#define ATMEL_BASE_QSPI0_AES_MEM	0x90000000
++#define ATMEL_BASE_QSPI1_AES_MEM	0x98000000
++#define ATMEL_BASE_SDHCI0		0xa0000000
++#define ATMEL_BASE_SDHCI1		0xb0000000
++#define ATMEL_BASE_QSPI0_MEM		0xd0000000
++#define ATMEL_BASE_QSPI1_MEM		0xd8000000
++
++/*
++ * Internal Memories
++ */
++#define ATMEL_BASE_UDPHS_FIFO	0x00300000	/* USB Device HS controller */
++#define ATMEL_BASE_OHCI		0x00400000	/* USB Host controller (OHCI) */
++#define ATMEL_BASE_EHCI		0x00500000	/* USB Host controller (EHCI) */
++
++/* Other misc defines */
++#define ATMEL_BASE_PMECC	(ATMEL_BASE_HSMC + 0x70)
++#define ATMEL_BASE_PMERRLOC	(ATMEL_BASE_HSMC + 0x500)
++
++#define AT91_PMECC		(ATMEL_BASE_PMECC - ATMEL_BASE_SYS)
++#define AT91_PMERRLOC		(ATMEL_BASE_PMERRLOC - ATMEL_BASE_SYS)
++
++#define ATMEL_BASE_PIOB		(ATMEL_BASE_PIOA + 0x40)
++#define ATMEL_BASE_PIOC		(ATMEL_BASE_PIOB + 0x40)
++#define ATMEL_BASE_PIOD		(ATMEL_BASE_PIOC + 0x40)
++
++/* SYSC spawns */
++#define ATMEL_BASE_RSTC		ATMEL_BASE_SYSC
++#define ATMEL_BASE_SHDC		(ATMEL_BASE_SYSC + 0x10)
++#define ATMEL_BASE_PIT		(ATMEL_BASE_SYSC + 0x30)
++#define ATMEL_BASE_WDT		(ATMEL_BASE_SYSC + 0x40)
++#define ATMEL_SYS_SCKCR		(ATMEL_BASE_SYSC + 0x50)
++#define ATMEL_BASE_RTCC		(ATMEL_BASE_SYSC + 0xb0)
++
++#define ATMEL_BASE_SMC		(ATMEL_BASE_HSMC + 0x600)
++
++/*
++ * Other misc defines
++ */
++#define ATMEL_PIO_PORTS		4
++#define CPU_HAS_PCR
++#define CPU_HAS_H32MXDIV
++
++/* SAMA5D2 series chip id definitions */
++#define ARCH_ID_SAMA5D2		0x8a5c08c0
++#define ARCH_EXID_SAMA5D21CU	0x0000005a
++#define ARCH_EXID_SAMA5D22CU	0x00000059
++#define ARCH_EXID_SAMA5D22CN	0x00000069
++#define ARCH_EXID_SAMA5D23CU	0x00000058
++#define ARCH_EXID_SAMA5D24CX	0x00000004
++#define ARCH_EXID_SAMA5D24CU	0x00000014
++#define ARCH_EXID_SAMA5D26CU	0x00000012
++#define ARCH_EXID_SAMA5D27CU	0x00000011
++#define ARCH_EXID_SAMA5D27CN	0x00000021
++#define ARCH_EXID_SAMA5D28CU	0x00000010
++#define ARCH_EXID_SAMA5D28CN	0x00000020
++
++#define cpu_is_sama5d2()	(get_chip_id() == ARCH_ID_SAMA5D2)
++#define cpu_is_sama5d21cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D21CU))
++#define cpu_is_sama5d22cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D22CU))
++#define cpu_is_sama5d22cn()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D22CN))
++#define cpu_is_sama5d23cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D23CU))
++#define cpu_is_sama5d24cx()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D24CX))
++#define cpu_is_sama5d24cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D24CU))
++#define cpu_is_sama5d26cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D26CU))
++#define cpu_is_sama5d27cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D27CU))
++#define cpu_is_sama5d27cn()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D27CN))
++#define cpu_is_sama5d28cu()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D28CU))
++#define cpu_is_sama5d28cn()	(cpu_is_sama5d2() && \
++		(get_extension_chip_id() == ARCH_EXID_SAMA5D28CN))
++
++/* PIT Timer(PIT_PIIR) */
++#define CONFIG_SYS_TIMER_COUNTER	0xf804803c
++
++/* No PMECC Galois table in ROM */
++#define NO_GALOIS_TABLE_IN_ROM
++
++#ifndef __ASSEMBLY__
++unsigned int get_chip_id(void);
++unsigned int get_extension_chip_id(void);
++unsigned int has_lcdc(void);
++char *get_cpu_name(void);
++#endif
++
++#endif
+diff --git a/board/atmel/sama5d2_xplained/Kconfig b/board/atmel/sama5d2_xplained/Kconfig
+new file mode 100644
+index 0000000..55712e9
+--- /dev/null
++++ b/board/atmel/sama5d2_xplained/Kconfig
+@@ -0,0 +1,15 @@
++if TARGET_SAMA5D2_XPLAINED
++
++config SYS_BOARD
++	default "sama5d2_xplained"
++
++config SYS_VENDOR
++	default "atmel"
++
++config SYS_SOC
++	default "at91"
++
++config SYS_CONFIG_NAME
++	default "sama5d2_xplained"
++
++endif
+diff --git a/board/atmel/sama5d2_xplained/MAINTAINERS b/board/atmel/sama5d2_xplained/MAINTAINERS
+new file mode 100644
+index 0000000..ff9c86f
+--- /dev/null
++++ b/board/atmel/sama5d2_xplained/MAINTAINERS
+@@ -0,0 +1,7 @@
++SAMA5D2 XPLAINED BOARD
++M:	Wenyou Yang <wenyou.yang@atmel.com>
++S:	Maintained
++F:	board/atmel/sama5d2_xplained/
++F:	include/configs/sama5d2_xplained.h
++F:	configs/sama5d2_xplained_mmc_defconfig
++F:	configs/sama5d2_xplained_spiflash_defconfig
+diff --git a/board/atmel/sama5d2_xplained/Makefile b/board/atmel/sama5d2_xplained/Makefile
+new file mode 100644
+index 0000000..420870b
+--- /dev/null
++++ b/board/atmel/sama5d2_xplained/Makefile
+@@ -0,0 +1,8 @@
++#
++# Copyright (C) 2015 Atmel Corporation
++#		     Wenyou Yang <wenyou.yang@atmel.com>
++#
++# SPDX-License-Identifier:	GPL-2.0+
++#
++
++obj-y += sama5d2_xplained.o
+diff --git a/board/atmel/sama5d2_xplained/sama5d2_xplained.c b/board/atmel/sama5d2_xplained/sama5d2_xplained.c
+new file mode 100644
+index 0000000..879c6cc
+--- /dev/null
++++ b/board/atmel/sama5d2_xplained/sama5d2_xplained.c
+@@ -0,0 +1,294 @@
++/*
++ * Copyright (C) 2015 Atmel Corporation
++ *		      Wenyou.Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <atmel_hlcdc.h>
++#include <lcd.h>
++#include <mmc.h>
++#include <net.h>
++#include <netdev.h>
++#include <spi.h>
++#include <version.h>
++#include <asm/io.h>
++#include <asm/arch/at91_common.h>
++#include <asm/arch/at91_pmc.h>
++#include <asm/arch/atmel_pio4.h>
++#include <asm/arch/atmel_usba_udc.h>
++#include <asm/arch/atmel_sdhci.h>
++#include <asm/arch/clk.h>
++#include <asm/arch/gpio.h>
++#include <asm/arch/sama5d2.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#ifdef CONFIG_ATMEL_SPI
++int spi_cs_is_valid(unsigned int bus, unsigned int cs)
++{
++	return bus == 0 && cs == 0;
++}
++
++void spi_cs_activate(struct spi_slave *slave)
++{
++	atmel_pio4_set_pio_output(AT91_PIO_PORTA, 17, 0);
++}
++
++void spi_cs_deactivate(struct spi_slave *slave)
++{
++	atmel_pio4_set_pio_output(AT91_PIO_PORTA, 17, 1);
++}
++
++static void board_spi0_hw_init(void)
++{
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 14, 0);
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 15, 0);
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 16, 0);
++
++	atmel_pio4_set_pio_output(AT91_PIO_PORTA, 17, 1);
++
++	at91_periph_clk_enable(ATMEL_ID_SPI0);
++}
++#endif
++
++#ifdef CONFIG_CMD_USB
++static void board_usb_hw_init(void)
++{
++	atmel_pio4_set_pio_output(AT91_PIO_PORTB, 9, 1);
++	atmel_pio4_set_pio_output(AT91_PIO_PORTB, 10, 1);
++}
++#endif
++
++#ifdef CONFIG_LCD
++vidinfo_t panel_info = {
++	.vl_col = 480,
++	.vl_row = 272,
++	.vl_clk = 9000000,
++	.vl_bpix = LCD_BPP,
++	.vl_tft = 1,
++	.vl_hsync_len = 41,
++	.vl_left_margin = 2,
++	.vl_right_margin = 2,
++	.vl_vsync_len = 11,
++	.vl_upper_margin = 2,
++	.vl_lower_margin = 2,
++	.mmio = ATMEL_BASE_LCDC,
++};
++
++/* No power up/down pin for the LCD pannel */
++void lcd_enable(void)	{ /* Empty! */ }
++void lcd_disable(void)	{ /* Empty! */ }
++
++unsigned int has_lcdc(void)
++{
++	return 1;
++}
++
++static void board_lcd_hw_init(void)
++{
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 28, 0);	/* LCDPWM */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 29, 0);	/* LCDDISP */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 30, 0);	/* LCDVSYNC */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 31, 0);	/* LCDHSYNC */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTD,  0, 0);	/* LCDPCK */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTD,  1, 0);	/* LCDDEN */
++
++	/* LCDDAT0 */
++	/* LCDDAT1 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 10, 0);	/* LCDDAT2 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 11, 0);	/* LCDDAT3 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 12, 0);	/* LCDDAT4 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 13, 0);	/* LCDDAT5 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 14, 0);	/* LCDDAT6 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 15, 0);	/* LCDDAT7 */
++
++	/* LCDDAT8 */
++	/* LCDDAT9 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 16, 0);	/* LCDDAT10 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 17, 0);	/* LCDDAT11 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 18, 0);	/* LCDDAT12 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 19, 0);	/* LCDDAT13 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 20, 0);	/* LCDDAT14 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 21, 0);	/* LCDDAT15 */
++
++	/* LCDD16 */
++	/* LCDD17 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 22, 0);	/* LCDDAT18 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 23, 0);	/* LCDDAT19 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 24, 0);	/* LCDDAT20 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 25, 0);	/* LCDDAT21 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 26, 0);	/* LCDDAT22 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTC, 27, 0);	/* LCDDAT23 */
++
++	at91_periph_clk_enable(ATMEL_ID_LCDC);
++}
++
++#ifdef CONFIG_LCD_INFO
++void lcd_show_board_info(void)
++{
++	ulong dram_size;
++	int i;
++	char temp[32];
++
++	lcd_printf("%s\n", U_BOOT_VERSION);
++	lcd_printf("2015 ATMEL Corp\n");
++	lcd_printf("%s CPU at %s MHz\n", get_cpu_name(),
++		   strmhz(temp, get_cpu_clk_rate()));
++
++	dram_size = 0;
++	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++)
++		dram_size += gd->bd->bi_dram[i].size;
++
++	lcd_printf("%ld MB SDRAM\n", dram_size >> 20);
++}
++#endif
++#endif
++
++#ifdef CONFIG_MACB
++static void board_gmac_hw_init(void)
++{
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 14, 0);	/* GTXCK */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 15, 0);	/* GTXEN */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 16, 0);	/* GRXDV */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 17, 0);	/* GRXER */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 18, 0);	/* GRX0 */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 19, 0);	/* GRX1 */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 20, 0);	/* GTX0 */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 21, 0);	/* GTX1 */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 22, 0);	/* GMDC */
++	atmel_pio4_set_f_periph(AT91_PIO_PORTB, 23, 0);	/* GMDIO */
++
++	at91_periph_clk_enable(ATMEL_ID_GMAC);
++}
++#endif
++
++#ifdef CONFIG_ATMEL_SDHCI
++#ifdef CONFIG_ATMEL_SDHCI0
++static void board_sdhci0_hw_init(void)
++{
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 0, 0);	/* SDMMC0_CK */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 1, 0);	/* SDMMC0_CMD */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 2, 0);	/* SDMMC0_DAT0 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 3, 0);	/* SDMMC0_DAT1 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 4, 0);	/* SDMMC0_DAT2 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 5, 0);	/* SDMMC0_DAT3 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 6, 0);	/* SDMMC0_DAT4 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 7, 0);	/* SDMMC0_DAT5 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 8, 0);	/* SDMMC0_DAT6 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 9, 0);	/* SDMMC0_DAT7 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 10, 0);	/* SDMMC0_RSTN */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTA, 11, 0);	/* SDMMC0_VDDSEL */
++
++	at91_periph_clk_enable(ATMEL_ID_SDHCI0);
++	at91_enable_periph_generated_clk(ATMEL_ID_SDHCI0);
++}
++#endif
++
++#ifdef CONFIG_ATMEL_SDHCI1
++static void board_sdhci1_hw_init(void)
++{
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 18, 0);	/* SDMMC1_DAT0 */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 19, 0);	/* SDMMC1_DAT1 */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 20, 0);	/* SDMMC1_DAT2 */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 21, 0);	/* SDMMC1_DAT3 */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 22, 0);	/* SDMMC1_CK */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 27, 0);	/* SDMMC1_RSTN */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 28, 0);	/* SDMMC1_CMD */
++	atmel_pio4_set_e_periph(AT91_PIO_PORTA, 30, 0);	/* SDMMC1_CD */
++
++	at91_periph_clk_enable(ATMEL_ID_SDHCI1);
++	at91_enable_periph_generated_clk(ATMEL_ID_SDHCI1);
++}
++#endif
++
++int board_mmc_init(bd_t *bis)
++{
++#ifdef CONFIG_ATMEL_SDHCI0
++	atmel_sdhci_init((void *)ATMEL_BASE_SDHCI0, ATMEL_ID_SDHCI0);
++#endif
++#ifdef CONFIG_ATMEL_SDHCI1
++	atmel_sdhci_init((void *)ATMEL_BASE_SDHCI1, ATMEL_ID_SDHCI1);
++#endif
++
++	return 0;
++}
++#endif
++
++static void board_uart1_hw_init(void)
++{
++	atmel_pio4_set_a_periph(AT91_PIO_PORTD, 2, 1);	/* URXD1 */
++	atmel_pio4_set_a_periph(AT91_PIO_PORTD, 3, 0);	/* UTXD1 */
++
++	at91_periph_clk_enable(ATMEL_ID_UART1);
++}
++
++int board_early_init_f(void)
++{
++	at91_periph_clk_enable(ATMEL_ID_PIOA);
++	at91_periph_clk_enable(ATMEL_ID_PIOB);
++	at91_periph_clk_enable(ATMEL_ID_PIOC);
++	at91_periph_clk_enable(ATMEL_ID_PIOD);
++
++	board_uart1_hw_init();
++
++	return 0;
++}
++
++int board_init(void)
++{
++	/* adress of boot parameters */
++	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
++
++#ifdef CONFIG_ATMEL_SPI
++	board_spi0_hw_init();
++#endif
++#ifdef CONFIG_ATMEL_SDHCI
++#ifdef CONFIG_ATMEL_SDHCI0
++	board_sdhci0_hw_init();
++#endif
++#ifdef CONFIG_ATMEL_SDHCI1
++	board_sdhci1_hw_init();
++#endif
++#endif
++#ifdef CONFIG_MACB
++	board_gmac_hw_init();
++#endif
++#ifdef CONFIG_LCD
++	board_lcd_hw_init();
++#endif
++#ifdef CONFIG_CMD_USB
++	board_usb_hw_init();
++#endif
++#ifdef CONFIG_USB_GADGET_ATMEL_USBA
++	at91_udp_hw_init();
++#endif
++
++	return 0;
++}
++
++int dram_init(void)
++{
++	gd->ram_size = get_ram_size((void *)CONFIG_SYS_SDRAM_BASE,
++				    CONFIG_SYS_SDRAM_SIZE);
++	return 0;
++}
++
++int board_eth_init(bd_t *bis)
++{
++	int rc = 0;
++
++#ifdef CONFIG_MACB
++	rc = macb_eth_initialize(0, (void *)ATMEL_BASE_GMAC, 0x00);
++#endif
++
++#ifdef CONFIG_USB_GADGET_ATMEL_USBA
++	usba_udc_probe(&pdata);
++#ifdef CONFIG_USB_ETH_RNDIS
++	usb_eth_initialize(bis);
++#endif
++#endif
++
++	return rc;
++}
+diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
+new file mode 100644
+index 0000000..f0a0bb0
+--- /dev/null
++++ b/configs/sama5d2_xplained_mmc_defconfig
+@@ -0,0 +1,10 @@
++CONFIG_ARM=y
++CONFIG_ARCH_AT91=y
++CONFIG_TARGET_SAMA5D2_XPLAINED=y
++CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
++# CONFIG_CMD_IMI is not set
++# CONFIG_CMD_IMLS is not set
++# CONFIG_CMD_LOADS is not set
++# CONFIG_CMD_FLASH is not set
++# CONFIG_CMD_FPGA is not set
++CONFIG_SPI_FLASH=y
+diff --git a/configs/sama5d2_xplained_spiflash_defconfig b/configs/sama5d2_xplained_spiflash_defconfig
+new file mode 100644
+index 0000000..9d2174c
+--- /dev/null
++++ b/configs/sama5d2_xplained_spiflash_defconfig
+@@ -0,0 +1,10 @@
++CONFIG_ARM=y
++CONFIG_ARCH_AT91=y
++CONFIG_TARGET_SAMA5D2_XPLAINED=y
++CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_SERIALFLASH"
++# CONFIG_CMD_IMI is not set
++# CONFIG_CMD_IMLS is not set
++# CONFIG_CMD_LOADS is not set
++# CONFIG_CMD_FLASH is not set
++# CONFIG_CMD_FPGA is not set
++CONFIG_SPI_FLASH=y
+diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
+new file mode 100644
+index 0000000..40b7b77
+--- /dev/null
++++ b/include/configs/sama5d2_xplained.h
+@@ -0,0 +1,192 @@
++/*
++ * Configuration file for the SAMA5D2 Xplained Board.
++ *
++ * Copyright (C) 2015 Atmel Corporation
++ *		      Wenyou Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++/* No NOR flash, this definition should put before common header */
++#define CONFIG_SYS_NO_FLASH
++
++#include "at91-sama5_common.h"
++
++/* serial console */
++#define CONFIG_ATMEL_USART
++#define CONFIG_USART_BASE		ATMEL_BASE_UART1
++#define CONFIG_USART_ID			ATMEL_ID_UART1
++
++/* SDRAM */
++#define CONFIG_NR_DRAM_BANKS		1
++#define CONFIG_SYS_SDRAM_BASE           ATMEL_BASE_DDRCS
++#define CONFIG_SYS_SDRAM_SIZE		0x20000000
++
++#ifdef CONFIG_SPL_BUILD
++#define CONFIG_SYS_INIT_SP_ADDR		0x210000
++#else
++#define CONFIG_SYS_INIT_SP_ADDR \
++	(CONFIG_SYS_SDRAM_BASE + 4 * 1024 - GENERATED_GBL_DATA_SIZE)
++#endif
++
++#define CONFIG_SYS_LOAD_ADDR		0x22000000 /* load address */
++
++#undef CONFIG_AT91_GPIO
++#define CONFIG_ATMEL_PIO4
++
++/* SerialFlash */
++#define CONFIG_CMD_SF
++
++#ifdef CONFIG_CMD_SF
++#define CONFIG_ATMEL_SPI
++#define CONFIG_ATMEL_SPI0
++#define CONFIG_SPI_FLASH_ATMEL
++#define CONFIG_SF_DEFAULT_BUS		0
++#define CONFIG_SF_DEFAULT_CS		0
++#define CONFIG_SF_DEFAULT_SPEED		30000000
++#endif
++
++/* NAND flash */
++#undef CONFIG_CMD_NAND
++
++#ifdef CONFIG_CMD_NAND
++#define CONFIG_NAND_ATMEL
++#define CONFIG_SYS_MAX_NAND_DEVICE	1
++#define CONFIG_SYS_NAND_BASE		ATMEL_BASE_CS3
++/* our ALE is AD21 */
++#define CONFIG_SYS_NAND_MASK_ALE	(1 << 21)
++/* our CLE is AD22 */
++#define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
++#define CONFIG_SYS_NAND_ONFI_DETECTION
++/* PMECC & PMERRLOC */
++#define CONFIG_ATMEL_NAND_HWECC
++#define CONFIG_ATMEL_NAND_HW_PMECC
++#endif
++
++/* MMC */
++#define CONFIG_CMD_MMC
++
++#ifdef CONFIG_CMD_MMC
++#define CONFIG_MMC
++#define CONFIG_GENERIC_MMC
++#define CONFIG_SDHCI
++#define CONFIG_ATMEL_SDHCI
++#define CONFIG_ATMEL_SDHCI0
++#define CONFIG_ATMEL_SDHCI1
++#define CONFIG_SUPPORT_EMMC_BOOT
++#endif
++
++/* USB */
++#define CONFIG_CMD_USB
++
++#ifdef CONFIG_CMD_USB
++#define CONFIG_USB_EHCI
++#define CONFIG_USB_EHCI_ATMEL
++#define CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS	3
++#define CONFIG_USB_STORAGE
++#endif
++
++/* USB device */
++#define CONFIG_USB_GADGET
++#define CONFIG_USB_GADGET_DUALSPEED
++#define CONFIG_USB_GADGET_ATMEL_USBA
++#define CONFIG_USB_ETHER
++#define CONFIG_USB_ETH_RNDIS
++#define CONFIG_USBNET_MANUFACTURER      "Atmel SAMA5D2 XPlained"
++
++#if defined(CONFIG_CMD_USB) || defined(CONFIG_CMD_MMC)
++#define CONFIG_CMD_FAT
++#define CONFIG_DOS_PARTITION
++#endif
++
++/* Ethernet Hardware */
++#define CONFIG_MACB
++#define CONFIG_RMII
++#define CONFIG_NET_RETRY_COUNT		20
++#define CONFIG_MACB_SEARCH_PHY
++
++/* LCD */
++/* #define CONFIG_LCD */
++
++#ifdef CONFIG_LCD
++#define LCD_BPP				LCD_COLOR16
++#define LCD_OUTPUT_BPP                  24
++#define CONFIG_LCD_LOGO
++#define CONFIG_LCD_INFO
++#define CONFIG_LCD_INFO_BELOW_LOGO
++#define CONFIG_SYS_WHITE_ON_BLACK
++#define CONFIG_ATMEL_HLCD
++#define CONFIG_ATMEL_LCD_RGB565
++#define CONFIG_SYS_CONSOLE_IS_IN_ENV
++#endif
++
++#ifdef CONFIG_SYS_USE_SERIALFLASH
++/* bootstrap + u-boot + env + linux in serial flash */
++#define CONFIG_ENV_IS_IN_SPI_FLASH
++#define CONFIG_ENV_SPI_BUS	CONFIG_SF_DEFAULT_BUS
++#define CONFIG_ENV_SPI_CS	CONFIG_SF_DEFAULT_CS
++#define CONFIG_ENV_OFFSET	0x4000
++#define CONFIG_ENV_SIZE		0x4000
++#define CONFIG_ENV_SECT_SIZE    0x1000
++#define CONFIG_BOOTCOMMAND      "sf probe 0; " \
++				"sf read 0x21000000 0x60000 0xc000; " \
++				"sf read 0x22000000 0x6c000 0x394000; " \
++				"bootz 0x22000000 - 0x21000000"
++
++#elif CONFIG_SYS_USE_NANDFLASH
++/* bootstrap + u-boot + env in nandflash */
++#define CONFIG_ENV_IS_IN_NAND
++#define CONFIG_ENV_OFFSET		0xc0000
++#define CONFIG_ENV_OFFSET_REDUND	0x100000
++#define CONFIG_ENV_SIZE			0x20000
++#define CONFIG_BOOTCOMMAND	"nand read 0x21000000 0x180000 0x80000;" \
++				"nand read 0x22000000 0x200000 0x600000;" \
++				"bootz 0x22000000 - 0x21000000"
++
++#elif CONFIG_SYS_USE_MMC
++
++#undef CONFIG_ENV_IS_IN_FAT
++#undef CONFIG_FAT_WRITE
++#undef FAT_ENV_INTERFACE
++#undef FAT_ENV_DEVICE_AND_PART
++#undef FAT_ENV_FILE
++#undef CONFIG_ENV_SIZE
++#undef CONFIG_BOOTCOMMAND
++
++/* bootstrap + u-boot + env in sd card */
++#define CONFIG_ENV_IS_IN_FAT
++#define CONFIG_FAT_WRITE
++#define FAT_ENV_INTERFACE	"mmc"
++/*
++ * We don't specify the part number, if device 0 has partition table, it means
++ * the first partition; it no partition table, then take whole device as a
++ * FAT file system.
++ */
++#define FAT_ENV_DEVICE_AND_PART	"1"
++#define FAT_ENV_FILE		"uboot.env"
++#define CONFIG_ENV_SIZE		0x4000
++#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 at91-sama5d2_xplained.dtb; " \
++				"fatload mmc 1:1 0x22000000 zImage; " \
++				"bootz 0x22000000 - 0x21000000"
++#endif
++
++#ifdef CONFIG_BOOTARGS
++#undef CONFIG_BOOTARGS
++#endif
++
++#ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_BOOTARGS \
++	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
++#else
++#define CONFIG_BOOTARGS						\
++	"console=ttyS0,115200 earlyprintk "			\
++	"mtdparts=atmel_nand:256k(bootstrap)ro,512k(uboot)ro,"	\
++	"256K(env),256k(evn_redundent),256k(spare),"		\
++	"512k(dtb),6M(kernel)ro,-(rootfs) "			\
++	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs"
++#endif
++
++#endif
+-- 
+2.5.3
+

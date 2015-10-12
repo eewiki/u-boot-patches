@@ -1,0 +1,99 @@
+From e603a15e8d71abcde1b5d3ccc81a3ec2c08b4ada Mon Sep 17 00:00:00 2001
+From: Wenyou Yang <wenyou.yang@atmel.com>
+Date: Tue, 22 Sep 2015 15:39:33 +0800
+Subject: [PATCH 3/4] mmc: atmel: Add atmel sdhci support
+
+The SDHCI is introduced by sama5d2, named as Secure Digital Multimedia
+Card Controller(SDMMC). It supports the embedded MultiMedia Card (e.MMC)
+Specification V4.41, the SD Memory Card Specification V3.0, and the SDIO
+V3.0 specification. It is compliant with the SD Host Controller Standard
+V3.0 specification.
+
+Signed-off-by: Wenyou Yang <wenyou.yang@atmel.com>
+---
+ arch/arm/mach-at91/include/mach/atmel_sdhci.h | 13 +++++++++
+ drivers/mmc/Makefile                          |  1 +
+ drivers/mmc/atmel_sdhci.c                     | 39 +++++++++++++++++++++++++++
+ 3 files changed, 53 insertions(+)
+ create mode 100644 arch/arm/mach-at91/include/mach/atmel_sdhci.h
+ create mode 100644 drivers/mmc/atmel_sdhci.c
+
+diff --git a/arch/arm/mach-at91/include/mach/atmel_sdhci.h b/arch/arm/mach-at91/include/mach/atmel_sdhci.h
+new file mode 100644
+index 0000000..9652bc2
+--- /dev/null
++++ b/arch/arm/mach-at91/include/mach/atmel_sdhci.h
+@@ -0,0 +1,13 @@
++/*
++ * Copyright (c) 2015 Atmel Corporation
++ *		      Wenyou.Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#ifndef __ATMEL_SDHCI_H
++#define __ATMEL_SDHCI_H
++
++int atmel_sdhci_init(void *regbase, u32 id);
++
++#endif
+diff --git a/drivers/mmc/Makefile b/drivers/mmc/Makefile
+index 99d0295..5d35705 100644
+--- a/drivers/mmc/Makefile
++++ b/drivers/mmc/Makefile
+@@ -8,6 +8,7 @@
+ obj-$(CONFIG_DM_MMC) += mmc-uclass.o
+ 
+ obj-$(CONFIG_ARM_PL180_MMCI) += arm_pl180_mmci.o
++obj-$(CONFIG_ATMEL_SDHCI) += atmel_sdhci.o
+ obj-$(CONFIG_BCM2835_SDHCI) += bcm2835_sdhci.o
+ obj-$(CONFIG_BFIN_SDH) += bfin_sdh.o
+ obj-$(CONFIG_DAVINCI_MMC) += davinci_mmc.o
+diff --git a/drivers/mmc/atmel_sdhci.c b/drivers/mmc/atmel_sdhci.c
+new file mode 100644
+index 0000000..185d977
+--- /dev/null
++++ b/drivers/mmc/atmel_sdhci.c
+@@ -0,0 +1,39 @@
++/*
++ * Copyright (C) 2015 Atmel Corporation
++ *		      Wenyou.Yang <wenyou.yang@atmel.com>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <common.h>
++#include <malloc.h>
++#include <sdhci.h>
++#include <asm/arch/clk.h>
++
++#define ATMEL_SDHC_MIN_FREQ	400000
++
++int atmel_sdhci_init(void *regbase, u32 id)
++{
++	struct sdhci_host *host = NULL;
++	u32 max_clk, min_clk = ATMEL_SDHC_MIN_FREQ;
++
++	host = (struct sdhci_host *)malloc(sizeof(struct sdhci_host));
++	if (!host) {
++		printf("%s: sdhci_host malloc failed\n", __func__);
++		return -ENOMEM;
++	}
++
++	host->name = "atmel_sdhci";
++	host->ioaddr = (void *)regbase;
++	host->quirks = 0;
++	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
++	max_clk = at91_get_periph_generated_clk(id);
++	if (!max_clk) {
++		printf("%s: Failed to get the proper clock\n", __func__);
++		return -1;
++	}
++
++	add_sdhci(host, max_clk, min_clk);
++
++	return 0;
++}
+-- 
+2.5.3
+
