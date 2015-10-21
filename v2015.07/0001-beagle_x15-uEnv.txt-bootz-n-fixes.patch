@@ -1,66 +1,55 @@
-From 81aab8e8e0622e494a4bb41f5aa4053924aac292 Mon Sep 17 00:00:00 2001
+From d5d8891d7731f9102d08d9ec8f7cd6eb215e3902 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 5 Oct 2015 10:28:38 -0500
+Date: Mon, 19 Oct 2015 12:29:45 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_omap5_common.h | 221 ++++++++++++++++++++++++++++++++++----
- 1 file changed, 202 insertions(+), 19 deletions(-)
+ include/configs/ti_armv7_common.h | 218 +++++++++++++++++++++++++++++++++++++-
+ include/configs/ti_omap5_common.h |  26 +++--
+ 2 files changed, 232 insertions(+), 12 deletions(-)
 
-diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index f10ac2c..dcec898 100644
---- a/include/configs/ti_omap5_common.h
-+++ b/include/configs/ti_omap5_common.h
-@@ -133,30 +133,70 @@
- #define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
- #define CONFIG_EXTRA_ENV_SETTINGS \
- 	DEFAULT_LINUX_BOOT_ENV \
--	DEFAULT_MMC_TI_ARGS \
- 	"console=" CONSOLEDEV ",115200n8\0" \
- 	"fdtfile=undefined\0" \
--	"bootpart=0:2\0" \
--	"bootdir=/boot\0" \
-+	"bootpart=0:1\0" \
-+	"bootdir=\0" \
- 	"bootfile=zImage\0" \
-+	"fdtdir=/dtbs\0" \
- 	"usbtty=cdc_acm\0" \
- 	"vram=16M\0" \
- 	"partitions=" PARTS_DEFAULT "\0" \
- 	"optargs=\0" \
- 	"dofastboot=0\0" \
--	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
--	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
-+	"mmcdev=0\0" \
-+	"mmcroot=/dev/mmcblk0p2 ro\0" \
-+	"mmcrootfstype=ext4 rootwait fixrtc\0" \
-+	"mmcargs=setenv bootargs console=${console} " \
-+		"${optargs} " \
-+		"root=${mmcroot} " \
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 5569ad9..a65bfb0 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -61,11 +61,27 @@
+ #define DEFAULT_MMC_TI_ARGS \
+ 	"mmcdev=0\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+-	"finduuid=part uuid mmc 0:2 uuid\0" \
++	"finduuid=part uuid mmc ${bootpart} uuid\0" \
+ 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"root=PARTUUID=${uuid} rw " \
+-		"rootfstype=${mmcrootfstype}\0" \
++		"root=PARTUUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
-+	"loadbootscript=load ${interface} ${bootpart} ${loadaddr} boot.scr\0" \
-+	"bootscript=echo Running bootscript from ${interface}${mmcdev} ...; " \
++	"args_mmc_old=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${oldroot} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_uuid=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
+ 	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
--	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
--	"mmcboot=mmc dev ${mmcdev}; " \
--		"if mmc rescan; then " \
--			"echo SD/MMC found on device ${mmcdev};" \
--			"if run loadimage; then " \
--				"run loadfdt; " \
--				"echo Booting from mmc${mmcdev} ...; " \
--				"run args_mmc; " \
--				"bootz ${loadaddr} - ${fdtaddr}; " \
--			"fi;" \
-+	"bootenv=uEnv.txt\0" \
-+	"loadbootenv=load ${interface} ${bootpart} ${loadaddr} ${bootenv}\0" \
-+	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
-+		"env import -t ${loadaddr} ${filesize}\0" \
-+	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
-+	"mmcboot=${interface} dev ${mmcdev}; " \
+@@ -90,6 +106,202 @@
+ 			"fi;" \
+ 		"fi;\0" \
+ 
++#define EEWIKI_MMC_BOOT \
++	"mmc_boot=${interface} dev ${mmcdev}; " \
 +		"if ${interface} rescan; then " \
 +			"echo Scanning ${interface} device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
@@ -90,20 +79,15 @@ index f10ac2c..dcec898 100644
 +					"echo Checking if uname_r is set in /boot/uEnv.txt ...;" \
 +					"if test -n ${uname_r}; then " \
 +						"echo debug: [uname_r=${uname_r}] ...;" \
-+						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
 +			"done;" \
- 		"fi;\0" \
- 	"findfdt="\
- 		"if test $board_name = omap5_uevm; then " \
-@@ -169,7 +209,147 @@
- 			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
- 		"if test $fdtfile = undefined; then " \
- 			"echo WARNING: Could not determine device tree to use; fi; \0" \
--	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
-+	"scsiboot=${interface} reset ; " \
++		"fi;\0" \
++
++#define EEWIKI_SCSI_BOOT \
++	"scsi_boot=${interface} reset ; " \
 +		"if ${interface} dev ${mmcdev}; then " \
 +			"echo Scanning ${interface} device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
@@ -133,13 +117,15 @@ index f10ac2c..dcec898 100644
 +					"echo Checking if uname_r is set in /boot/uEnv.txt ...;" \
 +					"if test -n ${uname_r}; then " \
 +						"echo debug: [uname_r=${uname_r}] ...;" \
-+						"setenv mmcroot /dev/sda${mmcpart} ro;" \
++						"setenv oldroot /dev/sda${mmcpart};" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
 +			"done;" \
 +		"fi;\0" \
-+	"usbboot=${interface} reset ; " \
++
++#define EEWIKI_USB_BOOT \
++	"usb_boot=${interface} reset ; " \
 +		"if ${interface} dev ${mmcdev}; then " \
 +			"echo Scanning ${interface} device ${mmcdev};" \
 +			"setenv bootpart ${mmcdev}:1; " \
@@ -169,12 +155,14 @@ index f10ac2c..dcec898 100644
 +					"echo Checking if uname_r is set in /boot/uEnv.txt ...;" \
 +					"if test -n ${uname_r}; then " \
 +						"echo debug: [uname_r=${uname_r}] ...;" \
-+						"setenv mmcroot /dev/sda${mmcpart} ro;" \
++						"setenv oldroot /dev/sda${mmcpart};" \
 +						"run uname_boot;" \
 +					"fi;" \
 +				"fi;" \
 +			"done;" \
 +		"fi;\0" \
++
++#define EEWIKI_UNAME_BOOT \
 +	"uname_boot="\
 +		"setenv bootdir /boot; " \
 +		"setenv bootfile vmlinuz-${uname_r}; " \
@@ -210,7 +198,7 @@ index f10ac2c..dcec898 100644
 +										"run loadfdt;" \
 +									"else " \
 +										"echo; echo unable to find ${fdtfile} ...; echo booting legacy ...;"\
-+										"run mmcargs;" \
++										"run args_mmc;" \
 +										"echo debug: [${bootargs}] ... ;" \
 +										"echo debug: [bootz ${loadaddr}] ... ;" \
 +										"bootz ${loadaddr}; " \
@@ -225,46 +213,92 @@ index f10ac2c..dcec898 100644
 +			"if test -e ${interface} ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
-+				"if test -n ${uuid}; then " \
-+					"setenv mmcroot UUID=${uuid} ro;" \
-+				"else " \
-+					"echo Warning: missing: uuid= so root=GUESS ...;" \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
 +				"fi;" \
-+				"echo debug: [root=${mmcroot}] ...;" \
-+				"run mmcargs;" \
-+				"echo debug: [${bootargs}] ... ;" \
-+				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
-+				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"if test -n ${uuid}; then " \
++					"run args_mmc_uuid;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"else " \
++					"run args_mmc_old;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
 +			"else " \
-+				"echo Warning: missing: /boot/initrd.img-${uname_r} ...;" \
-+				"echo debug: [root=${mmcroot}] ...;" \
-+				"run mmcargs;" \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
 +				"echo debug: [${bootargs}] ... ;" \
 +				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
 +				"bootz ${loadaddr} - ${fdtaddr}; " \
 +			"fi;" \
 +		"fi;\0" \
++
+ /*
+  * Default to a quick boot delay.
+  */
+diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
+index f10ac2c..a50324e 100644
+--- a/include/configs/ti_omap5_common.h
++++ b/include/configs/ti_omap5_common.h
+@@ -147,9 +147,9 @@
+ 	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+ 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+-	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"mmcboot=mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
++	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"mmcboot=${interface} dev ${mmcdev}; " \
++		"if ${interface} rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+ 			"if run loadimage; then " \
+ 				"run loadfdt; " \
+@@ -169,7 +169,12 @@
+ 			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
+-	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
++	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	EEWIKI_USB_BOOT \
++	EEWIKI_SCSI_BOOT \
++	EEWIKI_MMC_BOOT \
++	EEWIKI_UNAME_BOOT \
  	DFUARGS \
  	NETARGS \
  
-@@ -181,11 +361,14 @@
+@@ -181,12 +186,15 @@
  		"echo Booting into fastboot ...; fastboot;" \
  	"fi;" \
  	"run findfdt; " \
 -	"run envboot; " \
+-	"run mmcboot;" \
 +	"setenv mmcdev 0; " \
 +	"setenv interface usb; " \
-+	"run usbboot;" \
++	"run usb_boot;" \
 +	"setenv interface scsi; " \
-+	"run scsiboot;" \
++	"run scsi_boot;" \
 +	"setenv interface mmc; " \
- 	"run mmcboot;" \
++	"run mmc_boot;" \
  	"setenv mmcdev 1; " \
 -	"setenv bootpart 1:2; " \
 -	"setenv mmcroot /dev/mmcblk0p2 rw; " \
- 	"run mmcboot;" \
+-	"run mmcboot;" \
++	"run mmc_boot;" \
  	""
  #endif
+ 
 -- 
-2.5.3
+2.6.1
 
