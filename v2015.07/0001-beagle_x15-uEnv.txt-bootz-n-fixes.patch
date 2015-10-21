@@ -1,19 +1,19 @@
-From d5d8891d7731f9102d08d9ec8f7cd6eb215e3902 Mon Sep 17 00:00:00 2001
+From 7590819f235411693de6e5b018439a1563d391ff Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 19 Oct 2015 12:29:45 -0500
+Date: Wed, 21 Oct 2015 15:11:15 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ti_armv7_common.h | 218 +++++++++++++++++++++++++++++++++++++-
+ include/configs/ti_armv7_common.h | 238 ++++++++++++++++++++++++++++++++++++--
  include/configs/ti_omap5_common.h |  26 +++--
- 2 files changed, 232 insertions(+), 12 deletions(-)
+ 2 files changed, 248 insertions(+), 16 deletions(-)
 
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 5569ad9..a65bfb0 100644
+index 5569ad9..207c41a 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,27 @@
+@@ -61,20 +61,42 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -23,6 +23,7 @@ index 5569ad9..a65bfb0 100644
  		"${optargs} " \
 -		"root=PARTUUID=${uuid} rw " \
 -		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
 +		"root=PARTUUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
@@ -41,10 +42,28 @@ index 5569ad9..a65bfb0 100644
 +		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
- 	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/ram rw " \
++		"${cmdline}\0" \
++	"loadbootscript=load ${interface} ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
-@@ -90,6 +106,202 @@
+ 	"bootenvfile=uEnv.txt\0" \
+ 	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
+-	"envboot=mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
++	"loadbootenv=fatload ${interface} ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"envboot=${interface} dev ${mmcdev}; " \
++		"if ${interface} rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+ 			"if run loadbootscript; then " \
+ 				"run bootscript;" \
+@@ -90,6 +112,208 @@
  			"fi;" \
  		"fi;\0" \
  
@@ -213,6 +232,12 @@ index 5569ad9..a65bfb0 100644
 +			"if test -e ${interface} ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
 +				"if test -n ${uenv_root}; then " \
 +					"run args_uenv_root;" \
 +					"echo debug: [${bootargs}] ... ;" \

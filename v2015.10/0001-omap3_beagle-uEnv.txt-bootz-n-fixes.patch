@@ -1,15 +1,15 @@
-From 41dae0e298d651530b21795885a3baf8a2312347 Mon Sep 17 00:00:00 2001
+From e09f1cb1ba5820478f323e9958279db788b8ea57 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 21 Oct 2015 10:29:45 -0500
+Date: Wed, 21 Oct 2015 14:04:59 -0500
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/beagle/beagle.c          |  38 ++++++++--
+ board/ti/beagle/beagle.c          |  38 +++++++--
  common/image.c                    |   9 ---
- include/configs/omap3_beagle.h    | 151 +++++++++-----------------------------
- include/configs/ti_armv7_common.h | 145 ++++++++++++++++++++++++++++++++++--
- 4 files changed, 207 insertions(+), 136 deletions(-)
+ include/configs/omap3_beagle.h    | 151 +++++++++---------------------------
+ include/configs/ti_armv7_common.h | 157 ++++++++++++++++++++++++++++++++++++--
+ 4 files changed, 219 insertions(+), 136 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index 3b0a9e7..b885b93 100644
@@ -305,10 +305,10 @@ index bf986f8..87276c0 100644
  /*
   * OMAP3 has 12 GP timers, they can be driven by the system clock
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..bdb3523 100644
+index 6dc6515..3ebaa26 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,147 @@
+@@ -61,11 +61,159 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -335,6 +335,12 @@ index 6dc6515..bdb3523 100644
 +		"${optargs} " \
 +		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${musb} ${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/ram rw " \
 +		"${musb} ${cmdline}\0"
 +
 +#define EEWIKI_BOOT \
@@ -426,6 +432,12 @@ index 6dc6515..bdb3523 100644
 +			"if test -e ${interface} ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
 +				"if test -n ${uenv_root}; then " \
 +					"run args_uenv_root;" \
 +					"echo debug: [${bootargs}] ... ;" \
@@ -459,7 +471,7 @@ index 6dc6515..bdb3523 100644
  
  /*
   * Default to a quick boot delay.
-@@ -239,11 +375,8 @@
+@@ -239,11 +387,8 @@
  #define CONFIG_SPL_LIBDISK_SUPPORT
  #define CONFIG_SPL_MMC_SUPPORT
  #define CONFIG_SPL_FAT_SUPPORT

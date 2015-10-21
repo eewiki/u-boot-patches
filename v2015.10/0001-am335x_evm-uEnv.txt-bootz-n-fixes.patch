@@ -1,6 +1,6 @@
-From 9f2ed5a4798ee4983b65b7d4f33279fc722095af Mon Sep 17 00:00:00 2001
+From 3fd7c641df0b89f896f3382511e7eb66dc74b026 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 21 Oct 2015 09:39:27 -0500
+Date: Wed, 21 Oct 2015 14:01:57 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -11,10 +11,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/mux.c             |   2 -
  common/image.c                    |   9 --
  configs/am335x_evm_defconfig      |   1 -
- drivers/gpio/omap_gpio.c          | 107 ++++++++---------
+ drivers/gpio/omap_gpio.c          | 107 ++++++++--------
  include/configs/am335x_evm.h      |  56 ++++++---
- include/configs/ti_armv7_common.h | 237 +++++++++++++++++++++++++++++++++++++-
- 9 files changed, 381 insertions(+), 103 deletions(-)
+ include/configs/ti_armv7_common.h | 249 +++++++++++++++++++++++++++++++++++++-
+ 9 files changed, 393 insertions(+), 103 deletions(-)
 
 diff --git a/arch/arm/cpu/armv7/am33xx/board.c b/arch/arm/cpu/armv7/am33xx/board.c
 index bd14326..5b1eb18 100644
@@ -486,10 +486,10 @@ index 3cf768e..9d7cfd5 100644
  /* USB TI's IDs */
  #define CONFIG_G_DNL_VENDOR_NUM 0x0451
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6dc6515..b49c25e 100644
+index 6dc6515..b2ac51b 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -61,11 +61,242 @@
+@@ -61,11 +61,254 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -524,6 +524,12 @@ index 6dc6515..b49c25e 100644
 +		"${cape_enable} " \
 +		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/ram rw " \
 +		"${cmdline}\0"
 +
 +#define EEWIKI_NFS \
@@ -703,6 +709,12 @@ index 6dc6515..b49c25e 100644
 +			"if test -e ${interface} ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
 +				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
 +				"if test -n ${uenv_root}; then " \
 +					"run args_uenv_root;" \
 +					"echo debug: [${bootargs}] ... ;" \
