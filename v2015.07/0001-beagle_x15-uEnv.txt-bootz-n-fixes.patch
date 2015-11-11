@@ -1,14 +1,83 @@
-From 7590819f235411693de6e5b018439a1563d391ff Mon Sep 17 00:00:00 2001
+From 9b025754d3c9ebfd7685749ee706fec3ac0235ed Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 21 Oct 2015 15:11:15 -0500
+Date: Tue, 10 Nov 2015 15:45:16 -0600
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
+ board/ti/am57xx/mux_data.h        |  56 ++++-----
  include/configs/ti_armv7_common.h | 238 ++++++++++++++++++++++++++++++++++++--
  include/configs/ti_omap5_common.h |  26 +++--
- 2 files changed, 248 insertions(+), 16 deletions(-)
+ 3 files changed, 276 insertions(+), 44 deletions(-)
 
+diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
+index 7366d2e..b052994 100644
+--- a/board/ti/am57xx/mux_data.h
++++ b/board/ti/am57xx/mux_data.h
+@@ -114,35 +114,35 @@ const struct pad_conf_entry core_padconf_array_essential_x15[] = {
+ 	{VIN2A_D21, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d21.rgmii1_rxd2 */
+ 	{VIN2A_D22, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d22.rgmii1_rxd1 */
+ 	{VIN2A_D23, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d23.rgmii1_rxd0 */
+-	{VOUT1_CLK, (M0 | PIN_OUTPUT)},		/* vout1_clk.vout1_clk */
+-	{VOUT1_DE, (M0 | PIN_OUTPUT)},		/* vout1_de.vout1_de */
++	{VOUT1_CLK, (M15 | PIN_OUTPUT)},		/* vout1_clk.vout1_clk */
++	{VOUT1_DE, (M15 | PIN_OUTPUT)},		/* vout1_de.vout1_de */
+ 	{VOUT1_FLD, (M14 | PIN_INPUT)},		/* vout1_fld.gpio4_21 */
+-	{VOUT1_HSYNC, (M0 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
+-	{VOUT1_VSYNC, (M0 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
+-	{VOUT1_D0, (M0 | PIN_OUTPUT)},		/* vout1_d0.vout1_d0 */
+-	{VOUT1_D1, (M0 | PIN_OUTPUT)},		/* vout1_d1.vout1_d1 */
+-	{VOUT1_D2, (M0 | PIN_OUTPUT)},		/* vout1_d2.vout1_d2 */
+-	{VOUT1_D3, (M0 | PIN_OUTPUT)},		/* vout1_d3.vout1_d3 */
+-	{VOUT1_D4, (M0 | PIN_OUTPUT)},		/* vout1_d4.vout1_d4 */
+-	{VOUT1_D5, (M0 | PIN_OUTPUT)},		/* vout1_d5.vout1_d5 */
+-	{VOUT1_D6, (M0 | PIN_OUTPUT)},		/* vout1_d6.vout1_d6 */
+-	{VOUT1_D7, (M0 | PIN_OUTPUT)},		/* vout1_d7.vout1_d7 */
+-	{VOUT1_D8, (M0 | PIN_OUTPUT)},		/* vout1_d8.vout1_d8 */
+-	{VOUT1_D9, (M0 | PIN_OUTPUT)},		/* vout1_d9.vout1_d9 */
+-	{VOUT1_D10, (M0 | PIN_OUTPUT)},		/* vout1_d10.vout1_d10 */
+-	{VOUT1_D11, (M0 | PIN_OUTPUT)},		/* vout1_d11.vout1_d11 */
+-	{VOUT1_D12, (M0 | PIN_OUTPUT)},		/* vout1_d12.vout1_d12 */
+-	{VOUT1_D13, (M0 | PIN_OUTPUT)},		/* vout1_d13.vout1_d13 */
+-	{VOUT1_D14, (M0 | PIN_OUTPUT)},		/* vout1_d14.vout1_d14 */
+-	{VOUT1_D15, (M0 | PIN_OUTPUT)},		/* vout1_d15.vout1_d15 */
+-	{VOUT1_D16, (M0 | PIN_OUTPUT)},		/* vout1_d16.vout1_d16 */
+-	{VOUT1_D17, (M0 | PIN_OUTPUT)},		/* vout1_d17.vout1_d17 */
+-	{VOUT1_D18, (M0 | PIN_OUTPUT)},		/* vout1_d18.vout1_d18 */
+-	{VOUT1_D19, (M0 | PIN_OUTPUT)},		/* vout1_d19.vout1_d19 */
+-	{VOUT1_D20, (M0 | PIN_OUTPUT)},		/* vout1_d20.vout1_d20 */
+-	{VOUT1_D21, (M0 | PIN_OUTPUT)},		/* vout1_d21.vout1_d21 */
+-	{VOUT1_D22, (M0 | PIN_OUTPUT)},		/* vout1_d22.vout1_d22 */
+-	{VOUT1_D23, (M0 | PIN_OUTPUT)},		/* vout1_d23.vout1_d23 */
++	{VOUT1_HSYNC, (M15 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
++	{VOUT1_VSYNC, (M15 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
++	{VOUT1_D0, (M15 | PIN_OUTPUT)},		/* vout1_d0.vout1_d0 */
++	{VOUT1_D1, (M15 | PIN_OUTPUT)},		/* vout1_d1.vout1_d1 */
++	{VOUT1_D2, (M15 | PIN_OUTPUT)},		/* vout1_d2.vout1_d2 */
++	{VOUT1_D3, (M15 | PIN_OUTPUT)},		/* vout1_d3.vout1_d3 */
++	{VOUT1_D4, (M15 | PIN_OUTPUT)},		/* vout1_d4.vout1_d4 */
++	{VOUT1_D5, (M15 | PIN_OUTPUT)},		/* vout1_d5.vout1_d5 */
++	{VOUT1_D6, (M15 | PIN_OUTPUT)},		/* vout1_d6.vout1_d6 */
++	{VOUT1_D7, (M15 | PIN_OUTPUT)},		/* vout1_d7.vout1_d7 */
++	{VOUT1_D8, (M15 | PIN_OUTPUT)},		/* vout1_d8.vout1_d8 */
++	{VOUT1_D9, (M15 | PIN_OUTPUT)},		/* vout1_d9.vout1_d9 */
++	{VOUT1_D10, (M15 | PIN_OUTPUT)},		/* vout1_d10.vout1_d10 */
++	{VOUT1_D11, (M15 | PIN_OUTPUT)},		/* vout1_d11.vout1_d11 */
++	{VOUT1_D12, (M15 | PIN_OUTPUT)},		/* vout1_d12.vout1_d12 */
++	{VOUT1_D13, (M15 | PIN_OUTPUT)},		/* vout1_d13.vout1_d13 */
++	{VOUT1_D14, (M15 | PIN_OUTPUT)},		/* vout1_d14.vout1_d14 */
++	{VOUT1_D15, (M15 | PIN_OUTPUT)},		/* vout1_d15.vout1_d15 */
++	{VOUT1_D16, (M15 | PIN_OUTPUT)},		/* vout1_d16.vout1_d16 */
++	{VOUT1_D17, (M15 | PIN_OUTPUT)},		/* vout1_d17.vout1_d17 */
++	{VOUT1_D18, (M15 | PIN_OUTPUT)},		/* vout1_d18.vout1_d18 */
++	{VOUT1_D19, (M15 | PIN_OUTPUT)},		/* vout1_d19.vout1_d19 */
++	{VOUT1_D20, (M15 | PIN_OUTPUT)},		/* vout1_d20.vout1_d20 */
++	{VOUT1_D21, (M15 | PIN_OUTPUT)},		/* vout1_d21.vout1_d21 */
++	{VOUT1_D22, (M15 | PIN_OUTPUT)},		/* vout1_d22.vout1_d22 */
++	{VOUT1_D23, (M15 | PIN_OUTPUT)},		/* vout1_d23.vout1_d23 */
+ 	{MDIO_MCLK, (M0 | PIN_INPUT_PULLUP)},	/* mdio_mclk.mdio_mclk */
+ 	{MDIO_D, (M0 | PIN_INPUT_PULLUP)},	/* mdio_d.mdio_d */
+ 	{RMII_MHZ_50_CLK, (M14 | PIN_INPUT_PULLUP)},	/* RMII_MHZ_50_CLK.gpio5_17 */
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 5569ad9..207c41a 100644
 --- a/include/configs/ti_armv7_common.h
@@ -273,10 +342,10 @@ index 5569ad9..207c41a 100644
   * Default to a quick boot delay.
   */
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index f10ac2c..a50324e 100644
+index 9f6f0f6..e296248 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -147,9 +147,9 @@
+@@ -160,9 +160,9 @@
  	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
@@ -289,8 +358,8 @@ index f10ac2c..a50324e 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadimage; then " \
  				"run loadfdt; " \
-@@ -169,7 +169,12 @@
- 			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
+@@ -188,7 +188,12 @@
+ 			"setenv fdtfile am571x-idk.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
@@ -303,7 +372,7 @@ index f10ac2c..a50324e 100644
  	DFUARGS \
  	NETARGS \
  
-@@ -181,12 +186,15 @@
+@@ -200,12 +205,15 @@
  		"echo Booting into fastboot ...; fastboot;" \
  	"fi;" \
  	"run findfdt; " \
@@ -325,5 +394,5 @@ index f10ac2c..a50324e 100644
  #endif
  
 -- 
-2.6.1
+2.6.2
 

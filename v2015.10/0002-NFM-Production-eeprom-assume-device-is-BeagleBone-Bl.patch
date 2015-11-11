@@ -1,6 +1,6 @@
-From 8f060b4a4fa24ddb99de8bd4740d9862e2861728 Mon Sep 17 00:00:00 2001
+From 287f176425dd5bc578caf78a568840b94fc51b8f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 21 Oct 2015 09:44:02 -0500
+Date: Fri, 6 Nov 2015 14:05:43 -0600
 Subject: [PATCH 2/2] NFM: Production: eeprom: assume device is BeagleBone
  Black
 
@@ -94,10 +94,10 @@ index fd3da58..57a8a73 100644
  	}
  }
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 9d7cfd5..b8a0982 100644
+index d3f8a23..5428227 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
-@@ -180,6 +180,8 @@
+@@ -182,6 +182,8 @@
  #define CONFIG_BOOTCOMMAND \
  	"gpio set 53; " \
  	"run findfdt; " \
@@ -107,5 +107,5 @@ index 9d7cfd5..b8a0982 100644
  	"setenv mmcdev 0; " \
  	"setenv bootpart 0:1; " \
 -- 
-2.6.1
+2.6.2
 
