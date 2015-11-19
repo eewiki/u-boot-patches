@@ -1,6 +1,6 @@
-From 9b025754d3c9ebfd7685749ee706fec3ac0235ed Mon Sep 17 00:00:00 2001
+From 275458258e4c540c32ba427e41b9ac37141e8104 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 10 Nov 2015 15:45:16 -0600
+Date: Thu, 19 Nov 2015 14:56:36 -0600
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -11,7 +11,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  3 files changed, 276 insertions(+), 44 deletions(-)
 
 diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
-index 7366d2e..b052994 100644
+index d6da9d6..47ac254 100644
 --- a/board/ti/am57xx/mux_data.h
 +++ b/board/ti/am57xx/mux_data.h
 @@ -114,35 +114,35 @@ const struct pad_conf_entry core_padconf_array_essential_x15[] = {
@@ -342,7 +342,7 @@ index 5569ad9..207c41a 100644
   * Default to a quick boot delay.
   */
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 9f6f0f6..e296248 100644
+index d78b30f..96612a2 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
 @@ -160,9 +160,9 @@
@@ -358,8 +358,8 @@ index 9f6f0f6..e296248 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadimage; then " \
  				"run loadfdt; " \
-@@ -188,7 +188,12 @@
- 			"setenv fdtfile am571x-idk.dtb; fi;" \
+@@ -192,7 +192,12 @@
+ 			"setenv fdtfile am571x-idk-lcd-osd.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
@@ -372,7 +372,7 @@ index 9f6f0f6..e296248 100644
  	DFUARGS \
  	NETARGS \
  
-@@ -200,12 +205,15 @@
+@@ -204,12 +209,15 @@
  		"echo Booting into fastboot ...; fastboot;" \
  	"fi;" \
  	"run findfdt; " \
