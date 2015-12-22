@@ -380,9 +380,9 @@ index d78b30f..96612a2 100644
 -	"run mmcboot;" \
 +	"setenv mmcdev 0; " \
 +	"setenv interface usb; " \
-+	"run usb_boot;" \
++	"echo usb_boot is currently disabled;" \
 +	"setenv interface scsi; " \
-+	"run scsi_boot;" \
++	"echo scsi_boot is currently disabled;" \
 +	"setenv interface mmc; " \
 +	"run mmc_boot;" \
  	"setenv mmcdev 1; " \
