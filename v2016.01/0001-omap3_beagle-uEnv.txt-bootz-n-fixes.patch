@@ -1,17 +1,17 @@
-From 4edd8bbd562bd4b336c7db9bb03b1d64bce612d1 Mon Sep 17 00:00:00 2001
+From cafa82b42b74045e6a07fd2894eb070b32751107 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 13 Nov 2015 09:56:06 -0600
+Date: Tue, 12 Jan 2016 14:11:49 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c          |  38 +++++++--
  include/configs/omap3_beagle.h    | 151 +++++++++---------------------------
- include/configs/ti_armv7_common.h | 157 ++++++++++++++++++++++++++++++++++++--
- 3 files changed, 219 insertions(+), 127 deletions(-)
+ include/configs/ti_armv7_common.h | 159 ++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 219 insertions(+), 129 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
-index 56e3cfe..d8b6109 100644
+index ff317ef..8c1639b 100644
 --- a/board/ti/beagle/beagle.c
 +++ b/board/ti/beagle/beagle.c
 @@ -56,6 +56,7 @@
@@ -112,10 +112,10 @@ index 56e3cfe..d8b6109 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index bf986f8..87276c0 100644
+index 65f08a1..b46c5d6 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
-@@ -126,51 +126,31 @@
+@@ -125,51 +125,31 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -191,7 +191,7 @@ index bf986f8..87276c0 100644
  		"if test $beaglerev = AxBx; then " \
  			"setenv fdtfile omap3-beagle.dtb; fi; " \
  		"if test $beaglerev = Cx; then " \
-@@ -183,80 +163,19 @@
+@@ -182,80 +162,19 @@
  			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -284,7 +284,7 @@ index bf986f8..87276c0 100644
  /*
   * OMAP3 has 12 GP timers, they can be driven by the system clock
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 7810dd6..91156f4 100644
+index 2087eb1..9960aff 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -60,11 +60,159 @@
@@ -450,7 +450,7 @@ index 7810dd6..91156f4 100644
  
  /*
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
-@@ -233,11 +381,8 @@
+@@ -232,11 +380,8 @@
  #define CONFIG_SPL_LIBDISK_SUPPORT
  #define CONFIG_SPL_MMC_SUPPORT
  #define CONFIG_SPL_FAT_SUPPORT
@@ -462,6 +462,13 @@ index 7810dd6..91156f4 100644
  /* General parts of the framework, required. */
  #define CONFIG_SPL_I2C_SUPPORT
  #define CONFIG_SPL_LIBCOMMON_SUPPORT
+@@ -282,6 +427,4 @@
+ #define NETARGS ""
+ #endif
+ 
+-#include <config_distro_defaults.h>
+-
+ #endif	/* __CONFIG_TI_ARMV7_COMMON_H__ */
 -- 
-2.6.2
+2.6.4
 
