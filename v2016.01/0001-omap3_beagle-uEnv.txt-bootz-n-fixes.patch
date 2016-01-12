@@ -1,14 +1,14 @@
-From cafa82b42b74045e6a07fd2894eb070b32751107 Mon Sep 17 00:00:00 2001
+From 648945d0844f2330131e2fc94870f0443ea219e1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 12 Jan 2016 14:11:49 -0600
+Date: Tue, 12 Jan 2016 15:03:26 -0600
 Subject: [PATCH] omap3_beagle: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/beagle/beagle.c          |  38 +++++++--
- include/configs/omap3_beagle.h    | 151 +++++++++---------------------------
+ include/configs/omap3_beagle.h    | 152 +++++++++---------------------------
  include/configs/ti_armv7_common.h | 159 ++++++++++++++++++++++++++++++++++++--
- 3 files changed, 219 insertions(+), 129 deletions(-)
+ 3 files changed, 220 insertions(+), 129 deletions(-)
 
 diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
 index ff317ef..8c1639b 100644
@@ -112,10 +112,10 @@ index ff317ef..8c1639b 100644
  	switch (get_board_revision()) {
  	case REVISION_XM_AB:
 diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
-index 65f08a1..b46c5d6 100644
+index 65f08a1..e1beb51 100644
 --- a/include/configs/omap3_beagle.h
 +++ b/include/configs/omap3_beagle.h
-@@ -125,51 +125,31 @@
+@@ -125,51 +125,32 @@
  							/* devices */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -130,6 +130,7 @@ index 65f08a1..b46c5d6 100644
 -	"bootpart=0:2\0" \
 +	DEFAULT_LINUX_BOOT_ENV \
 +	DEFAULT_MMC_TI_ARGS \
++	"usbethaddr=02:DE:AD:BE:EF:FF\0" \
  	"console=ttyO2,115200n8\0" \
 -	"mpurate=auto\0" \
 -	"buddy=none\0" \
@@ -191,7 +192,7 @@ index 65f08a1..b46c5d6 100644
  		"if test $beaglerev = AxBx; then " \
  			"setenv fdtfile omap3-beagle.dtb; fi; " \
  		"if test $beaglerev = Cx; then " \
-@@ -182,80 +162,19 @@
+@@ -182,80 +163,19 @@
  			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
