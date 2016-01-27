@@ -1,15 +1,15 @@
-From ee2359d0b7a7ebef6c175fd1fa42870acbca8117 Mon Sep 17 00:00:00 2001
+From 1b31c89fdecd3725d711054da3e285d8ab81e973 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 13 Jan 2016 11:08:20 -0600
+Date: Mon, 25 Jan 2016 19:57:48 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/am335x/board.c           |  18 +++
  configs/am335x_evm_defconfig      |   5 +-
- include/configs/am335x_evm.h      |  44 ++++---
- include/configs/ti_armv7_common.h | 256 +++++++++++++++++++++++++++++++++++++-
- 4 files changed, 303 insertions(+), 20 deletions(-)
+ include/configs/am335x_evm.h      |  44 +++++--
+ include/configs/ti_armv7_common.h | 262 +++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 309 insertions(+), 20 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index f56d17e..49d95cf 100644
@@ -157,10 +157,10 @@ index c51db8c..e3402c4 100644
  	NETARGS \
  	DFUARGS \
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 2087eb1..973b1e2 100644
+index 2087eb1..94ea17c 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -60,11 +60,259 @@
+@@ -60,11 +60,265 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -313,7 +313,13 @@ index 2087eb1..973b1e2 100644
 +					"load ${interface} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
 +					"env import -t ${loadaddr} ${filesize};" \
 +					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${cape}; then " \
++						"echo debug: [cape=${cape}] ... ;" \
++						"setenv fdtfile ${fdtbase}-${cape}.dtb; " \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi; " \
 +					"if test -n ${dtb}; then " \
++						"echo debug: [dtb=${dtb}] ... ;" \
 +						"setenv fdtfile ${dtb};" \
 +						"echo Using: dtb=${fdtfile} ...;" \
 +					"fi;" \
@@ -423,7 +429,7 @@ index 2087eb1..973b1e2 100644
  
  /*
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
-@@ -282,6 +530,4 @@
+@@ -282,6 +536,4 @@
  #define NETARGS ""
  #endif
  
@@ -431,5 +437,5 @@ index 2087eb1..973b1e2 100644
 -
  #endif	/* __CONFIG_TI_ARMV7_COMMON_H__ */
 -- 
-2.6.4
+2.7.0.rc3
 
