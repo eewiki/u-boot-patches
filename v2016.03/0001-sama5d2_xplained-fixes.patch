@@ -1,0 +1,32 @@
+From db8febb4874b73131477194e8d5fc791133480ec Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 1 Dec 2015 11:06:58 -0600
+Subject: [PATCH] sama5d2_xplained fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/sama5d2_xplained.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
+index ae5ba3d..d2afa94 100644
+--- a/include/configs/sama5d2_xplained.h
++++ b/include/configs/sama5d2_xplained.h
+@@ -110,12 +110,12 @@
+ #undef CONFIG_BOOTCOMMAND
+ 
+ #define FAT_ENV_DEVICE_AND_PART	"1"
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 at91-sama5d2_xplained.dtb; " \
++#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 /dtbs/at91-sama5d2_xplained.dtb; " \
+ 				"fatload mmc 1:1 0x22000000 zImage; " \
+ 				"bootz 0x22000000 - 0x21000000"
+ #undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS \
+-	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
++	"console=ttyS0,115200 root=/dev/mmcblk1p2 ro rootwait"
+ 
+ #endif
+ 
+-- 
+2.6.2
+
