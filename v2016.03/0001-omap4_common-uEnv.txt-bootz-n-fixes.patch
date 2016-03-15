@@ -78,7 +78,7 @@ index 199612b..d8b700f 100644
 +					"fi;" \
 +					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
 +					"if test -n ${uname_r}; then " \
-+						"setenv oldroot /dev/mmcblk${mmcblk}p${mmcpart};" \
++						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
 +						"echo Running uname_boot ...;" \
 +						"run uname_boot;" \
 +					"fi;" \

@@ -1,18 +1,21 @@
-From 1b31c89fdecd3725d711054da3e285d8ab81e973 Mon Sep 17 00:00:00 2001
+From 436ad9505ae7f8b8fd94dab8873e39ba5f466575 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 25 Jan 2016 19:57:48 -0600
+Date: Wed, 9 Mar 2016 09:31:05 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           |  18 +++
+ board/ti/am335x/board.c           |  29 ++++-
+ board/ti/am335x/board.h           |   6 +
+ board/ti/am335x/mux.c             |  10 +-
+ common/spl/spl.c                  |   7 +
  configs/am335x_evm_defconfig      |   5 +-
- include/configs/am335x_evm.h      |  44 +++++--
+ include/configs/am335x_evm.h      |  58 ++++++---
  include/configs/ti_armv7_common.h | 262 +++++++++++++++++++++++++++++++++++++-
- 4 files changed, 309 insertions(+), 20 deletions(-)
+ 7 files changed, 352 insertions(+), 25 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index f56d17e..49d95cf 100644
+index f56d17e..e5608ac 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -481,6 +481,24 @@ void sdram_init(void)
@@ -40,6 +43,94 @@ index f56d17e..49d95cf 100644
  #if defined(CONFIG_HW_WATCHDOG)
  	hw_watchdog_init();
  #endif
+@@ -511,6 +529,13 @@ int board_late_init(void)
+ 	if ( (header.version[0] == 0x1a) && (header.version[1] == 0x00) &&
+ 	     (header.version[2] == 0x00) && (header.version[3] == 0x00) ) {
+ 		setenv("board_rev", "BBG1");
++	} else if ( (header.version[0] == 0x30) && (header.version[1] == 0x30) &&
++	            (header.version[2] == 0x41) && (header.version[3] == 0x35) ) {
++		setenv("board_rev", "SE0A");
++		header.version[0] = 0x53;
++		header.version[1] = 0x45;
++		header.version[2] = 0x30;
++		header.version[3] = 0x41;
+ 	} else {
+ 		strncpy(safe_string, (char *)header.version, sizeof(header.version));
+ 		safe_string[sizeof(header.version)] = 0;
+@@ -627,7 +652,7 @@ int board_eth_init(bd_t *bis)
+ 	if (read_eeprom(&header) < 0)
+ 		puts("Could not get board ID.\n");
+ 
+-	if (board_is_bone(&header) || board_is_bone_lt(&header) ||
++	if (board_is_bone(&header) || (board_is_bone_lt(&header) && !board_is_bone_lt_enhanced(&header)) ||
+ 	    board_is_idk(&header)) {
+ 		writel(MII_MODE_ENABLE, &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+@@ -657,7 +682,7 @@ int board_eth_init(bd_t *bis)
+ #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
+ #define AR8051_RGMII_TX_CLK_DLY		0x100
+ 
+-	if (board_is_evm_sk(&header) || board_is_gp_evm(&header)) {
++	if (board_is_evm_sk(&header) || board_is_gp_evm(&header) || board_is_bone_lt_enhanced(&header)) {
+ 		const char *devname;
+ 		devname = miiphy_get_current_dev();
+ 
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index bc700d5..f083483 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -39,6 +39,12 @@ static inline int board_is_bone_lt(struct am335x_baseboard_id *header)
+ 	return !strncmp(header->name, "A335BNLT", HDR_NAME_LEN);
+ }
+ 
++static inline int board_is_bone_lt_enhanced(struct am335x_baseboard_id *header)
++{
++	return (board_is_bone_lt(header) &&
++			strncmp("SE", header->version, 2) <= 0);
++}
++
+ static inline int board_is_evm_sk(struct am335x_baseboard_id *header)
+ {
+ 	return !strncmp("A335X_SK", header->name, HDR_NAME_LEN);
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index 79ed02f..e12d769 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -354,8 +354,14 @@ void enable_board_pin_mux(struct am335x_baseboard_id *header)
+ 		configure_module_pin_mux(rgmii1_pin_mux);
+ 		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
+ 	} else if (board_is_bone_lt(header)) {
+-		/* Beaglebone LT pinmux */
+-		configure_module_pin_mux(mii1_pin_mux);
++		if(board_is_bone_lt_enhanced(header)) {
++			/* SanCloud Beaglebone LT Enhanced pinmux */
++			configure_module_pin_mux(rgmii1_pin_mux);
++		}
++		else {
++			/* Beaglebone LT pinmux */
++			configure_module_pin_mux(mii1_pin_mux);
++		}
+ 		configure_module_pin_mux(mmc0_pin_mux);
+ #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
+ 		configure_module_pin_mux(nand_pin_mux);
+diff --git a/common/spl/spl.c b/common/spl/spl.c
+index 6e6dee7..d640ea3 100644
+--- a/common/spl/spl.c
++++ b/common/spl/spl.c
+@@ -461,6 +461,13 @@ ulong spl_relocate_stack_gd(void)
+ 	}
+ #endif
+ 
++	/* revert:
++	 * http://git.denx.de/?p=u-boot.git;a=commit;h=8656c4f76f012254a1a01d6d7956d85d7d3d73bf
++	 * fixes 1GB am335x
++	 */
++	/* Clear the BSS. */
++	memset(__bss_start, 0, __bss_end - __bss_start);
++
+ 	return ptr;
+ #else
+ 	return 0;
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
 index 27cb881..8699953 100644
 --- a/configs/am335x_evm_defconfig
@@ -57,7 +148,7 @@ index 27cb881..8699953 100644
  # CONFIG_CMD_FLASH is not set
  CONFIG_CMD_GPIO=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index c51db8c..e3402c4 100644
+index c51db8c..2f29f4d 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -128,25 +219,38 @@ index c51db8c..e3402c4 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadbootscript; then " \
  				"run bootscript;" \
-@@ -184,12 +195,14 @@
+@@ -184,12 +195,26 @@
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
 -			"setenv fdtfile am335x-bone.dtb; fi; " \
 +			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
  		"if test $board_name = A335BNLT; then " \
- 			"if test $board_rev = BBG1; then " \
+-			"if test $board_rev = BBG1; then " \
 -				"setenv fdtfile am335x-bonegreen.dtb; " \
++			"if test $board_rev = BLA0; then " \
++				"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; " \
++			"elif test $board_rev = BBG1; then " \
 +				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
++			"elif test $board_rev = GW1A; then " \
++				"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; " \
 +			"elif test $board_rev = AIA0; then " \
 +				"setenv fdtfile am335x-abbbi.dtb; setenv fdtbase am335x-abbbi; " \
++			"elif test $board_rev = EIA0; then " \
++				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++			"elif test $board_rev = SE0A; then " \
++				"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; " \
++			"elif test $board_rev = ME06; then " \
++				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
++			"elif test $board_rev = GH01; then " \
++				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
  			"else " \
 -				"setenv fdtfile am335x-boneblack.dtb; " \
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
  			"fi; " \
  		"fi; " \
  		"if test $board_name = A33515BB; then " \
-@@ -198,6 +211,9 @@
+@@ -198,6 +223,9 @@
  			"setenv fdtfile am335x-evmsk.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -437,5 +541,5 @@ index 2087eb1..94ea17c 100644
 -
  #endif	/* __CONFIG_TI_ARMV7_COMMON_H__ */
 -- 
-2.7.0.rc3
+2.7.0
 
