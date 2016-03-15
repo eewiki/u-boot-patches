@@ -1,15 +1,37 @@
-From ddbdb29ee297a8923e9bd310b3098a153f3cecda Mon Sep 17 00:00:00 2001
+From d78b7f00bca3b2423e26af3c7d5366240a4b2743 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 13 Oct 2014 12:01:06 -0500
+Date: Tue, 15 Mar 2016 09:05:15 -0500
 Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
+ drivers/mmc/fsl_esdhc.c   |   9 +--
  include/configs/mx51evk.h | 150 ++++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 132 insertions(+), 18 deletions(-)
+ 2 files changed, 133 insertions(+), 26 deletions(-)
 
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index ea5f4bf..f16e06d 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -249,15 +249,8 @@ static int esdhc_setup_data(struct mmc *mmc, struct mmc_data *data)
+ 	 * Rounding up to next power of 2
+ 	 * => timeout + 13 = log2(mmc->clock/4) + 1
+ 	 * => timeout + 13 = fls(mmc->clock/4)
+-	 *
+-	 * However, the MMC spec "It is strongly recommended for hosts to
+-	 * implement more than 500ms timeout value even if the card
+-	 * indicates the 250ms maximum busy length."  Even the previous
+-	 * value of 300ms is known to be insufficient for some cards.
+-	 * So, we use
+-	 * => timeout + 13 = fls(mmc->clock/2)
+ 	 */
+-	timeout = fls(mmc->clock/2);
++	timeout = fls(mmc->clock/4);
+ 	timeout -= 13;
+ 
+ 	if (timeout > 14)
 diff --git a/include/configs/mx51evk.h b/include/configs/mx51evk.h
-index d6e8ec4..1177df1 100644
+index 32cd58e..1e792b7 100644
 --- a/include/configs/mx51evk.h
 +++ b/include/configs/mx51evk.h
 @@ -80,6 +80,14 @@
@@ -27,7 +49,7 @@ index d6e8ec4..1177df1 100644
  /*
   * Eth Configs
   */
-@@ -143,24 +151,75 @@
+@@ -139,24 +147,75 @@
  #define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
  
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -111,7 +133,7 @@ index d6e8ec4..1177df1 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -199,19 +258,74 @@
+@@ -195,19 +254,74 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -197,5 +219,5 @@ index d6e8ec4..1177df1 100644
  #define CONFIG_ARP_TIMEOUT	200UL
  
 -- 
-2.1.1
+2.7.0
 
