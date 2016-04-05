@@ -1,6 +1,6 @@
-From ac04d6ea23a9de9bd20a2f11ba91350fa0268160 Mon Sep 17 00:00:00 2001
+From a497874051a766acea53da1dc7ff39ace5f5bd84 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 14 Mar 2016 15:07:51 -0500
+Date: Thu, 17 Mar 2016 16:12:01 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,9 +10,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/mux.c             |  18 ++-
  common/spl/spl.c                  |   8 ++
  configs/am335x_evm_defconfig      |   1 -
- include/configs/am335x_evm.h      |  58 ++++++---
+ include/configs/am335x_evm.h      |  60 ++++++---
  include/configs/ti_armv7_common.h | 255 +++++++++++++++++++++++++++++++++++++-
- 7 files changed, 352 insertions(+), 23 deletions(-)
+ 7 files changed, 354 insertions(+), 23 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index f56d17e..e5608ac 100644
@@ -167,7 +167,7 @@ index 7753ab5..8699953 100644
  CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
  CONFIG_AUTOBOOT_DELAY_STR="d"
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 6ebe0b3..396914b 100644
+index 6ebe0b3..b45c288 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -279,6 +279,15 @@ index 6ebe0b3..396914b 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
+@@ -471,6 +499,8 @@
+ #define CONFIG_PHY_GIGE
+ #define CONFIG_PHYLIB
+ #define CONFIG_PHY_SMSC
++#define CONFIG_PHY_ATHEROS
++#define CONFIG_PHY_VITESSE
+ 
+ /*
+  * NOR Size = 16 MiB
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 199612b..491f822 100644
 --- a/include/configs/ti_armv7_common.h
