@@ -70,9 +70,9 @@ index cbc7396..8b11400 100644
 +		"${cmdline}\0" \
 +	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 +	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
-+	"mmcboot=mmc dev ${mmcdev}; " \
-+		"if mmc rescan; then " \
++	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load ${interface} ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
++	"mmcboot=${interface} dev ${mmcdev}; " \
++		"if ${interface} rescan; then " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
