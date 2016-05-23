@@ -1,0 +1,174 @@
+From 1ce08192c4d304e003c7ae159f33865b55c6d50d Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Thu, 28 Apr 2016 16:51:27 -0500
+Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/vf610twr_defconfig |  2 ++
+ drivers/video/ipu_common.c |  2 +-
+ include/configs/vf610twr.h | 82 ++++++++++++++++++++++++++++++++++++----------
+ 3 files changed, 67 insertions(+), 19 deletions(-)
+
+diff --git a/configs/vf610twr_defconfig b/configs/vf610twr_defconfig
+index c014294..38310d6 100644
+--- a/configs/vf610twr_defconfig
++++ b/configs/vf610twr_defconfig
+@@ -16,6 +16,8 @@ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_MII=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_FAT=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_FS_GENERIC=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_DM=y
+ CONFIG_VYBRID_GPIO=y
+diff --git a/drivers/video/ipu_common.c b/drivers/video/ipu_common.c
+index 36d4b23..db50484 100644
+--- a/drivers/video/ipu_common.c
++++ b/drivers/video/ipu_common.c
+@@ -352,7 +352,7 @@ static int ipu_pixel_clk_set_rate(struct clk *clk, unsigned long rate)
+ 	 */
+ 	__raw_writel((div / 16) << 16, DI_BS_CLKGEN1(clk->id));
+ 
+-	clk->rate = (u64)(clk->parent->rate * 16) / div;
++	clk->rate = lldiv((u64)(clk->parent->rate * 16), div);
+ 
+ 	return 0;
+ }
+diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
+index b240613..8b804ec 100644
+--- a/include/configs/vf610twr.h
++++ b/include/configs/vf610twr.h
+@@ -79,6 +79,7 @@
+ 
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_DOS_PARTITION
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #define CONFIG_FEC_MXC
+ #define CONFIG_MII
+@@ -103,7 +104,7 @@
+ #define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+ #define CONFIG_SYS_SPD_BUS_NUM		0
+ 
+-#define CONFIG_BOOTDELAY		3
++#define CONFIG_BOOTDELAY		1
+ 
+ #define CONFIG_SYS_LOAD_ADDR		0x82000000
+ 
+@@ -134,13 +135,16 @@
+ 	MEM_LAYOUT_ENV_SETTINGS \
+ 	"script=boot.scr\0" \
+ 	"image=zImage\0" \
+-	"console=ttyLP1\0" \
++	"console=ttyLP1,115200\0" \
+ 	"fdt_file=vf610-twr.dtb\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+ 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
+ 	"mmcpart=1\0" \
+-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"optargs=\0" \
++	"cmdline=\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -155,15 +159,41 @@
+ 				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
+ 			"fi; "	\
+ 		"fi\0" \
+-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype}\0" \
++		"${cmdline}\0" \
+ 	"loadbootscript=" \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+-	"mmcboot=echo Booting from mmc ...; " \
++	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
++	"mmcboot=mmc dev ${mmcdev}; " \
++		"if mmc rescan; then " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdt_file ${dtb};" \
++						"echo Using: dtb=${fdt_file} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++	"mmcboot_old=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+@@ -201,19 +231,35 @@
+ 			"fi; " \
+ 		"else " \
+ 			"bootz; " \
++		"fi;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e mmc ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++						"run loadfdt;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"run mmcargs;" \
++			"echo debug: [${bootargs}] ... ;" \
++			"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
++			"bootz ${loadaddr} - ${fdt_addr}; " \
+ 		"fi;\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+-		   "if run loadbootscript; then " \
+-			   "run bootscript; " \
+-		   "else " \
+-			   "if run loadimage; then " \
+-				   "run mmcboot; " \
+-			   "else run netboot; " \
+-			   "fi; " \
+-		   "fi; " \
+-	   "else run netboot; fi"
++	   "run mmcboot;"
+ 
+ /* Miscellaneous configurable options */
+ #define CONFIG_SYS_LONGHELP		/* undef to save memory */
+-- 
+2.8.0.rc3
+
