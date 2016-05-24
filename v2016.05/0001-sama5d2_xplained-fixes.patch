@@ -1,6 +1,6 @@
-From 661e85630557c967ffc348a2b92795e4721793a1 Mon Sep 17 00:00:00 2001
+From d7803a5462e1b39e29c9d4451188699bcecd2c5c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 24 May 2016 13:44:03 -0500
+Date: Tue, 24 May 2016 14:02:21 -0500
 Subject: [PATCH] sama5d2_xplained fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -134,7 +134,7 @@ index 27a405a..c4ed224 100644
  		break;
  #endif
 diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
-index f9a8f6f..5318db6 100644
+index f9a8f6f..f344c52 100644
 --- a/include/configs/sama5d2_xplained.h
 +++ b/include/configs/sama5d2_xplained.h
 @@ -108,12 +108,12 @@
@@ -148,7 +148,7 @@ index f9a8f6f..5318db6 100644
  #undef CONFIG_BOOTARGS
  #define CONFIG_BOOTARGS \
 -	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
-+	"console=ttyS0,115200 root=/dev/mmcblk0p2 ro rootwait"
++	"console=ttyS0,115200 root=/dev/mmcblk1p2 ro rootwait"
  
  #endif
  
