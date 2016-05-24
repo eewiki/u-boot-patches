@@ -1,18 +1,143 @@
-From db8febb4874b73131477194e8d5fc791133480ec Mon Sep 17 00:00:00 2001
+From 661e85630557c967ffc348a2b92795e4721793a1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 1 Dec 2015 11:06:58 -0600
+Date: Tue, 24 May 2016 13:44:03 -0500
 Subject: [PATCH] sama5d2_xplained fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/sama5d2_xplained.h | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ arch/arm/mach-at91/Makefile               |  2 +-
+ arch/arm/mach-at91/bootparams_atmel.S     | 18 ++++++++++++++++
+ arch/arm/mach-at91/include/mach/sama5d2.h | 12 +++++++++++
+ arch/arm/mach-at91/spl.c                  | 36 +++++++++++++++++++++++++++++++
+ include/configs/sama5d2_xplained.h        |  4 ++--
+ 5 files changed, 69 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm/mach-at91/bootparams_atmel.S
 
+diff --git a/arch/arm/mach-at91/Makefile b/arch/arm/mach-at91/Makefile
+index 4424523..d2abf31 100644
+--- a/arch/arm/mach-at91/Makefile
++++ b/arch/arm/mach-at91/Makefile
+@@ -9,7 +9,7 @@ obj-$(CONFIG_AT91SAM9G20) += sdram.o spl_at91.o
+ obj-$(CONFIG_AT91SAM9M10G45) += mpddrc.o spl_at91.o
+ obj-$(CONFIG_AT91SAM9N12) += mpddrc.o spl_at91.o
+ obj-$(CONFIG_AT91SAM9X5) += mpddrc.o spl_at91.o
+-obj-$(CONFIG_SAMA5D2) += mpddrc.o spl_atmel.o matrix.o atmel_sfr.o
++obj-$(CONFIG_SAMA5D2) += bootparams_atmel.o mpddrc.o spl_atmel.o matrix.o atmel_sfr.o
+ obj-$(CONFIG_SAMA5D3) += mpddrc.o spl_atmel.o
+ obj-$(CONFIG_SAMA5D4) += mpddrc.o spl_atmel.o matrix.o atmel_sfr.o
+ obj-y += spl.o
+diff --git a/arch/arm/mach-at91/bootparams_atmel.S b/arch/arm/mach-at91/bootparams_atmel.S
+new file mode 100644
+index 0000000..568094b
+--- /dev/null
++++ b/arch/arm/mach-at91/bootparams_atmel.S
+@@ -0,0 +1,18 @@
++/*
++ * Atmel SAMA5Dx boot parameter handling
++ *
++ * Copyright (c) 2016 Marek Vasut <marex@denx.de>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <asm-offsets.h>
++#include <config.h>
++#include <asm/system.h>
++#include <linux/linkage.h>
++
++ENTRY(save_boot_params)
++	ldr	r0, =bootrom_stash
++	str	r4, [r0, #0]
++	b	save_boot_params_ret
++ENDPROC(save_boot_params)
+diff --git a/arch/arm/mach-at91/include/mach/sama5d2.h b/arch/arm/mach-at91/include/mach/sama5d2.h
+index dd5a2a7..e6d498c 100644
+--- a/arch/arm/mach-at91/include/mach/sama5d2.h
++++ b/arch/arm/mach-at91/include/mach/sama5d2.h
+@@ -225,6 +225,18 @@
+ /* No PMECC Galois table in ROM */
+ #define NO_GALOIS_TABLE_IN_ROM
+ 
++/* Boot modes stored by BootROM in r4 */
++#define ATMEL_SAMA5D2_BOOT_FROM_OFF	0
++#define ATMEL_SAMA5D2_BOOT_FROM_MASK	0xf
++#define ATMEL_SAMA5D2_BOOT_FROM_SPI	(0 << 0)
++#define ATMEL_SAMA5D2_BOOT_FROM_MCI	(1 << 0)
++#define ATMEL_SAMA5D2_BOOT_FROM_SMC	(2 << 0)
++#define ATMEL_SAMA5D2_BOOT_FROM_TWI	(3 << 0)
++#define ATMEL_SAMA5D2_BOOT_FROM_QSPI	(4 << 0)
++
++#define ATMEL_SAMA5D2_BOOT_DEV_ID_OFF	4
++#define ATMEL_SAMA5D2_BOOT_DEV_ID_MASK	0xf
++
+ #ifndef __ASSEMBLY__
+ unsigned int get_chip_id(void);
+ unsigned int get_extension_chip_id(void);
+diff --git a/arch/arm/mach-at91/spl.c b/arch/arm/mach-at91/spl.c
+index 27a405a..c4ed224 100644
+--- a/arch/arm/mach-at91/spl.c
++++ b/arch/arm/mach-at91/spl.c
+@@ -23,6 +23,40 @@ void at91_disable_wdt(void)
+ }
+ #endif
+ 
++#if defined(CONFIG_SAMA5D2)
++struct {
++	u32	r4;
++} bootrom_stash __attribute__((section(".data")));
++
++u32 spl_boot_device(void)
++{
++	u32 dev = (bootrom_stash.r4 >> ATMEL_SAMA5D2_BOOT_FROM_OFF) &
++		  ATMEL_SAMA5D2_BOOT_FROM_MASK;
++	u32 off = (bootrom_stash.r4 >> ATMEL_SAMA5D2_BOOT_DEV_ID_OFF) &
++		  ATMEL_SAMA5D2_BOOT_DEV_ID_MASK;
++
++#if defined(CONFIG_SYS_USE_MMC)
++	if (dev == ATMEL_SAMA5D2_BOOT_FROM_MCI) {
++		if (off == 0)
++			return BOOT_DEVICE_MMC1;
++		if (off == 1)
++			return BOOT_DEVICE_MMC2;
++		printf("ERROR: MMC controller %i not present!\n", dev);
++		hang();
++	}
++#endif
++
++#if defined(CONFIG_SYS_USE_SERIALFLASH) || defined(CONFIG_SYS_USE_SPIFLASH)
++	if (dev == ATMEL_SAMA5D2_BOOT_FROM_SPI)
++		return BOOT_DEVICE_SPI;
++#endif
++
++	printf("ERROR: SMC/TWI/QSPI boot device not supported!\n"
++	       "       Boot device %i, controller number %i\n", dev, off);
++
++	return BOOT_DEVICE_NONE;
++}
++#else
+ u32 spl_boot_device(void)
+ {
+ #ifdef CONFIG_SYS_USE_MMC
+@@ -34,12 +68,14 @@ u32 spl_boot_device(void)
+ #endif
+ 	return BOOT_DEVICE_NONE;
+ }
++#endif
+ 
+ u32 spl_boot_mode(void)
+ {
+ 	switch (spl_boot_device()) {
+ #ifdef CONFIG_SYS_USE_MMC
+ 	case BOOT_DEVICE_MMC1:
++	case BOOT_DEVICE_MMC2:
+ 		return MMCSD_MODE_FS;
+ 		break;
+ #endif
 diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
-index ae5ba3d..d2afa94 100644
+index f9a8f6f..5318db6 100644
 --- a/include/configs/sama5d2_xplained.h
 +++ b/include/configs/sama5d2_xplained.h
-@@ -110,12 +110,12 @@
+@@ -108,12 +108,12 @@
  #undef CONFIG_BOOTCOMMAND
  
  #define FAT_ENV_DEVICE_AND_PART	"1"
@@ -28,5 +153,5 @@ index ae5ba3d..d2afa94 100644
  #endif
  
 -- 
-2.6.2
+2.8.1
 
