@@ -1,6 +1,6 @@
-From d7803a5462e1b39e29c9d4451188699bcecd2c5c Mon Sep 17 00:00:00 2001
+From db9f77038a76c87bcaf49d4c0a6cf6de0bb423c1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 24 May 2016 14:02:21 -0500
+Date: Wed, 25 May 2016 13:10:43 -0500
 Subject: [PATCH] sama5d2_xplained fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,8 +9,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/mach-at91/bootparams_atmel.S     | 18 ++++++++++++++++
  arch/arm/mach-at91/include/mach/sama5d2.h | 12 +++++++++++
  arch/arm/mach-at91/spl.c                  | 36 +++++++++++++++++++++++++++++++
- include/configs/sama5d2_xplained.h        |  4 ++--
- 5 files changed, 69 insertions(+), 3 deletions(-)
+ configs/sama5d2_xplained_mmc_defconfig    |  4 ++++
+ include/configs/sama5d2_xplained.h        | 10 ++++-----
+ 6 files changed, 76 insertions(+), 6 deletions(-)
  create mode 100644 arch/arm/mach-at91/bootparams_atmel.S
 
 diff --git a/arch/arm/mach-at91/Makefile b/arch/arm/mach-at91/Makefile
@@ -133,25 +134,50 @@ index 27a405a..c4ed224 100644
  		return MMCSD_MODE_FS;
  		break;
  #endif
+diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
+index 7fd37d6..6cd7893 100644
+--- a/configs/sama5d2_xplained_mmc_defconfig
++++ b/configs/sama5d2_xplained_mmc_defconfig
+@@ -4,6 +4,10 @@ CONFIG_TARGET_SAMA5D2_XPLAINED=y
+ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
+ CONFIG_HUSH_PARSER=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_IMI is not set
+ # CONFIG_CMD_IMLS is not set
 diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
-index f9a8f6f..f344c52 100644
+index f9a8f6f..1695b48 100644
 --- a/include/configs/sama5d2_xplained.h
 +++ b/include/configs/sama5d2_xplained.h
-@@ -108,12 +108,12 @@
+@@ -102,19 +102,19 @@
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_PARTITION_UUIDS
++#define CONFIG_CMD_PART
+ 
+ /* bootstrap + u-boot + env in sd card */
+ #undef FAT_ENV_DEVICE_AND_PART
  #undef CONFIG_BOOTCOMMAND
  
  #define FAT_ENV_DEVICE_AND_PART	"1"
 -#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 at91-sama5d2_xplained.dtb; " \
-+#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 /dtbs/at91-sama5d2_xplained.dtb; " \
++#define CONFIG_BOOTCOMMAND	"part uuid mmc 1:2 partuuid; " \
++				"setenv bootargs console=ttyS0,115200 root=PARTUUID=${partuuid} ro rootwait; " \
++				"fatload mmc 1:1 0x21000000 /dtbs/at91-sama5d2_xplained.dtb; " \
  				"fatload mmc 1:1 0x22000000 zImage; " \
  				"bootz 0x22000000 - 0x21000000"
- #undef CONFIG_BOOTARGS
- #define CONFIG_BOOTARGS \
+-#undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS \
 -	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
-+	"console=ttyS0,115200 root=/dev/mmcblk1p2 ro rootwait"
- 
+-
  #endif
  
+ /* SPL */
 -- 
 2.8.1
 
