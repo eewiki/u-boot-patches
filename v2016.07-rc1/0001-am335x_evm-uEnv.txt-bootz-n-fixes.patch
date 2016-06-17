@@ -1,6 +1,6 @@
-From 879ebbe8529da61ec74319662c6d0bf88b900db3 Mon Sep 17 00:00:00 2001
+From 0d8edd2dc3f9e32b33cb42c3f0c681564c8bb255 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 17 Jun 2016 15:06:42 -0500
+Date: Fri, 17 Jun 2016 15:45:42 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -12,9 +12,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/mux.c                          |  17 +-
  common/spl/spl.c                               |   8 +
  configs/am335x_evm_defconfig                   |   7 +-
- include/configs/am335x_evm.h                   |  55 ++++-
+ include/configs/am335x_evm.h                   |  61 +++++-
  include/configs/ti_armv7_common.h              | 265 ++++++++++++++++++++++++-
- 9 files changed, 402 insertions(+), 22 deletions(-)
+ 9 files changed, 407 insertions(+), 23 deletions(-)
  create mode 100644 arch/arm/dts/am335x-boneblack-emmc-overlay.dts
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
@@ -234,7 +234,7 @@ index 696024c..840e7db 100644
 -CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
 +CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-boneblack-emmc-overlay am335x-icev2"
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index ba4c215..4cc2df3 100644
+index ba4c215..066c848 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -325,7 +325,19 @@ index ba4c215..4cc2df3 100644
  		"if test $board_name = A33515BB; then " \
  			"setenv fdtfile am335x-evm.dtb; fi; " \
  		"if test $board_name = A335X_SK; then " \
-@@ -180,6 +210,9 @@
+@@ -173,13 +203,20 @@
+ 		"if test $board_name = A335_ICE; then " \
+ 			"setenv fdtfile am335x-icev2.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+-			"echo WARNING: Could not determine device tree to use; fi; \0" \
++			"setenv board_name A335BNLT; " \
++			"setenv board_rev EMMC; " \
++			"setenv fdtbase am335x-boneblack-emmc-overlay; " \
++			"setenv fdtfile am335x-boneblack-emmc-overlay.dtb; " \
++		"fi; \0" \
+ 	"init_console=" \
+ 		"if test $board_name = A335_ICE; then "\
+ 			"setenv console ttyO3,115200n8;" \
  		"else " \
  			"setenv console ttyO0,115200n8;" \
  		"fi;\0" \
@@ -335,7 +347,7 @@ index ba4c215..4cc2df3 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -456,6 +489,8 @@
+@@ -456,6 +493,8 @@
  #define CONFIG_PHY_GIGE
  #define CONFIG_PHYLIB
  #define CONFIG_PHY_SMSC
