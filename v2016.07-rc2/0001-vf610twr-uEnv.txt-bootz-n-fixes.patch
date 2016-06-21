@@ -1,19 +1,19 @@
-From b04d9a4e5676639fed2a33ac493b6aa95f8ad4ef Mon Sep 17 00:00:00 2001
+From fc75cb6067ffbb9c71313eb579b67f4c44cc56b7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 17 Jun 2016 13:50:44 -0500
+Date: Tue, 21 Jun 2016 10:45:43 -0500
 Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/vf610twr_defconfig |  2 ++
- include/configs/vf610twr.h | 82 ++++++++++++++++++++++++++++++++++++----------
- 2 files changed, 66 insertions(+), 18 deletions(-)
+ include/configs/vf610twr.h | 80 ++++++++++++++++++++++++++++++++++++----------
+ 2 files changed, 65 insertions(+), 17 deletions(-)
 
 diff --git a/configs/vf610twr_defconfig b/configs/vf610twr_defconfig
-index c014294..38310d6 100644
+index 63a6ab9..4c8114a 100644
 --- a/configs/vf610twr_defconfig
 +++ b/configs/vf610twr_defconfig
-@@ -16,6 +16,8 @@ CONFIG_CMD_DHCP=y
+@@ -17,6 +17,8 @@ CONFIG_CMD_DHCP=y
  CONFIG_CMD_MII=y
  CONFIG_CMD_PING=y
  CONFIG_CMD_FAT=y
@@ -23,7 +23,7 @@ index c014294..38310d6 100644
  CONFIG_DM=y
  CONFIG_VYBRID_GPIO=y
 diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
-index b240613..8b804ec 100644
+index c4a1fd0..bc48b0f 100644
 --- a/include/configs/vf610twr.h
 +++ b/include/configs/vf610twr.h
 @@ -79,6 +79,7 @@
@@ -34,16 +34,7 @@ index b240613..8b804ec 100644
  
  #define CONFIG_FEC_MXC
  #define CONFIG_MII
-@@ -103,7 +104,7 @@
- #define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
- #define CONFIG_SYS_SPD_BUS_NUM		0
- 
--#define CONFIG_BOOTDELAY		3
-+#define CONFIG_BOOTDELAY		1
- 
- #define CONFIG_SYS_LOAD_ADDR		0x82000000
- 
-@@ -134,13 +135,16 @@
+@@ -133,13 +134,16 @@
  	MEM_LAYOUT_ENV_SETTINGS \
  	"script=boot.scr\0" \
  	"image=zImage\0" \
@@ -62,7 +53,7 @@ index b240613..8b804ec 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -155,15 +159,41 @@
+@@ -154,15 +158,41 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -109,7 +100,7 @@ index b240613..8b804ec 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -201,19 +231,35 @@
+@@ -200,19 +230,35 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
