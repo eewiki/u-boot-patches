@@ -1,18 +1,17 @@
-From 872c25ce5aebe5de9a15e73d09a356d6f564a208 Mon Sep 17 00:00:00 2001
+From bd0b1a9e03de18c1c402a80eba15ca3a2c049534 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 17 Jun 2016 16:40:44 -0500
+Date: Tue, 21 Jun 2016 10:35:08 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/omap4_panda_defconfig     |   6 +-
+ configs/omap4_panda_defconfig     |   5 +-
  include/configs/ti_armv7_common.h | 154 +++++++++++++++++++++++++++++++++++++-
- include/configs/ti_omap4_common.h |  17 +++--
- lib/tiny-printf.c                 |  57 +++++++++++---
- 4 files changed, 214 insertions(+), 20 deletions(-)
+ include/configs/ti_omap4_common.h |  18 +++--
+ 3 files changed, 168 insertions(+), 9 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index 406f0ac..95465e4 100644
+index 406f0ac..8f62717 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
 @@ -3,6 +3,10 @@ CONFIG_OMAP44XX=y
@@ -26,7 +25,7 @@ index 406f0ac..95465e4 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_ASKENV=y
-@@ -19,8 +23,8 @@ CONFIG_CMD_MII=y
+@@ -19,7 +23,6 @@ CONFIG_CMD_MII=y
  CONFIG_CMD_PING=y
  CONFIG_CMD_EXT2=y
  CONFIG_CMD_EXT4=y
@@ -34,8 +33,6 @@ index 406f0ac..95465e4 100644
  CONFIG_CMD_FAT=y
  CONFIG_CMD_FS_GENERIC=y
  CONFIG_SYS_NS16550=y
-+CONFIG_USE_TINY_PRINTF=y
- CONFIG_OF_LIBFDT=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 7db0881..1ad8fa8 100644
 --- a/include/configs/ti_armv7_common.h
@@ -211,20 +208,21 @@ index 7db0881..1ad8fa8 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 5fad3c1..e189151 100644
+index 5fad3c1..42a2d4f 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -45,7 +45,8 @@
+@@ -45,6 +45,10 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
--#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-+/* Yet another panda (A4) with "new" memory... */
-+/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
++/*
++ * Uncomment next line for:
++ * SDRAM: identified size not same as expected size identified: 0
++ */
+ #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
- #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
-@@ -83,9 +84,10 @@
+@@ -83,9 +87,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
  	"bootcmd_" #devtypel #instance "=" \
@@ -237,7 +235,7 @@ index 5fad3c1..e189151 100644
  
  #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
  	#devtypel #instance " "
-@@ -118,8 +120,8 @@
+@@ -118,8 +123,8 @@
  	"bootfile=zImage\0" \
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
@@ -248,7 +246,7 @@ index 5fad3c1..e189151 100644
  	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
  		"run args_mmc; " \
  		"if run loadimage; then " \
-@@ -142,7 +144,10 @@
+@@ -142,7 +147,10 @@
  			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -260,118 +258,6 @@ index 5fad3c1..e189151 100644
  	BOOTENV
  
  /*
-diff --git a/lib/tiny-printf.c b/lib/tiny-printf.c
-index a06abed..3c65fc9 100644
---- a/lib/tiny-printf.c
-+++ b/lib/tiny-printf.c
-@@ -16,6 +16,9 @@
- static char *bf;
- static char zs;
- 
-+/* Current position in sprintf() output string */
-+static char *outstr;
-+
- static void out(char c)
- {
- 	*bf++ = c;
-@@ -40,7 +43,7 @@ static void div_out(unsigned int *num, unsigned int div)
- 		out_dgt(dgt);
- }
- 
--int vprintf(const char *fmt, va_list va)
-+int _vprintf(const char *fmt, va_list va, void (*putc)(const char ch))
- {
- 	char ch;
- 	char *p;
-@@ -52,8 +55,8 @@ int vprintf(const char *fmt, va_list va)
- 		if (ch != '%') {
- 			putc(ch);
- 		} else {
--			char lz = 0;
--			char w = 0;
-+			bool lz = false;
-+			int width = 0;
- 
- 			ch = *(fmt++);
- 			if (ch == '0') {
-@@ -62,9 +65,9 @@ int vprintf(const char *fmt, va_list va)
- 			}
- 
- 			if (ch >= '0' && ch <= '9') {
--				w = 0;
-+				width = 0;
- 				while (ch >= '0' && ch <= '9') {
--					w = (w * 10) + ch - '0';
-+					width = (width * 10) + ch - '0';
- 					ch = *fmt++;
- 				}
- 			}
-@@ -73,7 +76,7 @@ int vprintf(const char *fmt, va_list va)
- 			zs = 0;
- 
- 			switch (ch) {
--			case 0:
-+			case '\0':
- 				goto abort;
- 			case 'u':
- 			case 'd':
-@@ -112,9 +115,9 @@ int vprintf(const char *fmt, va_list va)
- 
- 			*bf = 0;
- 			bf = p;
--			while (*bf++ && w > 0)
--				w--;
--			while (w-- > 0)
-+			while (*bf++ && width > 0)
-+				width--;
-+			while (width-- > 0)
- 				putc(lz ? '0' : ' ');
- 			if (p) {
- 				while ((ch = *p++))
-@@ -133,8 +136,42 @@ int printf(const char *fmt, ...)
- 	int ret;
- 
- 	va_start(va, fmt);
--	ret = vprintf(fmt, va);
-+	ret = _vprintf(fmt, va, putc);
-+	va_end(va);
-+
-+	return ret;
-+}
-+
-+static void putc_outstr(char ch)
-+{
-+	*outstr++ = ch;
-+}
-+
-+int sprintf(char *buf, const char *fmt, ...)
-+{
-+	va_list va;
-+	int ret;
-+
-+	va_start(va, fmt);
-+	outstr = buf;
-+	ret = _vprintf(fmt, va, putc_outstr);
-+	va_end(va);
-+	*outstr = '\0';
-+
-+	return ret;
-+}
-+
-+/* Note that size is ignored */
-+int snprintf(char *buf, size_t size, const char *fmt, ...)
-+{
-+	va_list va;
-+	int ret;
-+
-+	va_start(va, fmt);
-+	outstr = buf;
-+	ret = _vprintf(fmt, va, putc_outstr);
- 	va_end(va);
-+	*outstr = '\0';
- 
- 	return ret;
- }
 -- 
 2.8.1
 
