@@ -1,18 +1,18 @@
-From 22f802110190223a39a52c32b0a776c12e9ffa3d Mon Sep 17 00:00:00 2001
+From 2630cd867fefd0db771b5fa68aabddb57d119e59 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 28 Apr 2016 16:35:39 -0500
+Date: Tue, 21 Jun 2016 10:19:40 -0500
 Subject: [PATCH] de0_nano fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/socfpga_de0_nano_soc.h | 100 +++++++++++++++++++++++++++------
- 1 file changed, 84 insertions(+), 16 deletions(-)
+ include/configs/socfpga_de0_nano_soc.h | 98 ++++++++++++++++++++++++++++------
+ 1 file changed, 83 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/socfpga_de0_nano_soc.h b/include/configs/socfpga_de0_nano_soc.h
-index fdddfa3..741a1bd 100644
+index 6b9546e..c50066b 100644
 --- a/include/configs/socfpga_de0_nano_soc.h
 +++ b/include/configs/socfpga_de0_nano_soc.h
-@@ -13,15 +13,16 @@
+@@ -13,6 +13,7 @@
  #define CONFIG_DOS_PARTITION
  #define CONFIG_FAT_WRITE
  #define CONFIG_HW_WATCHDOG
@@ -20,10 +20,8 @@ index fdddfa3..741a1bd 100644
  
  /* Memory configurations */
  #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
- 
+@@ -20,7 +21,7 @@
  /* Booting Linux */
--#define CONFIG_BOOTDELAY	3
-+#define CONFIG_BOOTDELAY	1
  #define CONFIG_BOOTFILE		"fitImage"
  #define CONFIG_BOOTARGS		"console=ttyS0," __stringify(CONFIG_BAUDRATE)
 -#define CONFIG_BOOTCOMMAND	"run mmcload; run mmcboot"
@@ -31,7 +29,7 @@ index fdddfa3..741a1bd 100644
  #define CONFIG_LOADADDR		0x01000000
  #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
  
-@@ -35,20 +36,87 @@
+@@ -34,20 +35,87 @@
  
  /* Extra Environment */
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -134,5 +132,5 @@ index fdddfa3..741a1bd 100644
  /* The rest of the configuration is shared */
  #include <configs/socfpga_common.h>
 -- 
-2.8.0.rc3
+2.8.1
 
