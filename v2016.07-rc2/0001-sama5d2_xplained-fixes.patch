@@ -1,0 +1,58 @@
+From a4d7c180e30bbf5fd6efb40351e20197d38620a2 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Mon, 13 Jun 2016 12:08:41 -0500
+Subject: [PATCH] sama5d2_xplained fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/sama5d2_xplained_mmc_defconfig |  4 ++++
+ include/configs/sama5d2_xplained.h     | 10 +++++-----
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
+index 1880256..1c73285 100644
+--- a/configs/sama5d2_xplained_mmc_defconfig
++++ b/configs/sama5d2_xplained_mmc_defconfig
+@@ -4,6 +4,10 @@ CONFIG_TARGET_SAMA5D2_XPLAINED=y
+ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
+ CONFIG_HUSH_PARSER=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_IMI is not set
+ # CONFIG_CMD_IMLS is not set
+diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
+index f9a8f6f..1695b48 100644
+--- a/include/configs/sama5d2_xplained.h
++++ b/include/configs/sama5d2_xplained.h
+@@ -102,19 +102,19 @@
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
++#define CONFIG_PARTITION_UUIDS
++#define CONFIG_CMD_PART
+ 
+ /* bootstrap + u-boot + env in sd card */
+ #undef FAT_ENV_DEVICE_AND_PART
+ #undef CONFIG_BOOTCOMMAND
+ 
+ #define FAT_ENV_DEVICE_AND_PART	"1"
+-#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 at91-sama5d2_xplained.dtb; " \
++#define CONFIG_BOOTCOMMAND	"part uuid mmc 1:2 partuuid; " \
++				"setenv bootargs console=ttyS0,115200 root=PARTUUID=${partuuid} ro rootwait; " \
++				"fatload mmc 1:1 0x21000000 /dtbs/at91-sama5d2_xplained.dtb; " \
+ 				"fatload mmc 1:1 0x22000000 zImage; " \
+ 				"bootz 0x22000000 - 0x21000000"
+-#undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS \
+-	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
+-
+ #endif
+ 
+ /* SPL */
+-- 
+2.8.1
+
