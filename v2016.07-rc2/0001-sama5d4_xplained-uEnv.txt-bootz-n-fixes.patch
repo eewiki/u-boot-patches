@@ -1,6 +1,6 @@
-From 6a85df0efe0bd49ba366dd6db3639df395a1974a Mon Sep 17 00:00:00 2001
+From 96218726866029399e748b70ad5b188efe99c89c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 25 May 2016 13:57:50 -0500
+Date: Tue, 21 Jun 2016 09:56:33 -0500
 Subject: [PATCH] sama5d4_xplained: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,12 +10,12 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  2 files changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/configs/sama5d4_xplained_mmc_defconfig b/configs/sama5d4_xplained_mmc_defconfig
-index 1ea5cda..6b0d9d6 100644
+index 74e2087..6dc54cc 100644
 --- a/configs/sama5d4_xplained_mmc_defconfig
 +++ b/configs/sama5d4_xplained_mmc_defconfig
-@@ -4,6 +4,10 @@ CONFIG_TARGET_SAMA5D4_XPLAINED=y
- CONFIG_SPL=y
+@@ -6,6 +6,10 @@ CONFIG_FIT=y
  CONFIG_SYS_EXTRA_OPTIONS="SAMA5D4,SYS_USE_MMC"
+ CONFIG_BOOTDELAY=3
  CONFIG_HUSH_PARSER=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
@@ -25,10 +25,10 @@ index 1ea5cda..6b0d9d6 100644
  # CONFIG_CMD_IMI is not set
  # CONFIG_CMD_IMLS is not set
 diff --git a/include/configs/at91-sama5_common.h b/include/configs/at91-sama5_common.h
-index dc955b2..f9b5786 100644
+index 9257c5f..c514f63 100644
 --- a/include/configs/at91-sama5_common.h
 +++ b/include/configs/at91-sama5_common.h
-@@ -49,6 +49,8 @@
+@@ -48,6 +48,8 @@
   */
  
  #ifdef CONFIG_SYS_USE_MMC
@@ -37,7 +37,7 @@ index dc955b2..f9b5786 100644
  
  #ifdef CONFIG_ENV_IS_IN_MMC
  /* Use raw reserved sectors to save environment */
-@@ -68,12 +70,11 @@
+@@ -67,12 +69,11 @@
  #define CONFIG_BOOTCOMMAND	"if test ! -n ${dtb_name}; then "	\
  				    "setenv dtb_name at91-${board_name}.dtb; " \
  				"fi; "					\

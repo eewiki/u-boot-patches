@@ -1,6 +1,6 @@
-From a4d7c180e30bbf5fd6efb40351e20197d38620a2 Mon Sep 17 00:00:00 2001
+From ff6f6742691a8e84b2452891f2e0aa9fedc556e6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 13 Jun 2016 12:08:41 -0500
+Date: Tue, 21 Jun 2016 09:48:40 -0500
 Subject: [PATCH] sama5d2_xplained fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,12 +10,12 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  2 files changed, 9 insertions(+), 5 deletions(-)
 
 diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
-index 1880256..1c73285 100644
+index 9ca2a9c..33d4240 100644
 --- a/configs/sama5d2_xplained_mmc_defconfig
 +++ b/configs/sama5d2_xplained_mmc_defconfig
-@@ -4,6 +4,10 @@ CONFIG_TARGET_SAMA5D2_XPLAINED=y
- CONFIG_SPL=y
+@@ -6,6 +6,10 @@ CONFIG_FIT=y
  CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
+ CONFIG_BOOTDELAY=3
  CONFIG_HUSH_PARSER=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
