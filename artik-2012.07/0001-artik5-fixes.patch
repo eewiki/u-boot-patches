@@ -1,13 +1,13 @@
-From a946bcb95151b2c88cf8582176673f2c859b3eb6 Mon Sep 17 00:00:00 2001
+From 4282aa372cc9cbd87406cdeb777c0c76e511dc01 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 29 Jun 2016 15:14:12 -0500
+Date: Wed, 29 Jun 2016 16:44:55 -0500
 Subject: [PATCH] artik5 fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  include/configs/artik5.h       | 2 +-
- include/configs/artik_common.h | 7 ++++---
- 2 files changed, 5 insertions(+), 4 deletions(-)
+ include/configs/artik_common.h | 9 +++++----
+ 2 files changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/include/configs/artik5.h b/include/configs/artik5.h
 index 6918579..214112c 100755
@@ -23,7 +23,7 @@ index 6918579..214112c 100755
  /* Base address for secondary boot information */
  #define CONFIG_SECONDARY_BOOT_INFORM_BASE	(CONFIG_SYS_TEXT_BASE - 0x8)
 diff --git a/include/configs/artik_common.h b/include/configs/artik_common.h
-index 9aeb14c..7017531 100644
+index 9aeb14c..99fa1b2 100644
 --- a/include/configs/artik_common.h
 +++ b/include/configs/artik_common.h
 @@ -215,6 +215,7 @@
@@ -34,8 +34,12 @@ index 9aeb14c..7017531 100644
  
  #define CONFIG_OF_LIBFDT
  
-@@ -243,7 +244,7 @@
- #define CONFIG_ROOT_DEV		0
+@@ -240,10 +241,10 @@
+ #define CONFIG_MODULE_PART_SIZE		32
+ #define CONFIG_ROOTFS_PART_SIZE		3072
+ 
+-#define CONFIG_ROOT_DEV		0
++#define CONFIG_ROOT_DEV		1
  #define CONFIG_BOOT_PART	1
  #define CONFIG_MODULE_PART	2
 -#define CONFIG_ROOT_PART	3
