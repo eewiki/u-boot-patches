@@ -1,13 +1,13 @@
-From 1ebda7bd82d94e4ad40ef843737b92f93e5bc7dc Mon Sep 17 00:00:00 2001
+From a946bcb95151b2c88cf8582176673f2c859b3eb6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 21 Jun 2016 16:42:53 -0500
+Date: Wed, 29 Jun 2016 15:14:12 -0500
 Subject: [PATCH] artik5 fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  include/configs/artik5.h       | 2 +-
- include/configs/artik_common.h | 5 +++--
- 2 files changed, 4 insertions(+), 3 deletions(-)
+ include/configs/artik_common.h | 7 ++++---
+ 2 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/include/configs/artik5.h b/include/configs/artik5.h
 index 6918579..214112c 100755
@@ -23,7 +23,7 @@ index 6918579..214112c 100755
  /* Base address for secondary boot information */
  #define CONFIG_SECONDARY_BOOT_INFORM_BASE	(CONFIG_SYS_TEXT_BASE - 0x8)
 diff --git a/include/configs/artik_common.h b/include/configs/artik_common.h
-index 9aeb14c..7391ec2 100644
+index 9aeb14c..7017531 100644
 --- a/include/configs/artik_common.h
 +++ b/include/configs/artik_common.h
 @@ -215,6 +215,7 @@
@@ -43,15 +43,17 @@ index 9aeb14c..7391ec2 100644
  
  #define PARTS_DEFAULT							\
  	"uuid_disk=${uuid_gpt_disk};"					\
-@@ -284,7 +285,7 @@
+@@ -284,8 +285,8 @@
  	"rootdev=" __stringify(CONFIG_ROOT_DEV) "\0"			\
  	"rootpart=" __stringify(CONFIG_ROOT_PART) "\0"			\
  	"bootpart=" __stringify(CONFIG_BOOT_PART) "\0"			\
 -	"root_rw=rw\0"							\
+-	"opts=loglevel=4\0"						\
 +	"root_rw=rootwait ro\0"						\
- 	"opts=loglevel=4\0"						\
++	"opts=\0"						\
  	"fdtfile=" CONFIG_FDT_FILE "\0"					\
  	"kernel_file=zImage\0"						\
+ 	"kernel_addr=40008000\0"					\
 -- 
 2.8.1
 
