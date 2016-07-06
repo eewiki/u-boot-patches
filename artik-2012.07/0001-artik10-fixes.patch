@@ -1,0 +1,63 @@
+From 3ca589de26f532e9350da5e365a702745ed0e384 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 6 Jul 2016 12:06:49 -0500
+Subject: [PATCH] artik10 fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/artik10.h      | 2 +-
+ include/configs/artik_common.h | 9 +++++----
+ 2 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/include/configs/artik10.h b/include/configs/artik10.h
+index b0e697d..8b6fdfb 100644
+--- a/include/configs/artik10.h
++++ b/include/configs/artik10.h
+@@ -145,7 +145,7 @@
+ 
+ #define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR - 0x1000000)
+ 
+-#define CONFIG_FDT_FILE		"exynos5422-artik10.dtb"
++#define CONFIG_FDT_FILE		"/dtbs/exynos5422-artik10-eval.dtb"
+ 
+ /* Base address for secondary boot information */
+ #define CONFIG_SECONDARY_BOOT_INFORM_BASE	(CONFIG_SYS_TEXT_BASE - 0x8)
+diff --git a/include/configs/artik_common.h b/include/configs/artik_common.h
+index 9aeb14c..99fa1b2 100644
+--- a/include/configs/artik_common.h
++++ b/include/configs/artik_common.h
+@@ -215,6 +215,7 @@
+ #define CONFIG_CMD_MOVI
+ #define CONFIG_CMD_MOVINAND
+ #define CONFIG_CMD_BOOTZ
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ #define CONFIG_OF_LIBFDT
+ 
+@@ -240,10 +241,10 @@
+ #define CONFIG_MODULE_PART_SIZE		32
+ #define CONFIG_ROOTFS_PART_SIZE		3072
+ 
+-#define CONFIG_ROOT_DEV		0
++#define CONFIG_ROOT_DEV		1
+ #define CONFIG_BOOT_PART	1
+ #define CONFIG_MODULE_PART	2
+-#define CONFIG_ROOT_PART	3
++#define CONFIG_ROOT_PART	2
+ 
+ #define PARTS_DEFAULT							\
+ 	"uuid_disk=${uuid_gpt_disk};"					\
+@@ -284,8 +285,8 @@
+ 	"rootdev=" __stringify(CONFIG_ROOT_DEV) "\0"			\
+ 	"rootpart=" __stringify(CONFIG_ROOT_PART) "\0"			\
+ 	"bootpart=" __stringify(CONFIG_BOOT_PART) "\0"			\
+-	"root_rw=rw\0"							\
+-	"opts=loglevel=4\0"						\
++	"root_rw=rootwait ro\0"						\
++	"opts=\0"						\
+ 	"fdtfile=" CONFIG_FDT_FILE "\0"					\
+ 	"kernel_file=zImage\0"						\
+ 	"kernel_addr=40008000\0"					\
+-- 
+2.8.1
+
