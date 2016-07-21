@@ -1,0 +1,105 @@
+From 0be2ef2815f039f2e3af2884c1b345abda905855 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 8 Jun 2016 16:54:55 -0500
+Subject: [PATCH] at91sam9x5ek: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/at91sam9x5ek_mmc_defconfig |  3 ++
+ include/configs/at91sam9x5ek.h     | 58 ++++++++++++++++++++++++++++++--------
+ 2 files changed, 49 insertions(+), 12 deletions(-)
+
+diff --git a/configs/at91sam9x5ek_mmc_defconfig b/configs/at91sam9x5ek_mmc_defconfig
+index db501c5..898ed04 100644
+--- a/configs/at91sam9x5ek_mmc_defconfig
++++ b/configs/at91sam9x5ek_mmc_defconfig
+@@ -15,7 +15,10 @@ CONFIG_CMD_USB=y
+ # CONFIG_CMD_SETEXPR is not set
+ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_PING=y
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
+ CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
+ CONFIG_SPI_FLASH=y
+ CONFIG_SPI_FLASH_ATMEL=y
+ CONFIG_OF_LIBFDT=y
+diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
+index 251094e..b9cb2f9 100644
+--- a/include/configs/at91sam9x5ek.h
++++ b/include/configs/at91sam9x5ek.h
+@@ -119,6 +119,7 @@
+ #define CONFIG_MMC
+ #define CONFIG_GENERIC_MMC
+ #define CONFIG_GENERIC_ATMEL_MCI
++#define CONFIG_SUPPORT_RAW_INITRD
+ #endif
+ 
+ /* FAT */
+@@ -194,18 +195,51 @@
+ #endif
+ 
+ #ifdef CONFIG_SYS_USE_MMC
+-#define CONFIG_BOOTARGS		"mem=128M console=ttyS0,115200 " \
+-				"mtdparts=atmel_nand:" \
+-				"8M(bootstrap/uboot/kernel)ro,-(rootfs) " \
+-				"root=/dev/mmcblk0p2 " \
+-				"rw rootfstype=ext4 rootwait"
+-#else
+-#define CONFIG_BOOTARGS							\
+-	"console=ttyS0,115200 earlyprintk "				\
+-	"mtdparts=atmel_nand:256k(bootstrap)ro,512k(uboot)ro,"		\
+-	"256k(env),256k(env_redundant),256k(spare),"			\
+-	"512k(dtb),6M(kernel)ro,-(rootfs) "				\
+-	"rootfstype=ubifs ubi.mtd=7 root=ubi0:rootfs rw"
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
++	"loadaddr=0x22000000\0" \
++	"fdtaddr=0x27FF0000\0" \
++	"fdtfile=/dtbs/at91sam9g25ek.dtb\0" \
++	"console=ttyS0,115200n8\0" \
++	"optargs=\0" \
++	"video=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"video=${video}\0" \
++	"loadbootenv=load mmc ${mmcdev}:${mmcpart} ${loadaddr} uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
++	"loadzimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} zImage\0" \
++	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdtaddr} ${fdtfile}\0" \
++	"mmcboot=echo Booting from mmc ...; " \
++		"run mmcargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0"
++
++#define CONFIG_BOOTCOMMAND \
++	"mmc dev ${mmcdev};" \
++	"if mmc rescan; then " \
++		"echo SD/MMC found on device ${mmcdev};" \
++		"if run loadbootenv; then " \
++			"run importbootenv;" \
++		"fi;" \
++		"echo Checking if uenvcmd is set ...;" \
++		"if test -n $uenvcmd; then " \
++			"echo Running uenvcmd ...;" \
++			"run uenvcmd;" \
++		"fi;" \
++		"echo Running default loadzimage ...;" \
++		"if run loadzimage; then " \
++			"run loadfdt;" \
++			"run mmcboot;" \
++		"fi;" \
++	"fi;"
+ #endif
+ 
+ #define CONFIG_BAUDRATE		115200
+-- 
+2.8.1
+
