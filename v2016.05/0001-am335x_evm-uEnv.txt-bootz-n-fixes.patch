@@ -1,18 +1,18 @@
-From a9b283c017183afc70a9fddf0bc2f95c3084532c Mon Sep 17 00:00:00 2001
+From 0069f1471c0d8f62ada69f4afc00342207070ba7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 27 May 2016 12:23:06 -0500
+Date: Fri, 5 Aug 2016 16:21:19 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/am335x/board.c           |  22 +++-
  board/ti/am335x/board.h           |   5 +
- board/ti/am335x/mux.c             |  17 ++-
+ board/ti/am335x/mux.c             |   9 +-
  common/spl/spl.c                  |   8 ++
  configs/am335x_evm_defconfig      |   1 -
- include/configs/am335x_evm.h      |  55 ++++++--
+ include/configs/am335x_evm.h      |  59 +++++++--
  include/configs/ti_armv7_common.h | 265 +++++++++++++++++++++++++++++++++++++-
- 7 files changed, 352 insertions(+), 21 deletions(-)
+ 7 files changed, 348 insertions(+), 21 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index 4330be6..0a8979e 100644
@@ -78,24 +78,10 @@ index 062c345..6ed163c 100644
  {
  	return board_ti_is("A335X_SK");
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index fdf827f..44b78b0 100644
+index fdf827f..9a26095 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
-@@ -237,6 +237,13 @@ static struct module_pin_mux bone_norcape_pin_mux[] = {
- };
- #endif
- 
-+static struct module_pin_mux bbb_p9_15_pin_mux[] = {
-+	/* P9.15 shared pin */
-+	{OFFSET(gpmc_a0), MODE(0) | PULLUDDIS},
-+	{OFFSET(gpmc_csn3), (MODE(3) | RXACTIVE | PULLUP_EN)},
-+	{-1},
-+};
-+
- #if defined(CONFIG_NOR_BOOT)
- void enable_norboot_pin_mux(void)
- {
-@@ -356,7 +363,14 @@ void enable_board_pin_mux(void)
+@@ -356,7 +356,14 @@ void enable_board_pin_mux(void)
  		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
  	} else if (board_is_bone_lt()) {
  		/* Beaglebone LT pinmux */
@@ -111,14 +97,6 @@ index fdf827f..44b78b0 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
  		configure_module_pin_mux(nand_pin_mux);
-@@ -364,6 +378,7 @@ void enable_board_pin_mux(void)
- 		configure_module_pin_mux(bone_norcape_pin_mux);
- #else
- 		configure_module_pin_mux(mmc1_pin_mux);
-+		configure_module_pin_mux(bbb_p9_15_pin_mux);
- #endif
- 	} else {
- 		puts("Unknown board, cannot configure pinmux.");
 diff --git a/common/spl/spl.c b/common/spl/spl.c
 index 82e7f58..6a226c5 100644
 --- a/common/spl/spl.c
@@ -151,7 +129,7 @@ index 62f26b5..55ff115 100644
  CONFIG_AUTOBOOT_KEYED=y
  CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 16935a1..96edf3a 100644
+index 16935a1..0223f84 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -206,7 +184,7 @@ index 16935a1..96edf3a 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"run envboot; " \
  			"if run loadimage; then " \
-@@ -160,17 +169,41 @@
+@@ -160,17 +169,45 @@
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
  		"if test $board_name = A335BONE; then " \
@@ -232,6 +210,10 @@ index 16935a1..96edf3a 100644
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 +			"elif test $board_rev = GH01; then " \
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++			"elif test $board_rev = BWA0; then " \
++				"setenv fdtfile am335x-boneblack-wireless.dtb; setenv fdtbase am335x-boneblack-wireless; " \
++			"elif test $board_rev = BWA3; then " \
++				"setenv fdtfile am335x-boneblack-wireless.dtb; setenv fdtbase am335x-boneblack-wireless; " \
 +			"else " \
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 +			"fi; " \
@@ -251,7 +233,7 @@ index 16935a1..96edf3a 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -432,6 +465,8 @@
+@@ -432,6 +469,8 @@
  #define CONFIG_PHY_GIGE
  #define CONFIG_PHYLIB
  #define CONFIG_PHY_SMSC
