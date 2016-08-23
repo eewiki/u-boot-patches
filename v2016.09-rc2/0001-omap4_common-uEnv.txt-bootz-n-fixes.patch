@@ -1,17 +1,17 @@
-From 471c6f0b36291f5014f4347b935883ccf8a8ad75 Mon Sep 17 00:00:00 2001
+From 520e2862bc0892769a7a75852a6c29768caad1c9 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 17 Jun 2016 16:44:55 -0500
+Date: Tue, 23 Aug 2016 13:25:46 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/omap4_panda_defconfig     |   6 +-
+ configs/omap4_panda_defconfig     |   5 +-
  include/configs/ti_armv7_common.h | 154 +++++++++++++++++++++++++++++++++++++-
- include/configs/ti_omap4_common.h |  17 +++--
- 3 files changed, 167 insertions(+), 10 deletions(-)
+ include/configs/ti_omap4_common.h |  15 ++--
+ 3 files changed, 165 insertions(+), 9 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index 406f0ac..95465e4 100644
+index 406f0ac..8f62717 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
 @@ -3,6 +3,10 @@ CONFIG_OMAP44XX=y
@@ -25,7 +25,7 @@ index 406f0ac..95465e4 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_ASKENV=y
-@@ -19,8 +23,8 @@ CONFIG_CMD_MII=y
+@@ -19,7 +23,6 @@ CONFIG_CMD_MII=y
  CONFIG_CMD_PING=y
  CONFIG_CMD_EXT2=y
  CONFIG_CMD_EXT4=y
@@ -33,10 +33,8 @@ index 406f0ac..95465e4 100644
  CONFIG_CMD_FAT=y
  CONFIG_CMD_FS_GENERIC=y
  CONFIG_SYS_NS16550=y
-+CONFIG_USE_TINY_PRINTF=y
- CONFIG_OF_LIBFDT=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index ba7cf15..1ad8fa8 100644
+index 9f947ee..733e46a 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -59,11 +59,33 @@
@@ -210,19 +208,17 @@ index ba7cf15..1ad8fa8 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 5fad3c1..e189151 100644
+index 5fad3c1..368e1f9 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -45,7 +45,8 @@
+@@ -45,6 +45,7 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
--#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-+/* Yet another panda (A4) with "new" memory... */
-+/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
++/* Comment out next line for ES Rev B3 or A4 with new "M" Micron memory... */
+ #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
- #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
 @@ -83,9 +84,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
@@ -260,5 +256,5 @@ index 5fad3c1..e189151 100644
  
  /*
 -- 
-2.8.1
+2.9.3
 
