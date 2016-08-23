@@ -1,6 +1,6 @@
-From 8991e3ff363adb90c1292af3f665fb24f22b02a7 Mon Sep 17 00:00:00 2001
+From 77aba2c3d5a52222b9a334b0f699eac182e65e47 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 5 Aug 2016 16:25:22 -0500
+Date: Tue, 23 Aug 2016 11:46:20 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -18,10 +18,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  create mode 100644 arch/arm/dts/am335x-boneblack-emmc-overlay.dts
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index ef573ec..9686f48 100644
+index 223124e..aa3a5fe 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -100,6 +100,7 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += \
+@@ -106,6 +106,7 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += \
  	zynqmp-zc1751-xm018-dc4.dtb		\
  	zynqmp-zc1751-xm019-dc5.dtb
  dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb am335x-bone.dtb \
@@ -170,10 +170,10 @@ index 8afa5f9..466ee08 100644
  #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
  		configure_module_pin_mux(nand_pin_mux);
 diff --git a/common/spl/spl.c b/common/spl/spl.c
-index 840910a..a35daf9 100644
+index b7ec333..9c8485b 100644
 --- a/common/spl/spl.c
 +++ b/common/spl/spl.c
-@@ -507,6 +507,14 @@ ulong spl_relocate_stack_gd(void)
+@@ -536,6 +536,14 @@ ulong spl_relocate_stack_gd(void)
  #if !defined(CONFIG_ARM)
  	gd = new_gd;
  #endif
@@ -189,7 +189,7 @@ index 840910a..a35daf9 100644
  #else
  	return 0;
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 696024c..840e7db 100644
+index 6885230..176b54b 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
 @@ -4,8 +4,11 @@ CONFIG_SPL_STACK_R_ADDR=0x82000000
@@ -205,12 +205,13 @@ index 696024c..840e7db 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_ASKENV=y
-@@ -48,4 +51,4 @@ CONFIG_RSA=y
+@@ -48,5 +51,5 @@ CONFIG_RSA=y
  CONFIG_FIT=y
  CONFIG_SPL_OF_LIBFDT=y
  CONFIG_SPL_LOAD_FIT=y
 -CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
 +CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-boneblack-emmc-overlay am335x-icev2"
+ CONFIG_DM_I2C=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
 index ba4c215..67f15ec 100644
 --- a/include/configs/am335x_evm.h
@@ -339,7 +340,7 @@ index ba4c215..67f15ec 100644
  /*
   * NOR Size = 16 MiB
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index ba7cf15..4e410ff 100644
+index 9f947ee..5700140 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -59,18 +59,50 @@
@@ -627,5 +628,5 @@ index ba7cf15..4e410ff 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 -- 
-2.8.1
+2.9.3
 
