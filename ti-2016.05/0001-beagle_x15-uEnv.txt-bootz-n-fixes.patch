@@ -1,6 +1,6 @@
-From c08b86bae69a6ddccebde73b86333e3bdc21d34b Mon Sep 17 00:00:00 2001
+From 80549e3b37432990bf6d2694ac96dd5101952e3c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 29 Jun 2016 15:48:19 -0500
+Date: Tue, 23 Aug 2016 11:52:22 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -80,7 +80,7 @@ index aee02f1..1012c2e 100644
  	{MDIO_D, (M0 | PIN_INPUT_PULLUP)},	/* mdio_d.mdio_d */
  	{RMII_MHZ_50_CLK, (M14 | PIN_INPUT_PULLUP)},	/* RMII_MHZ_50_CLK.gpio5_17 */
 diff --git a/configs/am57xx_evm_nodt_defconfig b/configs/am57xx_evm_nodt_defconfig
-index 9fdb019..b8ce575 100644
+index da6876b..5433c83 100644
 --- a/configs/am57xx_evm_nodt_defconfig
 +++ b/configs/am57xx_evm_nodt_defconfig
 @@ -2,6 +2,10 @@ CONFIG_ARM=y
@@ -95,7 +95,7 @@ index 9fdb019..b8ce575 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 73dd755..e4a6026 100644
+index 83bd661..36ccdbb 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -59,20 +59,42 @@
@@ -360,10 +360,10 @@ index 73dd755..e4a6026 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 201865f..6aabfec 100644
+index 90bb5b4..66c2e10 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -84,9 +84,9 @@
+@@ -83,9 +83,9 @@
  	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
@@ -376,8 +376,8 @@ index 201865f..6aabfec 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadimage; then " \
  				"run loadfdt; " \
-@@ -120,23 +120,26 @@
- 			"setenv fdtfile am571x-idk-lcd-osd.dtb; fi;" \
+@@ -125,23 +125,26 @@
+ 			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 -	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
@@ -412,8 +412,8 @@ index 201865f..6aabfec 100644
 -	"run mmcboot;" \
 +	"run mmc_boot;" \
  	""
- #endif
  
+ /*
 -- 
-2.8.1
+2.9.3
 
