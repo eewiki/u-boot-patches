@@ -1,20 +1,20 @@
-From b15a4ad309c11d085f3c14fd072e9fe49203cbdf Mon Sep 17 00:00:00 2001
+From 325f05e3a7180b90ba7b7480b131de79b4d65c16 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 23 Aug 2016 15:09:10 -0500
+Date: Mon, 29 Aug 2016 21:15:17 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/dts/Makefile                          |   1 +
  arch/arm/dts/am335x-boneblack-emmc-overlay.dts |  42 ++++
- board/ti/am335x/board.c                        |  24 ++-
- board/ti/am335x/board.h                        |   5 +
+ board/ti/am335x/board.c                        |  26 ++-
+ board/ti/am335x/board.h                        |  10 +
  board/ti/am335x/mux.c                          |   9 +-
  common/spl/spl.c                               |   8 +
  configs/am335x_evm_defconfig                   |   8 +-
  include/configs/am335x_evm.h                   |  65 +++++-
  include/configs/ti_armv7_common.h              | 265 ++++++++++++++++++++++++-
- 9 files changed, 404 insertions(+), 23 deletions(-)
+ 9 files changed, 411 insertions(+), 23 deletions(-)
  create mode 100644 arch/arm/dts/am335x-boneblack-emmc-overlay.dts
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
@@ -78,7 +78,7 @@ index 0000000..82e1d37
 +	system-power-controller;
 +};
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 56f4984..cbbce12 100644
+index 56f4984..7d9f519 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -539,6 +539,24 @@ static struct clk_synth cdce913_data = {
@@ -111,7 +111,7 @@ index 56f4984..cbbce12 100644
  		puts("Could not get board ID.\n");
  
 -	if (board_is_bone() || board_is_bone_lt() ||
-+	if (board_is_bone() || (board_is_bone_lt() && !board_is_bone_lt_enhanced()) ||
++	if (board_is_bone() || (board_is_bone_lt() && !board_is_bone_lt_enhanced() && !board_is_m10a()) ||
  	    board_is_idk()) {
  		writel(MII_MODE_ENABLE, &cdev->miisel);
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
@@ -120,24 +120,26 @@ index 56f4984..cbbce12 100644
  #define AR8051_RGMII_TX_CLK_DLY		0x100
  
 -	if (board_is_evm_sk() || board_is_gp_evm()) {
-+	if (board_is_evm_sk() || board_is_gp_evm() || board_is_bone_lt_enhanced()) {
++	if (board_is_evm_sk() || board_is_gp_evm() || board_is_bone_lt_enhanced() || board_is_m10a()) {
  		const char *devname;
  		devname = miiphy_get_current_dev();
  
-@@ -765,6 +783,8 @@ int board_fit_config_name_match(const char *name)
+@@ -765,6 +783,10 @@ int board_fit_config_name_match(const char *name)
  		return 0;
  	else if (board_is_bone_lt() && !strcmp(name, "am335x-boneblack"))
  		return 0;
++	else if (board_is_m10a() && !strcmp(name, "am335x-boneblack"))
++		return 0;
 +	else if (board_is_bone_lt_enhanced() && !strcmp(name, "am335x-boneblack"))
 +		return 0;
  	else if (board_is_evm_sk() && !strcmp(name, "am335x-evmsk"))
  		return 0;
  	else if (board_is_bbg1() && !strcmp(name, "am335x-bonegreen"))
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 9776df7..cded779 100644
+index 9776df7..17d00c3 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
-@@ -26,6 +26,11 @@ static inline int board_is_bbg1(void)
+@@ -26,6 +26,16 @@ static inline int board_is_bbg1(void)
  	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BBG1", 4);
  }
  
@@ -146,11 +148,16 @@ index 9776df7..cded779 100644
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "SE0A", 4);
 +}
 +
++static inline int board_is_m10a(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "M10A", 4);
++}
++
  static inline int board_is_evm_sk(void)
  {
  	return board_ti_is("A335X_SK");
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 8afa5f9..466ee08 100644
+index 8afa5f9..aef5806 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
 @@ -381,7 +381,14 @@ void enable_board_pin_mux(void)
@@ -158,7 +165,7 @@ index 8afa5f9..466ee08 100644
  	} else if (board_is_bone_lt()) {
  		/* Beaglebone LT pinmux */
 -		configure_module_pin_mux(mii1_pin_mux);
-+		if(board_is_bone_lt_enhanced()) {
++		if(board_is_bone_lt_enhanced() || board_is_m10a()) {
 +			/* SanCloud Beaglebone LT Enhanced pinmux */
 +			configure_module_pin_mux(rgmii1_pin_mux);
 +		}
@@ -219,7 +226,7 @@ index 6885230..82c1f19 100644
 +CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-boneblack-emmc-overlay am335x-icev2"
  CONFIG_DM_I2C=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index ba4c215..67f15ec 100644
+index ba4c215..6a4351a 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -17,6 +17,7 @@
@@ -297,7 +304,7 @@ index ba4c215..67f15ec 100644
 +			"elif test $board_rev = ME06; then " \
 +				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
 +			"elif test $board_rev = M10A; then " \
-+				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++				"setenv fdtfile am335x-vsc8531bbb.dtb; setenv fdtbase am335x-vsc8531bbb; " \
 +			"elif test $board_rev = GH01; then " \
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 +			"elif test $board_rev = BWA0; then " \
