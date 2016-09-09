@@ -1,15 +1,15 @@
-From 80549e3b37432990bf6d2694ac96dd5101952e3c Mon Sep 17 00:00:00 2001
+From d4176e56733f6c1c6c089de0c6cd4c1db8062663 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 23 Aug 2016 11:52:22 -0500
+Date: Fri, 9 Sep 2016 14:16:51 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/am57xx/mux_data.h        |  56 ++++-----
  configs/am57xx_evm_nodt_defconfig |   4 +
- include/configs/ti_armv7_common.h | 242 ++++++++++++++++++++++++++++++++++++--
- include/configs/ti_omap5_common.h |  31 ++---
- 4 files changed, 282 insertions(+), 51 deletions(-)
+ include/configs/ti_armv7_common.h | 247 ++++++++++++++++++++++++++++++++++++--
+ include/configs/ti_omap5_common.h |  25 ++--
+ 4 files changed, 280 insertions(+), 52 deletions(-)
 
 diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
 index aee02f1..1012c2e 100644
@@ -95,10 +95,10 @@ index da6876b..5433c83 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 83bd661..36ccdbb 100644
+index 4730d86..b31c11d 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -59,20 +59,42 @@
+@@ -60,22 +60,45 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -142,17 +142,22 @@ index 83bd661..36ccdbb 100644
 +	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
  		"env import -t ${loadaddr} ${filesize}\0" \
 -	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
+-	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
 -	"envboot=mmc dev ${mmcdev}; " \
 -		"if mmc rescan; then " \
 +	"loadbootenv=fatload ${interface} ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	"envboot=${interface} dev ${mmcdev}; " \
 +		"if ${interface} rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadbootscript; then " \
  				"run bootscript;" \
-@@ -88,6 +110,208 @@
- 			"fi;" \
- 		"fi;\0" \
+@@ -127,6 +150,208 @@
+ 	"loadfit=run args_fit; bootm ${loadaddr}:kernel@1 " \
+ 		"${loadaddr}:ramdisk@1 ${loadaddr}:${fdtfile};\0" \
  
 +#define EEWIKI_MMC_BOOT \
 +	"mmc_boot=${interface} dev ${mmcdev}; " \
@@ -360,29 +365,13 @@ index 83bd661..36ccdbb 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 90bb5b4..66c2e10 100644
+index 0f7e053..364417f 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -83,9 +83,9 @@
- 	"loadbootscript=fatload mmc ${mmcdev} ${loadaddr} boot.scr\0" \
- 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
- 		"source ${loadaddr}\0" \
--	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
--	"mmcboot=mmc dev ${mmcdev}; " \
--		"if mmc rescan; then " \
-+	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"mmcboot=${interface} dev ${mmcdev}; " \
-+		"if ${interface} rescan; then " \
- 			"echo SD/MMC found on device ${mmcdev};" \
- 			"if run loadimage; then " \
- 				"run loadfdt; " \
-@@ -125,23 +125,26 @@
+@@ -111,25 +111,24 @@
  			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
--	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile};\0" \
-+	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
 +	EEWIKI_USB_BOOT \
 +	EEWIKI_SCSI_BOOT \
 +	EEWIKI_MMC_BOOT \
@@ -396,6 +385,9 @@ index 90bb5b4..66c2e10 100644
 -		"setenv dofastboot 0; saveenv;" \
 -		"echo Booting into fastboot ...; fastboot 0;" \
 -	"fi;" \
+-	"if test ${boot_fit} -eq 1; then "	\
+-		"run update_to_fit;"	\
+-	"fi;"	\
  	"run findfdt; " \
 -	"run envboot; " \
 -	"run mmcboot;" \
