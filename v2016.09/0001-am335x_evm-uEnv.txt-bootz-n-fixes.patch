@@ -1,6 +1,6 @@
-From e169c085489cb1950b511b0c5036d7fe49d6e1a8 Mon Sep 17 00:00:00 2001
+From b88da24ce25bb297fa9736d53df69ca9c6544f4c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 12 Sep 2016 12:06:03 -0500
+Date: Tue, 20 Sep 2016 13:12:11 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -19,10 +19,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.h                        |  15 ++
  board/ti/am335x/mux.c                          |   9 +-
  configs/am335x_boneblack_defconfig             |   1 -
- configs/am335x_evm_defconfig                   |  11 +-
+ configs/am335x_evm_defconfig                   |  19 +-
  include/configs/am335x_evm.h                   |  73 +++++--
  include/configs/ti_armv7_common.h              | 265 ++++++++++++++++++++++++-
- 17 files changed, 792 insertions(+), 123 deletions(-)
+ 17 files changed, 791 insertions(+), 132 deletions(-)
  create mode 100644 arch/arm/dts/am335x-bone-common_mii.dtsi
  create mode 100644 arch/arm/dts/am335x-bone-common_rgmii.dtsi
  create mode 100644 arch/arm/dts/am335x-boneblack-emmc-overlay.dts
@@ -787,20 +787,19 @@ index b4e2a1c..822cc6a 100644
  CONFIG_HUSH_PARSER=y
  CONFIG_AUTOBOOT_KEYED=y
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 65a9002..8e44f2e 100644
+index 65a9002..e0f0f6c 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -1,14 +1,17 @@
+@@ -1,14 +1,15 @@
  CONFIG_ARM=y
  CONFIG_TARGET_AM335X_EVM=y
  CONFIG_SPL_STACK_R_ADDR=0x82000000
 -CONFIG_DEFAULT_DEVICE_TREE="am335x-evm"
-+CONFIG_DEFAULT_DEVICE_TREE="am335x-boneblack"
  CONFIG_SPL=y
  CONFIG_SPL_STACK_R=y
  CONFIG_FIT=y
 -CONFIG_SYS_EXTRA_OPTIONS="NAND"
- CONFIG_SPL_LOAD_FIT=y
+-CONFIG_SPL_LOAD_FIT=y
  CONFIG_VERSION_VARIABLE=y
  CONFIG_HUSH_PARSER=y
 +CONFIG_AUTOBOOT_KEYED=y
@@ -810,7 +809,7 @@ index 65a9002..8e44f2e 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_ASKENV=y
-@@ -18,6 +21,7 @@ CONFIG_CMD_SF=y
+@@ -18,6 +19,7 @@ CONFIG_CMD_SF=y
  CONFIG_CMD_SPI=y
  CONFIG_CMD_I2C=y
  CONFIG_CMD_USB=y
@@ -818,17 +817,31 @@ index 65a9002..8e44f2e 100644
  CONFIG_CMD_DFU=y
  CONFIG_CMD_GPIO=y
  # CONFIG_CMD_SETEXPR is not set
-@@ -29,8 +33,9 @@ CONFIG_CMD_EXT4=y
+@@ -29,16 +31,10 @@ CONFIG_CMD_EXT4=y
  CONFIG_CMD_EXT4_WRITE=y
  CONFIG_CMD_FAT=y
  CONFIG_CMD_FS_GENERIC=y
-+CONFIG_OF_LIBFDT_OVERLAY=y
- CONFIG_OF_CONTROL=y
+-CONFIG_OF_CONTROL=y
 -CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
-+CONFIG_OF_LIST="am335x-bone am335x-boneblack am335x-bonegreen am335x-boneblack-emmc-overlay am335x-sancloud-bbe am335x-vsc8531bbb"
- CONFIG_DM_I2C=y
- CONFIG_DM_MMC=y
+-CONFIG_DM_I2C=y
+-CONFIG_DM_MMC=y
++CONFIG_OF_LIBFDT_OVERLAY=y
  CONFIG_SPI_FLASH=y
+ CONFIG_SPI_FLASH_WINBOND=y
+-CONFIG_DM_ETH=y
+ CONFIG_SYS_NS16550=y
+-CONFIG_TIMER=y
+-CONFIG_OMAP_TIMER=y
+ CONFIG_USB=y
+ CONFIG_USB_MUSB_HOST=y
+ CONFIG_USB_MUSB_GADGET=y
+@@ -48,5 +44,4 @@ CONFIG_USB_GADGET_DOWNLOAD=y
+ CONFIG_G_DNL_MANUFACTURER="Texas Instruments"
+ CONFIG_G_DNL_VENDOR_NUM=0x0451
+ CONFIG_G_DNL_PRODUCT_NUM=0xd022
+-CONFIG_RSA=y
+-CONFIG_SPL_OF_LIBFDT=y
++CONFIG_OF_LIBFDT=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
 index f12ee04..528cff2 100644
 --- a/include/configs/am335x_evm.h
