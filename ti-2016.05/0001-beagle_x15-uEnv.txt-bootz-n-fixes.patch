@@ -1,6 +1,6 @@
-From d4176e56733f6c1c6c089de0c6cd4c1db8062663 Mon Sep 17 00:00:00 2001
+From f8808f7fd91f0e8a6f43ebce58a161f6adfd9dd4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 9 Sep 2016 14:16:51 -0500
+Date: Tue, 18 Oct 2016 14:51:16 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -19,66 +19,66 @@ index aee02f1..1012c2e 100644
  	{VIN2A_D21, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d21.rgmii1_rxd2 */
  	{VIN2A_D22, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d22.rgmii1_rxd1 */
  	{VIN2A_D23, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d23.rgmii1_rxd0 */
--	{VOUT1_CLK, (M0 | PIN_OUTPUT)},		/* vout1_clk.vout1_clk */
--	{VOUT1_DE, (M0 | PIN_OUTPUT)},		/* vout1_de.vout1_de */
-+	{VOUT1_CLK, (M15 | PIN_OUTPUT)},		/* vout1_clk.vout1_clk */
+-	{VOUT1_CLK, (M0 | PIN_OUTPUT)},	/* vout1_clk.vout1_clk */
+-	{VOUT1_DE, (M0 | PIN_OUTPUT)},	/* vout1_de.vout1_de */
++	{VOUT1_CLK, (M15 | PIN_OUTPUT)},	/* vout1_clk.vout1_clk */
 +	{VOUT1_DE, (M15 | PIN_OUTPUT)},		/* vout1_de.vout1_de */
- 	{VOUT1_FLD, (M14 | PIN_INPUT)},		/* vout1_fld.gpio4_21 */
+ 	{VOUT1_FLD, (M14 | PIN_OUTPUT)},	/* vout1_fld.gpio4_21 */
 -	{VOUT1_HSYNC, (M0 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
 -	{VOUT1_VSYNC, (M0 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
--	{VOUT1_D0, (M0 | PIN_OUTPUT)},		/* vout1_d0.vout1_d0 */
--	{VOUT1_D1, (M0 | PIN_OUTPUT)},		/* vout1_d1.vout1_d1 */
--	{VOUT1_D2, (M0 | PIN_OUTPUT)},		/* vout1_d2.vout1_d2 */
--	{VOUT1_D3, (M0 | PIN_OUTPUT)},		/* vout1_d3.vout1_d3 */
--	{VOUT1_D4, (M0 | PIN_OUTPUT)},		/* vout1_d4.vout1_d4 */
--	{VOUT1_D5, (M0 | PIN_OUTPUT)},		/* vout1_d5.vout1_d5 */
--	{VOUT1_D6, (M0 | PIN_OUTPUT)},		/* vout1_d6.vout1_d6 */
--	{VOUT1_D7, (M0 | PIN_OUTPUT)},		/* vout1_d7.vout1_d7 */
--	{VOUT1_D8, (M0 | PIN_OUTPUT)},		/* vout1_d8.vout1_d8 */
--	{VOUT1_D9, (M0 | PIN_OUTPUT)},		/* vout1_d9.vout1_d9 */
--	{VOUT1_D10, (M0 | PIN_OUTPUT)},		/* vout1_d10.vout1_d10 */
--	{VOUT1_D11, (M0 | PIN_OUTPUT)},		/* vout1_d11.vout1_d11 */
--	{VOUT1_D12, (M0 | PIN_OUTPUT)},		/* vout1_d12.vout1_d12 */
--	{VOUT1_D13, (M0 | PIN_OUTPUT)},		/* vout1_d13.vout1_d13 */
--	{VOUT1_D14, (M0 | PIN_OUTPUT)},		/* vout1_d14.vout1_d14 */
--	{VOUT1_D15, (M0 | PIN_OUTPUT)},		/* vout1_d15.vout1_d15 */
--	{VOUT1_D16, (M0 | PIN_OUTPUT)},		/* vout1_d16.vout1_d16 */
--	{VOUT1_D17, (M0 | PIN_OUTPUT)},		/* vout1_d17.vout1_d17 */
--	{VOUT1_D18, (M0 | PIN_OUTPUT)},		/* vout1_d18.vout1_d18 */
--	{VOUT1_D19, (M0 | PIN_OUTPUT)},		/* vout1_d19.vout1_d19 */
--	{VOUT1_D20, (M0 | PIN_OUTPUT)},		/* vout1_d20.vout1_d20 */
--	{VOUT1_D21, (M0 | PIN_OUTPUT)},		/* vout1_d21.vout1_d21 */
--	{VOUT1_D22, (M0 | PIN_OUTPUT)},		/* vout1_d22.vout1_d22 */
--	{VOUT1_D23, (M0 | PIN_OUTPUT)},		/* vout1_d23.vout1_d23 */
+-	{VOUT1_D0, (M0 | PIN_OUTPUT)},	/* vout1_d0.vout1_d0 */
+-	{VOUT1_D1, (M0 | PIN_OUTPUT)},	/* vout1_d1.vout1_d1 */
+-	{VOUT1_D2, (M0 | PIN_OUTPUT)},	/* vout1_d2.vout1_d2 */
+-	{VOUT1_D3, (M0 | PIN_OUTPUT)},	/* vout1_d3.vout1_d3 */
+-	{VOUT1_D4, (M0 | PIN_OUTPUT)},	/* vout1_d4.vout1_d4 */
+-	{VOUT1_D5, (M0 | PIN_OUTPUT)},	/* vout1_d5.vout1_d5 */
+-	{VOUT1_D6, (M0 | PIN_OUTPUT)},	/* vout1_d6.vout1_d6 */
+-	{VOUT1_D7, (M0 | PIN_OUTPUT)},	/* vout1_d7.vout1_d7 */
+-	{VOUT1_D8, (M0 | PIN_OUTPUT)},	/* vout1_d8.vout1_d8 */
+-	{VOUT1_D9, (M0 | PIN_OUTPUT)},	/* vout1_d9.vout1_d9 */
+-	{VOUT1_D10, (M0 | PIN_OUTPUT)},	/* vout1_d10.vout1_d10 */
+-	{VOUT1_D11, (M0 | PIN_OUTPUT)},	/* vout1_d11.vout1_d11 */
+-	{VOUT1_D12, (M0 | PIN_OUTPUT)},	/* vout1_d12.vout1_d12 */
+-	{VOUT1_D13, (M0 | PIN_OUTPUT)},	/* vout1_d13.vout1_d13 */
+-	{VOUT1_D14, (M0 | PIN_OUTPUT)},	/* vout1_d14.vout1_d14 */
+-	{VOUT1_D15, (M0 | PIN_OUTPUT)},	/* vout1_d15.vout1_d15 */
+-	{VOUT1_D16, (M0 | PIN_OUTPUT)},	/* vout1_d16.vout1_d16 */
+-	{VOUT1_D17, (M0 | PIN_OUTPUT)},	/* vout1_d17.vout1_d17 */
+-	{VOUT1_D18, (M0 | PIN_OUTPUT)},	/* vout1_d18.vout1_d18 */
+-	{VOUT1_D19, (M0 | PIN_OUTPUT)},	/* vout1_d19.vout1_d19 */
+-	{VOUT1_D20, (M0 | PIN_OUTPUT)},	/* vout1_d20.vout1_d20 */
+-	{VOUT1_D21, (M0 | PIN_OUTPUT)},	/* vout1_d21.vout1_d21 */
+-	{VOUT1_D22, (M0 | PIN_OUTPUT)},	/* vout1_d22.vout1_d22 */
+-	{VOUT1_D23, (M0 | PIN_OUTPUT)},	/* vout1_d23.vout1_d23 */
 +	{VOUT1_HSYNC, (M15 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
 +	{VOUT1_VSYNC, (M15 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
-+	{VOUT1_D0, (M15 | PIN_OUTPUT)},		/* vout1_d0.vout1_d0 */
-+	{VOUT1_D1, (M15 | PIN_OUTPUT)},		/* vout1_d1.vout1_d1 */
-+	{VOUT1_D2, (M15 | PIN_OUTPUT)},		/* vout1_d2.vout1_d2 */
-+	{VOUT1_D3, (M15 | PIN_OUTPUT)},		/* vout1_d3.vout1_d3 */
-+	{VOUT1_D4, (M15 | PIN_OUTPUT)},		/* vout1_d4.vout1_d4 */
-+	{VOUT1_D5, (M15 | PIN_OUTPUT)},		/* vout1_d5.vout1_d5 */
-+	{VOUT1_D6, (M15 | PIN_OUTPUT)},		/* vout1_d6.vout1_d6 */
-+	{VOUT1_D7, (M15 | PIN_OUTPUT)},		/* vout1_d7.vout1_d7 */
-+	{VOUT1_D8, (M15 | PIN_OUTPUT)},		/* vout1_d8.vout1_d8 */
-+	{VOUT1_D9, (M15 | PIN_OUTPUT)},		/* vout1_d9.vout1_d9 */
-+	{VOUT1_D10, (M15 | PIN_OUTPUT)},		/* vout1_d10.vout1_d10 */
-+	{VOUT1_D11, (M15 | PIN_OUTPUT)},		/* vout1_d11.vout1_d11 */
-+	{VOUT1_D12, (M15 | PIN_OUTPUT)},		/* vout1_d12.vout1_d12 */
-+	{VOUT1_D13, (M15 | PIN_OUTPUT)},		/* vout1_d13.vout1_d13 */
-+	{VOUT1_D14, (M15 | PIN_OUTPUT)},		/* vout1_d14.vout1_d14 */
++	{VOUT1_D0, (M15 | PIN_OUTPUT)},	/* vout1_d0.vout1_d0 */
++	{VOUT1_D1, (M15 | PIN_OUTPUT)},	/* vout1_d1.vout1_d1 */
++	{VOUT1_D2, (M15 | PIN_OUTPUT)},	/* vout1_d2.vout1_d2 */
++	{VOUT1_D3, (M15 | PIN_OUTPUT)},	/* vout1_d3.vout1_d3 */
++	{VOUT1_D4, (M15 | PIN_OUTPUT)},	/* vout1_d4.vout1_d4 */
++	{VOUT1_D5, (M15 | PIN_OUTPUT)},	/* vout1_d5.vout1_d5 */
++	{VOUT1_D6, (M15 | PIN_OUTPUT)},	/* vout1_d6.vout1_d6 */
++	{VOUT1_D7, (M15 | PIN_OUTPUT)},	/* vout1_d7.vout1_d7 */
++	{VOUT1_D8, (M15 | PIN_OUTPUT)},	/* vout1_d8.vout1_d8 */
++	{VOUT1_D9, (M15 | PIN_OUTPUT)},	/* vout1_d9.vout1_d9 */
++	{VOUT1_D10, (M15 | PIN_OUTPUT)},	/* vout1_d10.vout1_d10 */
++	{VOUT1_D11, (M15 | PIN_OUTPUT)},	/* vout1_d11.vout1_d11 */
++	{VOUT1_D12, (M15 | PIN_OUTPUT)},	/* vout1_d12.vout1_d12 */
++	{VOUT1_D13, (M15 | PIN_OUTPUT)},	/* vout1_d13.vout1_d13 */
++	{VOUT1_D14, (M15 | PIN_OUTPUT)},	/* vout1_d14.vout1_d14 */
 +	{VOUT1_D15, (M15 | PIN_OUTPUT)},		/* vout1_d15.vout1_d15 */
 +	{VOUT1_D16, (M15 | PIN_OUTPUT)},		/* vout1_d16.vout1_d16 */
 +	{VOUT1_D17, (M15 | PIN_OUTPUT)},		/* vout1_d17.vout1_d17 */
-+	{VOUT1_D18, (M15 | PIN_OUTPUT)},		/* vout1_d18.vout1_d18 */
-+	{VOUT1_D19, (M15 | PIN_OUTPUT)},		/* vout1_d19.vout1_d19 */
-+	{VOUT1_D20, (M15 | PIN_OUTPUT)},		/* vout1_d20.vout1_d20 */
-+	{VOUT1_D21, (M15 | PIN_OUTPUT)},		/* vout1_d21.vout1_d21 */
-+	{VOUT1_D22, (M15 | PIN_OUTPUT)},		/* vout1_d22.vout1_d22 */
-+	{VOUT1_D23, (M15 | PIN_OUTPUT)},		/* vout1_d23.vout1_d23 */
- 	{MDIO_MCLK, (M0 | PIN_INPUT_PULLUP)},	/* mdio_mclk.mdio_mclk */
- 	{MDIO_D, (M0 | PIN_INPUT_PULLUP)},	/* mdio_d.mdio_d */
- 	{RMII_MHZ_50_CLK, (M14 | PIN_INPUT_PULLUP)},	/* RMII_MHZ_50_CLK.gpio5_17 */
++	{VOUT1_D18, (M15 | PIN_OUTPUT)},	/* vout1_d18.vout1_d18 */
++	{VOUT1_D19, (M15 | PIN_OUTPUT)},	/* vout1_d19.vout1_d19 */
++	{VOUT1_D20, (M15 | PIN_OUTPUT)},	/* vout1_d20.vout1_d20 */
++	{VOUT1_D21, (M15 | PIN_OUTPUT)},	/* vout1_d21.vout1_d21 */
++	{VOUT1_D22, (M15 | PIN_OUTPUT)},	/* vout1_d22.vout1_d22 */
++	{VOUT1_D23, (M15 | PIN_OUTPUT)},	/* vout1_d23.vout1_d23 */
+ 	{MDIO_MCLK, (M0 | PIN_OUTPUT_PULLDOWN)},	/* mdio_mclk.mdio_mclk */
+ 	{MDIO_D, (M0 | PIN_INPUT)},	/* mdio_d.mdio_d */
+ 	{RGMII0_TXC, (M0 | PIN_OUTPUT_PULLDOWN | MANUAL_MODE)},	/* rgmii0_txc.rgmii0_txc */
 diff --git a/configs/am57xx_evm_nodt_defconfig b/configs/am57xx_evm_nodt_defconfig
 index da6876b..5433c83 100644
 --- a/configs/am57xx_evm_nodt_defconfig
@@ -95,7 +95,7 @@ index da6876b..5433c83 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 4730d86..b31c11d 100644
+index 8fa6f3e..3f47c2b 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -60,22 +60,45 @@
@@ -155,9 +155,9 @@ index 4730d86..b31c11d 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadbootscript; then " \
  				"run bootscript;" \
-@@ -127,6 +150,208 @@
- 	"loadfit=run args_fit; bootm ${loadaddr}:kernel@1 " \
- 		"${loadaddr}:ramdisk@1 ${loadaddr}:${fdtfile};\0" \
+@@ -126,6 +149,208 @@
+ 	"args_fit=setenv bootargs console=${console} \0" \
+ 	"loadfit=run args_fit; bootm ${loadaddr}#${fdtfile};\0" \
  
 +#define EEWIKI_MMC_BOOT \
 +	"mmc_boot=${interface} dev ${mmcdev}; " \
@@ -365,7 +365,7 @@ index 4730d86..b31c11d 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 0f7e053..364417f 100644
+index a566918..83e748d 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
 @@ -111,25 +111,24 @@
@@ -407,5 +407,5 @@ index 0f7e053..364417f 100644
  
  /*
 -- 
-2.9.3
+2.10.1
 
