@@ -1,15 +1,15 @@
-From 2630cd867fefd0db771b5fa68aabddb57d119e59 Mon Sep 17 00:00:00 2001
+From 9b87177da1720a40857e666619706430382e715f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 21 Jun 2016 10:19:40 -0500
+Date: Fri, 18 Nov 2016 15:48:35 -0600
 Subject: [PATCH] de0_nano fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/socfpga_de0_nano_soc.h | 98 ++++++++++++++++++++++++++++------
- 1 file changed, 83 insertions(+), 15 deletions(-)
+ include/configs/socfpga_de0_nano_soc.h | 111 ++++++++++++++++++++++++++++-----
+ 1 file changed, 96 insertions(+), 15 deletions(-)
 
 diff --git a/include/configs/socfpga_de0_nano_soc.h b/include/configs/socfpga_de0_nano_soc.h
-index 6b9546e..c50066b 100644
+index 6b9546e..bc69bf8 100644
 --- a/include/configs/socfpga_de0_nano_soc.h
 +++ b/include/configs/socfpga_de0_nano_soc.h
 @@ -13,6 +13,7 @@
@@ -29,7 +29,7 @@ index 6b9546e..c50066b 100644
  #define CONFIG_LOADADDR		0x01000000
  #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
  
-@@ -34,20 +35,87 @@
+@@ -34,20 +35,100 @@
  
  /* Extra Environment */
  #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -52,6 +52,7 @@ index 6b9546e..c50066b 100644
 +	"fdt_addr=0x07000000\0" \
 +	"fdt_file=socfpga_cyclone5_de0_sockit.dtb\0" \
 +	"rdaddr=0x07080000\0" \
++	"fpgadata=0x2000000\0" \
 +	"interface=mmc\0" \
 +	"optargs=\0" \
 +	"cmdline=\0" \
@@ -65,6 +66,8 @@ index 6b9546e..c50066b 100644
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
 +	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadfpga=load ${interface} ${bootpart} ${fpgadata} ${bootdir}/${fpga_file}; setenv fpgadatasize ${filesize}\0" \
++	"uploadfpga=fpga load 0 ${fpgadata} ${fpgadatasize}\0" \
 +	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
 +	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load ${interface} ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
 +	"mmcboot=${interface} dev ${mmcdev}; " \
@@ -92,6 +95,16 @@ index 6b9546e..c50066b 100644
 +		"fi;\0" \
 +	"uname_boot="\
 +		"setenv bootdir /boot; " \
++		"if test -n ${fpgafile}; then " \
++			"setenv fpga_file ${fpgafile};" \
++			"if test -e ${interface} ${bootpart} ${bootdir}/${fpga_file}; then " \
++				"echo loading ${bootdir}/${fpga_file} ...; "\
++				"run loadfpga;" \
++				"echo uploading to fpga ...; "\
++				"run uploadfpga;" \
++				"echo fpga loading complete ...; "\
++			"fi;" \
++		"fi;" \
 +		"setenv bootfile vmlinuz-${uname_r}; " \
 +		"if test -e ${interface} ${bootpart} ${bootdir}/${bootfile}; then " \
 +			"echo loading ${bootdir}/${bootfile} ...; "\
@@ -132,5 +145,5 @@ index 6b9546e..c50066b 100644
  /* The rest of the configuration is shared */
  #include <configs/socfpga_common.h>
 -- 
-2.8.1
+2.10.2
 
