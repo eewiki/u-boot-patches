@@ -1,0 +1,329 @@
+From b2aacc132ac9f35ad8b5fa24ac8d564908c030bc Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 30 Dec 2016 11:24:44 -0600
+Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/mach-omap2/am33xx/clock_am33xx.c |  1 +
+ board/ti/am335x/board.c                   | 99 +++++++++++++++++++++++++++++++
+ board/ti/am335x/board.h                   | 17 ++++++
+ board/ti/am335x/mux.c                     | 15 +++++
+ include/configs/ti_armv7_common.h         | 73 +++++++++++++++++++++++
+ include/configs/ti_armv7_omap.h           |  3 +
+ 6 files changed, 208 insertions(+)
+
+diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
+index 7b841b2d55..119ca3d62c 100644
+--- a/arch/arm/mach-omap2/am33xx/clock_am33xx.c
++++ b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
+@@ -145,6 +145,7 @@ void enable_basic_clocks(void)
+ 		&cmper->gpio2clkctrl,
+ 		&cmper->gpio3clkctrl,
+ 		&cmper->i2c1clkctrl,
++		&cmper->i2c2clkctrl,
+ 		&cmper->cpgmac0clkctrl,
+ 		&cmper->spi0clkctrl,
+ 		&cmrtc->rtcclkctrl,
+diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
+index b385de0447..4a98510aec 100644
+--- a/board/ti/am335x/board.c
++++ b/board/ti/am335x/board.c
+@@ -72,9 +72,104 @@ void do_board_detect(void)
+ 
+ 	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
+ 		printf("ti_i2c_eeprom_init failed\n");
++
++	//hack-ish, needs to mux'ed early, in do_cape_detect was too late...
++	enable_i2c2_pin_mux();
++	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
+ }
+ #endif
+ 
++#define CAPE_EEPROM_ADDR0	0x54
++#define CAPE_EEPROM_ADDR1	0x55
++#define CAPE_EEPROM_ADDR2	0x56
++#define CAPE_EEPROM_ADDR3	0x57
++
++void write_hex (unsigned char i)
++{
++	char cc;
++
++	cc = i >> 4;
++	cc &= 0xf;
++	if (cc > 9)
++		serial_putc (cc + 55);
++	else
++		serial_putc (cc + 48);
++	cc = i & 0xf;
++	if (cc > 9)
++		serial_putc (cc + 55);
++	else
++		serial_putc (cc + 48);
++}
++
++static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
++{
++	unsigned char addr;
++	/* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
++	/* 14 + 16 + 1 + 4 + 5 = 40 */
++	char cape_overlay[40];
++	const char s[2] = ".";
++	char *token;
++
++	i2c_set_bus_num(2);
++
++	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
++		if (i2c_probe(addr)) {
++			puts("BeagleBone: cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++		} else {
++			/* read the eeprom using i2c */
++			if (i2c_read(addr, 0, 2, (uchar *)cape_header,
++				     sizeof(struct am335x_cape_eeprom_id))) {
++				puts("BeagleBone: cape eeprom: Could not read the EEPROM; something fundamentally"
++					" wrong on the I2C bus.\n");
++				return -EIO;
++			}
++
++			if (cape_header->header == 0xEE3355AA) {
++				strlcpy(cape_overlay, "/lib/firmware/", 14 + 1);
++
++				/* cape_header->part_number stop at [.] */
++				token = strtok(cape_header->part_number, s);
++				strncat(cape_overlay, token, 16);
++
++				strncat(cape_overlay, "-", 1);
++				strncat(cape_overlay, cape_header->version, 4);
++				strncat(cape_overlay, ".dtbo", 5);
++
++				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
++				write_hex(addr);
++				printf(": %s\n", cape_overlay);
++
++				switch(addr)
++				{
++					case CAPE_EEPROM_ADDR0:
++						setenv("uboot_overlay_addr0", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR1:
++						setenv("uboot_overlay_addr1", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR2:
++						setenv("uboot_overlay_addr2", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR3:
++						setenv("uboot_overlay_addr3", cape_overlay);
++						break;
++				}
++			}
++		}
++	}
++
++	i2c_set_bus_num(0);
++	return 0;
++}
++
++void do_cape_detect(void)
++{
++	struct am335x_cape_eeprom_id cape_header;
++
++	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
++	probe_cape_eeprom(&cape_header);
++}
++
+ #ifndef CONFIG_DM_SERIAL
+ struct serial_device *default_serial_console(void)
+ {
+@@ -728,6 +823,10 @@ int board_late_init(void)
+ 	}
+ #endif
+ 
++#ifdef CONFIG_TI_I2C_BOARD_DETECT
++	do_cape_detect();
++#endif
++
+ 	return 0;
+ }
+ #endif
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index 8e872bb1c7..05d713e228 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -11,6 +11,22 @@
+ #ifndef _BOARD_H_
+ #define _BOARD_H_
+ 
++struct am335x_cape_eeprom_id {
++	unsigned int header;
++	char eeprom_rev[2];
++	char board_name[32];
++	char version[4];
++	char manufacture[16];
++	char part_number[16];
++	char number_of_pins[2];
++	char serial_number[12];
++	char pin_usage[140];
++	char vdd_3v3exp[ 2];
++	char vdd_5v[ 2];
++	char sys_5v[2];
++	char dc_supplied[2];
++};
++
+ /**
+  * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
+  * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
+@@ -93,5 +109,6 @@ void enable_uart3_pin_mux(void);
+ void enable_uart4_pin_mux(void);
+ void enable_uart5_pin_mux(void);
+ void enable_i2c0_pin_mux(void);
++void enable_i2c2_pin_mux(void);
+ void enable_board_pin_mux(void);
+ #endif
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index 6d65e99a1a..2ae077fb14 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -120,6 +120,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
+ 	{-1},
+ };
+ 
++static struct module_pin_mux i2c2_pin_mux[] = {
++	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
++	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
++	{-1},
++};
++
+ static struct module_pin_mux spi0_pin_mux[] = {
+ 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
+ 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
+@@ -304,6 +312,11 @@ void enable_i2c0_pin_mux(void)
+ 	configure_module_pin_mux(i2c0_pin_mux);
+ }
+ 
++void enable_i2c2_pin_mux(void)
++{
++	configure_module_pin_mux(i2c2_pin_mux);
++}
++
+ /*
+  * The AM335x GP EVM, if daughter card(s) are connected, can have 8
+  * different profiles.  These profiles determine what peripherals are
+@@ -352,6 +365,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_gp_evm()) {
+ 		/* General Purpose EVM */
+ 		unsigned short profile = detect_daughter_board_profile();
+@@ -397,6 +411,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_icev2()) {
+ 		configure_module_pin_mux(mmc0_pin_mux);
+ 		configure_module_pin_mux(gpio0_18_pin_mux);
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 4b6cbb9e89..f6c668060a 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -347,6 +347,79 @@
+ 					"fi;" \
+ 				"fi;" \
+ 			"fi; " \
++			"if test -n ${enable_uboot_overlays}; then " \
++				"if test -n ${uboot_overlay_addr0}; then " \
++					"echo debug: [uboot_overlay_addr0=${uboot_overlay_addr0}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr0}; then " \
++						"echo loading ${uboot_overlay_addr0} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr0};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize;" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize;" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr0}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr1}; then " \
++					"echo debug: [uboot_overlay_addr1=${uboot_overlay_addr1}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr1}; then " \
++						"echo loading ${uboot_overlay_addr1} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr1};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize;" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize;" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr1}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr2}; then " \
++					"echo debug: [uboot_overlay_addr2=${uboot_overlay_addr2}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr2}; then " \
++						"echo loading ${uboot_overlay_addr2} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr2};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize;" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize;" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr2}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr3}; then " \
++					"echo debug: [uboot_overlay_addr3=${uboot_overlay_addr3}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr3}; then " \
++						"echo loading ${uboot_overlay_addr3} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr3};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize;" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize;" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr3}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${dtb_overlay}; then " \
++					"echo debug: [dtb_overlay=${dtb_overlay}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${dtb_overlay}; then " \
++						"echo loading ${dtb_overlay} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${dtb_overlay};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize;" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize;" \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${dtb_overlay}]...;" \
++					"fi; " \
++				"fi;" \
++			"else " \
++				"echo add [enable_uboot_overlays=1] to /boot/uEnv.txt to enable...;" \
++			"fi;" \
+ 			"setenv rdfile initrd.img-${uname_r}; " \
+ 			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
+ 				"echo loading ${bootdir}/${rdfile} ...; "\
+diff --git a/include/configs/ti_armv7_omap.h b/include/configs/ti_armv7_omap.h
+index 6d9d4b2d97..9c9e2266fc 100644
+--- a/include/configs/ti_armv7_omap.h
++++ b/include/configs/ti_armv7_omap.h
+@@ -20,6 +20,9 @@
+ #define CONFIG_SYS_OMAP24_I2C_SLAVE	1
+ #define CONFIG_SYS_I2C_OMAP24XX
+ 
++#define CONFIG_SYS_OMAP24_I2C_SPEED2	100000
++#define CONFIG_SYS_OMAP24_I2C_SLAVE2	1
++
+ /* MMC/SD IP block */
+ #define CONFIG_OMAP_HSMMC
+ 
+-- 
+2.11.0
+
