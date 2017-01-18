@@ -1,6 +1,6 @@
-From b2aacc132ac9f35ad8b5fa24ac8d564908c030bc Mon Sep 17 00:00:00 2001
+From 00664d602414d12a9826a50002c28c8de2552673 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 30 Dec 2016 11:24:44 -0600
+Date: Wed, 18 Jan 2017 12:57:43 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,9 +9,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.c                   | 99 +++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   | 17 ++++++
  board/ti/am335x/mux.c                     | 15 +++++
- include/configs/ti_armv7_common.h         | 73 +++++++++++++++++++++++
+ include/configs/ti_armv7_common.h         | 77 ++++++++++++++++++++++++
  include/configs/ti_armv7_omap.h           |  3 +
- 6 files changed, 208 insertions(+)
+ 6 files changed, 212 insertions(+)
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 index 7b841b2d55..119ca3d62c 100644
@@ -227,23 +227,27 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 4b6cbb9e89..f6c668060a 100644
+index 5ef1e8f18a..05c9c796ee 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -347,6 +347,79 @@
+@@ -347,6 +347,83 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
 +			"if test -n ${enable_uboot_overlays}; then " \
++				"if test -n ${uboot_fdt_buffer}; then " \
++					"setenv uboot_fdt_buffer 0x60000;" \
++				"fi;" \
++				"echo debug: [uboot_fdt_buffer=${uboot_fdt_buffer}] ... ;" \
 +				"if test -n ${uboot_overlay_addr0}; then " \
 +					"echo debug: [uboot_overlay_addr0=${uboot_overlay_addr0}] ... ;" \
 +					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr0}; then " \
 +						"echo loading ${uboot_overlay_addr0} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr0};" \
 +						"fdt addr ${fdtaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"fdt apply ${rdaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr0}]...;" \
@@ -255,9 +259,9 @@ index 4b6cbb9e89..f6c668060a 100644
 +						"echo loading ${uboot_overlay_addr1} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr1};" \
 +						"fdt addr ${fdtaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"fdt apply ${rdaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr1}]...;" \
@@ -269,9 +273,9 @@ index 4b6cbb9e89..f6c668060a 100644
 +						"echo loading ${uboot_overlay_addr2} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr2};" \
 +						"fdt addr ${fdtaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"fdt apply ${rdaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr2}]...;" \
@@ -283,9 +287,9 @@ index 4b6cbb9e89..f6c668060a 100644
 +						"echo loading ${uboot_overlay_addr3} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr3};" \
 +						"fdt addr ${fdtaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"fdt apply ${rdaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr3}]...;" \
@@ -297,9 +301,9 @@ index 4b6cbb9e89..f6c668060a 100644
 +						"echo loading ${dtb_overlay} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${dtb_overlay};" \
 +						"fdt addr ${fdtaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +						"fdt apply ${rdaddr};" \
-+						"fdt resize;" \
++						"fdt resize ${uboot_fdt_buffer};" \
 +					"else " \
 +						"echo unable to find [${devtype} ${bootpart} ${dtb_overlay}]...;" \
 +					"fi; " \
