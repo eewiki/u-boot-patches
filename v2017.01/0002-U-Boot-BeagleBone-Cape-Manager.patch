@@ -1,17 +1,17 @@
-From 328156e52d0480b11c0484ca49b738b834dd3b8a Mon Sep 17 00:00:00 2001
+From 983866fd82d41ec4113bf22462c8b5d16ca7c4c8 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 19 Jan 2017 13:59:32 -0600
+Date: Thu, 19 Jan 2017 16:58:56 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   |  99 ++++++++++++++++++++++++
- board/ti/am335x/board.h                   |  17 +++++
- board/ti/am335x/mux.c                     |  15 ++++
- include/configs/ti_armv7_common.h         | 120 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 229 +++++++++++++++++++++++++++---
+ board/ti/am335x/board.h                   |  17 +++
+ board/ti/am335x/mux.c                     |  15 ++
+ include/configs/ti_armv7_common.h         | 120 ++++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 6 files changed, 255 insertions(+)
+ 6 files changed, 365 insertions(+), 20 deletions(-)
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 index 7b841b2d55..119ca3d62c 100644
@@ -26,10 +26,10 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index b385de0447..4a98510aec 100644
+index b385de0447..884ddbbcb7 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
-@@ -72,9 +72,104 @@ void do_board_detect(void)
+@@ -72,9 +72,212 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -70,6 +70,90 @@ index b385de0447..4a98510aec 100644
 +	char cape_overlay[40];
 +	const char s[2] = ".";
 +	char *token;
++
++	char virtual_emmc=0;
++	/* 1 -> TDA998x, 2 -> ADV7511 */
++	char virtual_video=0;
++	/* 1 -> Black Wireless, 2 -> Green Wireless */
++	char virtual_wireless=0;
++
++	char *name = NULL;
++
++	if (board_is_bone_lt()) {
++		puts("BeagleBone Black:\n");
++		virtual_emmc=1;
++		virtual_video=1;
++		virtual_wireless=0;
++		name = "A335BNLT";
++
++		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
++			puts("Model: BeagleBoard.org BeagleBone Blue:\n");
++			virtual_emmc=0;
++			virtual_video=0;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
++			puts("Model: BeagleBoard.org BeagleBone Black Wireless:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=1;
++			name = "BBBW";
++		}
++		if (!strncmp(board_ti_get_rev(), "BBG", 3)) {
++			/* catches again in board_is_bbg1() */
++			//puts("Model: SeeedStudio BeagleBone Green:\n");
++			virtual_emmc=1;
++			virtual_video=0;
++			virtual_wireless=0;
++			name = "BBG1";
++		}
++		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
++			puts("Model: SeeedStudio BeagleBone Green Wireless:\n");
++			virtual_emmc=1;
++			virtual_video=0;
++			virtual_wireless=2;
++		}
++		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
++			puts("Model: Arrow BeagleBone Black Industrial:\n");
++			virtual_emmc=1;
++			virtual_video=2;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "EIA", 3)) {
++			puts("Model: Element14 BeagleBone Black Industrial:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
++			puts("Model: SanCloud BeagleBone Enhanced:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
++			puts("Model: MENTOREL BeagleBone uSomIQ:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "NAD", 3)) {
++			puts("Model: Neuromeka BeagleBone Air:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++	}
++
++	if (board_is_bbg1()) {
++		puts("Model: SeeedStudio BeagleBone Green:\n");
++		virtual_emmc=1;
++		virtual_video=0;
++		virtual_wireless=0;
++		name = "BBG1";
++	}
++
++	set_board_info_env(name);
 +
 +	i2c_set_bus_num(2);
 +
@@ -115,8 +199,32 @@ index b385de0447..4a98510aec 100644
 +						setenv("uboot_overlay_addr3", cape_overlay);
 +						break;
 +				}
++
++				virtual_emmc=0;
++				virtual_video=0;
++				virtual_wireless=0;
 +			}
 +		}
++	}
++
++	if (virtual_emmc == 1) {
++		setenv("uboot_emmc", "/lib/firmware/BB-BONE-eMMC1-01-00A0.dtbo");
++	}
++
++	if (virtual_video == 1) {
++		setenv("uboot_video", "/lib/firmware/BB-HDMI-TDA998x-00A0.dtbo");
++	}
++
++	if (virtual_video == 2) {
++		setenv("uboot_video", "/lib/firmware/BB-HDMI-ADV7511-00A0.dtbo");
++	}
++
++	if (virtual_wireless == 1) {
++		setenv("uboot_wireless", "/lib/firmware/BB-BBBW-WL1835-00A0.dtbo");
++	}
++
++	if (virtual_wireless == 2) {
++		setenv("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
 +	}
 +
 +	i2c_set_bus_num(0);
@@ -134,12 +242,41 @@ index b385de0447..4a98510aec 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -728,6 +823,10 @@ int board_late_init(void)
+@@ -667,26 +870,6 @@ int board_late_init(void)
+ #endif
+ 
+ #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+-	char *name = NULL;
+-
+-	if (board_is_bone_lt()) {
+-		puts("Board: BeagleBone Black\n");
+-		name = "A335BNLT";
+-		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
+-			puts("Model: BeagleBone Black Wireless\n");
+-			name = "BBBW";
+-		}
+-		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
+-			puts("Model: SanCloud BeagleBone Enhanced\n");
+-			name = "SBBE";
+-		}
+-	}
+-
+-	if (board_is_bbg1())
+-		name = "BBG1";
+-
+-	set_board_info_env(name);
+-
+ 	/*
+ 	 * Default FIT boot on HS devices. Non FIT images are not allowed
+ 	 * on HS devices.
+@@ -728,6 +911,12 @@ int board_late_init(void)
  	}
  #endif
  
++#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 +#ifdef CONFIG_TI_I2C_BOARD_DETECT
 +	do_cape_detect();
++#endif
 +#endif
 +
  	return 0;
@@ -227,7 +364,7 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 5ef1e8f18a..a55f5a4986 100644
+index 5ef1e8f18a..3500336caa 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -347,6 +347,126 @@
@@ -311,7 +448,7 @@ index 5ef1e8f18a..a55f5a4986 100644
 +					"fi; " \
 +				"fi;" \
 +				"if test -n ${uboot_video}; then " \
-+					"echo debug: [uboot_bbb_hdmi=${uboot_video}] ... ;" \
++					"echo debug: [uboot_video=${uboot_video}] ... ;" \
 +					"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
 +						"echo loading ${uboot_video} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
@@ -325,7 +462,7 @@ index 5ef1e8f18a..a55f5a4986 100644
 +					"fi; " \
 +				"fi;" \
 +				"if test -n ${uboot_wireless}; then " \
-+					"echo debug: [uboot_bbb_hdmi=${uboot_wireless}] ... ;" \
++					"echo debug: [uboot_wireless=${uboot_wireless}] ... ;" \
 +					"if test -e ${devtype} ${bootpart} ${uboot_wireless}; then " \
 +						"echo loading ${uboot_wireless} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_wireless};" \
