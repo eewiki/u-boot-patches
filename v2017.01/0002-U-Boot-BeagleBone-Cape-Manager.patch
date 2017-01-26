@@ -1,17 +1,17 @@
-From 983866fd82d41ec4113bf22462c8b5d16ca7c4c8 Mon Sep 17 00:00:00 2001
+From 82a129a8b5dcac01a915ec7444eef3b348dadcd8 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 19 Jan 2017 16:58:56 -0600
+Date: Thu, 26 Jan 2017 15:44:59 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 229 +++++++++++++++++++++++++++---
+ board/ti/am335x/board.c                   | 237 +++++++++++++++++++++++++++---
  board/ti/am335x/board.h                   |  17 +++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 120 ++++++++++++++++
+ include/configs/ti_armv7_common.h         | 120 +++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 6 files changed, 365 insertions(+), 20 deletions(-)
+ 6 files changed, 369 insertions(+), 24 deletions(-)
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 index 7b841b2d55..119ca3d62c 100644
@@ -26,10 +26,10 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index b385de0447..884ddbbcb7 100644
+index cde6c3ba32..f4f0950015 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
-@@ -72,9 +72,212 @@ void do_board_detect(void)
+@@ -72,9 +72,216 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -91,6 +91,7 @@ index b385de0447..884ddbbcb7 100644
 +			virtual_emmc=0;
 +			virtual_video=0;
 +			virtual_wireless=0;
++			name = "BBBL";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
 +			puts("Model: BeagleBoard.org BeagleBone Black Wireless:\n");
@@ -130,6 +131,7 @@ index b385de0447..884ddbbcb7 100644
 +			virtual_emmc=1;
 +			virtual_video=1;
 +			virtual_wireless=0;
++			name = "SBBE";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
 +			puts("Model: MENTOREL BeagleBone uSomIQ:\n");
@@ -202,7 +204,9 @@ index b385de0447..884ddbbcb7 100644
 +
 +				virtual_emmc=0;
 +				virtual_video=0;
-+				virtual_wireless=0;
++				if (virtual_wireless != 1) {
++					virtual_wireless=0;
++				}
 +			}
 +		}
 +	}
@@ -242,7 +246,7 @@ index b385de0447..884ddbbcb7 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -667,26 +870,6 @@ int board_late_init(void)
+@@ -667,30 +874,6 @@ int board_late_init(void)
  #endif
  
  #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
@@ -254,6 +258,10 @@ index b385de0447..884ddbbcb7 100644
 -		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
 -			puts("Model: BeagleBone Black Wireless\n");
 -			name = "BBBW";
+-		}
+-		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
+-			puts("Model: BeagleBone Blue\n");
+-			name = "BBBL";
 -		}
 -		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 -			puts("Model: SanCloud BeagleBone Enhanced\n");
@@ -269,7 +277,7 @@ index b385de0447..884ddbbcb7 100644
  	/*
  	 * Default FIT boot on HS devices. Non FIT images are not allowed
  	 * on HS devices.
-@@ -728,6 +911,12 @@ int board_late_init(void)
+@@ -732,6 +915,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -283,7 +291,7 @@ index b385de0447..884ddbbcb7 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 8e872bb1c7..05d713e228 100644
+index fdf8c56258..4962e610f4 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -11,6 +11,22 @@
@@ -309,7 +317,7 @@ index 8e872bb1c7..05d713e228 100644
  /**
   * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
   * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
-@@ -93,5 +109,6 @@ void enable_uart3_pin_mux(void);
+@@ -98,5 +114,6 @@ void enable_uart3_pin_mux(void);
  void enable_uart4_pin_mux(void);
  void enable_uart5_pin_mux(void);
  void enable_i2c0_pin_mux(void);

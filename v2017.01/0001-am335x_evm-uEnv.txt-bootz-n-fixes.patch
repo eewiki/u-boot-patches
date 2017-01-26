@@ -1,627 +1,22 @@
-From d9602b70f0ff885fe04f4bd5ead77976d74b0e6b Mon Sep 17 00:00:00 2001
+From 37f37a09b3c8e14ba7ca3fd1eb7e7e2a6c95bc0f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 30 Dec 2016 11:06:56 -0600
+Date: Thu, 26 Jan 2017 15:39:05 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/dts/Makefile                          |  11 +-
- arch/arm/dts/am335x-bone-common.dtsi           |  78 -------
- arch/arm/dts/am335x-bone-common_mii.dtsi       |  83 ++++++++
- arch/arm/dts/am335x-bone-common_rgmii.dtsi     |  81 ++++++++
- arch/arm/dts/am335x-bone.dts                   |   5 +
- arch/arm/dts/am335x-boneblack-emmc-overlay.dts |  43 ++++
- arch/arm/dts/am335x-boneblack.dts              |   1 +
- arch/arm/dts/am335x-bonegreen.dts              |   1 +
- arch/arm/dts/am335x-sancloud-bbe.dts           | 100 +++++++++
- arch/arm/dts/am335x-vsc8531bbb.dts             |  91 ++++++++
- board/ti/am335x/board.c                        |  51 ++++-
- board/ti/am335x/board.h                        |  15 ++
- board/ti/am335x/mux.c                          |   9 +-
- configs/am335x_boneblack_defconfig             |   2 +-
- configs/am335x_evm_defconfig                   |  23 +--
- include/configs/am335x_evm.h                   |  60 ++++--
- include/configs/ti_armv7_common.h              | 276 ++++++++++++++++++++++++-
- scripts/config_whitelist.txt                   |   1 +
- 18 files changed, 800 insertions(+), 131 deletions(-)
- create mode 100644 arch/arm/dts/am335x-bone-common_mii.dtsi
- create mode 100644 arch/arm/dts/am335x-bone-common_rgmii.dtsi
- create mode 100644 arch/arm/dts/am335x-boneblack-emmc-overlay.dts
- create mode 100644 arch/arm/dts/am335x-sancloud-bbe.dts
- create mode 100644 arch/arm/dts/am335x-vsc8531bbb.dts
+ board/ti/am335x/board.c            |  43 +++++-
+ board/ti/am335x/board.h            |  20 +++
+ board/ti/am335x/mux.c              |   9 +-
+ configs/am335x_boneblack_defconfig |   2 +-
+ configs/am335x_evm_defconfig       |  23 ++--
+ include/configs/am335x_evm.h       |  60 ++++++--
+ include/configs/ti_armv7_common.h  | 276 +++++++++++++++++++++++++++++++++++--
+ scripts/config_whitelist.txt       |   1 +
+ 8 files changed, 394 insertions(+), 40 deletions(-)
 
-diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 3ee608b5b4..53c1e5955c 100644
---- a/arch/arm/dts/Makefile
-+++ b/arch/arm/dts/Makefile
-@@ -115,13 +115,10 @@ dtb-$(CONFIG_ARCH_ZYNQMP) += \
- 	zynqmp-zc1751-xm018-dc4.dtb		\
- 	zynqmp-zc1751-xm019-dc5.dtb
- dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb am335x-bone.dtb \
--	am335x-draco.dtb \
--	am335x-evm.dtb \
--	am335x-evmsk.dtb \
--	am335x-bonegreen.dtb \
--	am335x-icev2.dtb \
--	am335x-pxm50.dtb \
--	am335x-rut.dtb
-+	am335x-boneblack-emmc-overlay.dtb \
-+	am335x-sancloud-bbe.dtb \
-+	am335x-vsc8531bbb.dtb \
-+	am335x-bonegreen.dtb
- dtb-$(CONFIG_AM43XX) += am437x-gp-evm.dtb am437x-sk-evm.dtb	\
- 	am43x-epos-evm.dtb \
- 	am437x-idk-evm.dtb
-diff --git a/arch/arm/dts/am335x-bone-common.dtsi b/arch/arm/dts/am335x-bone-common.dtsi
-index 40a3c35ff8..2a0030149e 100644
---- a/arch/arm/dts/am335x-bone-common.dtsi
-+++ b/arch/arm/dts/am335x-bone-common.dtsi
-@@ -106,60 +106,6 @@
- 		>;
- 	};
- 
--	cpsw_default: cpsw_default {
--		pinctrl-single,pins = <
--			/* Slave 1 */
--			0x110 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxerr.mii1_rxerr */
--			0x114 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txen.mii1_txen */
--			0x118 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxdv.mii1_rxdv */
--			0x11c (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd3.mii1_txd3 */
--			0x120 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd2.mii1_txd2 */
--			0x124 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd1.mii1_txd1 */
--			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd0.mii1_txd0 */
--			0x12c (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_txclk.mii1_txclk */
--			0x130 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxclk.mii1_rxclk */
--			0x134 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd3.mii1_rxd3 */
--			0x138 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd2.mii1_rxd2 */
--			0x13c (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd1.mii1_rxd1 */
--			0x140 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd0.mii1_rxd0 */
--		>;
--	};
--
--	cpsw_sleep: cpsw_sleep {
--		pinctrl-single,pins = <
--			/* Slave 1 reset value */
--			0x110 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x114 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x118 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x11c (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x120 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x124 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x128 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x12c (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x130 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x13c (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--		>;
--	};
--
--	davinci_mdio_default: davinci_mdio_default {
--		pinctrl-single,pins = <
--			/* MDIO */
--			0x148 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
--			0x14c (PIN_OUTPUT_PULLUP | MUX_MODE0)			/* mdio_clk.mdio_clk */
--		>;
--	};
--
--	davinci_mdio_sleep: davinci_mdio_sleep {
--		pinctrl-single,pins = <
--			/* MDIO reset value */
--			0x148 (PIN_INPUT_PULLDOWN | MUX_MODE7)
--			0x14c (PIN_INPUT_PULLDOWN | MUX_MODE7)
--		>;
--	};
--
- 	mmc1_pins: pinmux_mmc1_pins {
- 		pinctrl-single,pins = <
- 			0x160 (PIN_INPUT | MUX_MODE7) /* GPIO0_6 */
-@@ -359,30 +305,6 @@
- 	};
- };
- 
--&cpsw_emac0 {
--	phy_id = <&davinci_mdio>, <0>;
--	phy-mode = "mii";
--};
--
--&cpsw_emac1 {
--	phy_id = <&davinci_mdio>, <1>;
--	phy-mode = "mii";
--};
--
--&mac {
--	pinctrl-names = "default", "sleep";
--	pinctrl-0 = <&cpsw_default>;
--	pinctrl-1 = <&cpsw_sleep>;
--	status = "okay";
--};
--
--&davinci_mdio {
--	pinctrl-names = "default", "sleep";
--	pinctrl-0 = <&davinci_mdio_default>;
--	pinctrl-1 = <&davinci_mdio_sleep>;
--	status = "okay";
--};
--
- &mmc1 {
- 	status = "okay";
- 	bus-width = <0x4>;
-diff --git a/arch/arm/dts/am335x-bone-common_mii.dtsi b/arch/arm/dts/am335x-bone-common_mii.dtsi
-new file mode 100644
-index 0000000000..b7b1da2aa6
---- /dev/null
-+++ b/arch/arm/dts/am335x-bone-common_mii.dtsi
-@@ -0,0 +1,83 @@
-+/*
-+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+
-+&am33xx_pinmux {
-+	cpsw_default: cpsw_default {
-+		pinctrl-single,pins = <
-+			/* Slave 1 */
-+			0x110 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxerr.mii1_rxerr */
-+			0x114 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txen.mii1_txen */
-+			0x118 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxdv.mii1_rxdv */
-+			0x11c (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd3.mii1_txd3 */
-+			0x120 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd2.mii1_txd2 */
-+			0x124 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd1.mii1_txd1 */
-+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE0)	/* mii1_txd0.mii1_txd0 */
-+			0x12c (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_txclk.mii1_txclk */
-+			0x130 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxclk.mii1_rxclk */
-+			0x134 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd3.mii1_rxd3 */
-+			0x138 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd2.mii1_rxd2 */
-+			0x13c (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd1.mii1_rxd1 */
-+			0x140 (PIN_INPUT_PULLUP | MUX_MODE0)	/* mii1_rxd0.mii1_rxd0 */
-+		>;
-+	};
-+
-+	cpsw_sleep: cpsw_sleep {
-+		pinctrl-single,pins = <
-+			/* Slave 1 reset value */
-+			0x110 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x114 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x118 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x11c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x120 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x124 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x128 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x12c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x130 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x13c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+		>;
-+	};
-+
-+	davinci_mdio_default: davinci_mdio_default {
-+		pinctrl-single,pins = <
-+			/* MDIO */
-+			0x148 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
-+			0x14c (PIN_OUTPUT_PULLUP | MUX_MODE0)			/* mdio_clk.mdio_clk */
-+		>;
-+	};
-+
-+	davinci_mdio_sleep: davinci_mdio_sleep {
-+		pinctrl-single,pins = <
-+			/* MDIO reset value */
-+			0x148 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x14c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+		>;
-+	};
-+};
-+
-+&cpsw_emac0 {
-+	phy_id = <&davinci_mdio>, <0>;
-+	phy-mode = "mii";
-+};
-+
-+&mac {
-+	pinctrl-names = "default", "sleep";
-+	pinctrl-0 = <&cpsw_default>;
-+	pinctrl-1 = <&cpsw_sleep>;
-+	slaves = <1>;
-+	status = "okay";
-+};
-+
-+&davinci_mdio {
-+	pinctrl-names = "default", "sleep";
-+	pinctrl-0 = <&davinci_mdio_default>;
-+	pinctrl-1 = <&davinci_mdio_sleep>;
-+	status = "okay";
-+};
-diff --git a/arch/arm/dts/am335x-bone-common_rgmii.dtsi b/arch/arm/dts/am335x-bone-common_rgmii.dtsi
-new file mode 100644
-index 0000000000..07e7342679
---- /dev/null
-+++ b/arch/arm/dts/am335x-bone-common_rgmii.dtsi
-@@ -0,0 +1,81 @@
-+/*
-+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+
-+&am33xx_pinmux {
-+	cpsw_default: cpsw_default {
-+		pinctrl-single,pins = <
-+			/* Slave 1 */
-+			0x114 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txen.rgmii1_tctl */
-+			0x118 (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxdv.rgmii1_rctl */
-+			0x11c (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd3.rgmii1_txd3 */
-+			0x120 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd2.rgmii1_txd2 */
-+			0x124 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd1.rgmii1_txd1 */
-+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd0.rgmii1_txd0 */
-+			0x12c (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txclk.rgmii1_txclk */
-+			0x130 (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxclk.rgmii1_rxclk */
-+			0x134 (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxd3.rgmii1_rxd3 */
-+			0x138 (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxd2.rgmii1_rxd2 */
-+			0x13c (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxd1.rgmii1_rxd1 */
-+			0x140 (PIN_INPUT_PULLUP | MUX_MODE2)	/* mii1_rxd0.rgmii1_rxd0 */
-+		>;
-+	};
-+
-+	cpsw_sleep: cpsw_sleep {
-+		pinctrl-single,pins = <
-+			/* Slave 1 reset value */
-+			0x114 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x118 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x11c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x120 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x124 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x128 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x12c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x130 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x13c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+		>;
-+	};
-+
-+	davinci_mdio_default: davinci_mdio_default {
-+		pinctrl-single,pins = <
-+			/* MDIO */
-+			0x148 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
-+			0x14c (PIN_OUTPUT_PULLUP | MUX_MODE0)			/* mdio_clk.mdio_clk */
-+		>;
-+	};
-+
-+	davinci_mdio_sleep: davinci_mdio_sleep {
-+		pinctrl-single,pins = <
-+			/* MDIO reset value */
-+			0x148 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+			0x14c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-+		>;
-+	};
-+};
-+
-+&cpsw_emac0 {
-+	phy_id = <&davinci_mdio>, <0>;
-+	phy-mode = "rgmii";
-+};
-+
-+&mac {
-+	pinctrl-names = "default", "sleep";
-+	pinctrl-0 = <&cpsw_default>;
-+	pinctrl-1 = <&cpsw_sleep>;
-+	slaves = <1>;
-+	status = "okay";
-+};
-+
-+&davinci_mdio {
-+	pinctrl-names = "default", "sleep";
-+	pinctrl-0 = <&davinci_mdio_default>;
-+	pinctrl-1 = <&davinci_mdio_sleep>;
-+	status = "okay";
-+};
-diff --git a/arch/arm/dts/am335x-bone.dts b/arch/arm/dts/am335x-bone.dts
-index 6b84937204..610dde45f4 100644
---- a/arch/arm/dts/am335x-bone.dts
-+++ b/arch/arm/dts/am335x-bone.dts
-@@ -9,10 +9,15 @@
- 
- #include "am33xx.dtsi"
- #include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_mii.dtsi"
- 
- / {
- 	model = "TI AM335x BeagleBone";
- 	compatible = "ti,am335x-bone", "ti,am33xx";
-+	chosen {
-+		stdout-path = &uart0;
-+		tick-timer = &timer2;
-+	};
- };
- 
- &ldo3_reg {
-diff --git a/arch/arm/dts/am335x-boneblack-emmc-overlay.dts b/arch/arm/dts/am335x-boneblack-emmc-overlay.dts
-new file mode 100644
-index 0000000000..3830571c4a
---- /dev/null
-+++ b/arch/arm/dts/am335x-boneblack-emmc-overlay.dts
-@@ -0,0 +1,43 @@
-+/*
-+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+/dts-v1/;
-+
-+#include "am33xx.dtsi"
-+#include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_mii.dtsi"
-+
-+/ {
-+	model = "TI AM335x BeagleBone Black";
-+	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
-+	chosen {
-+		stdout-path = &uart0;
-+		tick-timer = &timer2;
-+	};
-+};
-+
-+&ldo3_reg {
-+	regulator-min-microvolt = <1800000>;
-+	regulator-max-microvolt = <1800000>;
-+	regulator-always-on;
-+};
-+
-+&mmc1 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+};
-+
-+&mmc2 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+	pinctrl-names = "default";
-+	pinctrl-0 = <&emmc_pins>;
-+	bus-width = <8>;
-+	status = "okay";
-+};
-+
-+&rtc {
-+	system-power-controller;
-+};
-diff --git a/arch/arm/dts/am335x-boneblack.dts b/arch/arm/dts/am335x-boneblack.dts
-index 27ebe4a65d..a4ed1356e6 100644
---- a/arch/arm/dts/am335x-boneblack.dts
-+++ b/arch/arm/dts/am335x-boneblack.dts
-@@ -9,6 +9,7 @@
- 
- #include "am33xx.dtsi"
- #include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_mii.dtsi"
- 
- / {
- 	model = "TI AM335x BeagleBone Black";
-diff --git a/arch/arm/dts/am335x-bonegreen.dts b/arch/arm/dts/am335x-bonegreen.dts
-index 9c59da90fa..fd4e92974e 100644
---- a/arch/arm/dts/am335x-bonegreen.dts
-+++ b/arch/arm/dts/am335x-bonegreen.dts
-@@ -9,6 +9,7 @@
- 
- #include "am33xx.dtsi"
- #include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_mii.dtsi"
- 
- / {
- 	model = "TI AM335x BeagleBone Green";
-diff --git a/arch/arm/dts/am335x-sancloud-bbe.dts b/arch/arm/dts/am335x-sancloud-bbe.dts
-new file mode 100644
-index 0000000000..63338c8517
---- /dev/null
-+++ b/arch/arm/dts/am335x-sancloud-bbe.dts
-@@ -0,0 +1,100 @@
-+/*
-+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+/dts-v1/;
-+
-+#include "am33xx.dtsi"
-+#include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_rgmii.dtsi"
-+
-+/ {
-+	model = "SanCloud BeagleBone Enhanced";
-+	compatible = "sancloud,am335x-boneenhanced", "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
-+	chosen {
-+		stdout-path = &uart0;
-+		tick-timer = &timer2;
-+	};
-+};
-+
-+&ldo3_reg {
-+	regulator-min-microvolt = <1800000>;
-+	regulator-max-microvolt = <1800000>;
-+	regulator-always-on;
-+};
-+
-+&mmc1 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+};
-+
-+&mmc2 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+	pinctrl-names = "default";
-+	pinctrl-0 = <&emmc_pins>;
-+	bus-width = <8>;
-+	status = "okay";
-+};
-+
-+&am33xx_pinmux {
-+	pinctrl-names = "default";
-+	pinctrl-0 = <&usb_hub_ctrl>;
-+
-+	nxp_hdmi_bonelt_pins: nxp_hdmi_bonelt_pins {
-+		pinctrl-single,pins = <
-+			0x1b0 0x03      /* xdma_event_intr0, OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT */
-+			0xa0 0x08       /* lcd_data0.lcd_data0, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xa4 0x08       /* lcd_data1.lcd_data1, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xa8 0x08       /* lcd_data2.lcd_data2, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xac 0x08       /* lcd_data3.lcd_data3, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb0 0x08       /* lcd_data4.lcd_data4, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb4 0x08       /* lcd_data5.lcd_data5, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb8 0x08       /* lcd_data6.lcd_data6, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xbc 0x08       /* lcd_data7.lcd_data7, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc0 0x08       /* lcd_data8.lcd_data8, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc4 0x08       /* lcd_data9.lcd_data9, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc8 0x08       /* lcd_data10.lcd_data10, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xcc 0x08       /* lcd_data11.lcd_data11, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd0 0x08       /* lcd_data12.lcd_data12, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd4 0x08       /* lcd_data13.lcd_data13, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd8 0x08       /* lcd_data14.lcd_data14, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xdc 0x08       /* lcd_data15.lcd_data15, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xe0 0x00       /* lcd_vsync.lcd_vsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xe4 0x00       /* lcd_hsync.lcd_hsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xe8 0x00       /* lcd_pclk.lcd_pclk, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xec 0x00       /* lcd_ac_bias_en.lcd_ac_bias_en, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+		>;
-+	};
-+	nxp_hdmi_bonelt_off_pins: nxp_hdmi_bonelt_off_pins {
-+		pinctrl-single,pins = <
-+			0x1b0 0x03      /* xdma_event_intr0, OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT */
-+		>;
-+	};
-+
-+	usb_hub_ctrl: usb_hub_ctrl {
-+		pinctrl-single,pins = <
-+			0x144 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* mcasp0_ahclkr.gpio3_17 */
-+		>;
-+	};
-+};
-+
-+&lcdc {
-+	status = "okay";
-+};
-+
-+/ {
-+	hdmi {
-+		compatible = "ti,tilcdc,slave";
-+		i2c = <&i2c0>;
-+		pinctrl-names = "default", "off";
-+		pinctrl-0 = <&nxp_hdmi_bonelt_pins>;
-+		pinctrl-1 = <&nxp_hdmi_bonelt_off_pins>;
-+		status = "okay";
-+	};
-+};
-+
-+&rtc {
-+	system-power-controller;
-+};
-diff --git a/arch/arm/dts/am335x-vsc8531bbb.dts b/arch/arm/dts/am335x-vsc8531bbb.dts
-new file mode 100644
-index 0000000000..d2df1aaf1e
---- /dev/null
-+++ b/arch/arm/dts/am335x-vsc8531bbb.dts
-@@ -0,0 +1,91 @@
-+/*
-+ * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License version 2 as
-+ * published by the Free Software Foundation.
-+ */
-+/dts-v1/;
-+
-+#include "am33xx.dtsi"
-+#include "am335x-bone-common.dtsi"
-+#include "am335x-bone-common_rgmii.dtsi"
-+
-+/ {
-+	model = "TI AM335x BeagleBone Black";
-+	compatible = "ti,am335x-bone-black", "ti,am335x-bone", "ti,am33xx";
-+	chosen {
-+		stdout-path = &uart0;
-+		tick-timer = &timer2;
-+	};
-+};
-+
-+&ldo3_reg {
-+	regulator-min-microvolt = <1800000>;
-+	regulator-max-microvolt = <1800000>;
-+	regulator-always-on;
-+};
-+
-+&mmc1 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+};
-+
-+&mmc2 {
-+	vmmc-supply = <&vmmcsd_fixed>;
-+	pinctrl-names = "default";
-+	pinctrl-0 = <&emmc_pins>;
-+	bus-width = <8>;
-+	status = "okay";
-+};
-+
-+&am33xx_pinmux {
-+	nxp_hdmi_bonelt_pins: nxp_hdmi_bonelt_pins {
-+		pinctrl-single,pins = <
-+			0x1b0 0x03      /* xdma_event_intr0, OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT */
-+			0xa0 0x08       /* lcd_data0.lcd_data0, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xa4 0x08       /* lcd_data1.lcd_data1, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xa8 0x08       /* lcd_data2.lcd_data2, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xac 0x08       /* lcd_data3.lcd_data3, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb0 0x08       /* lcd_data4.lcd_data4, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb4 0x08       /* lcd_data5.lcd_data5, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xb8 0x08       /* lcd_data6.lcd_data6, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xbc 0x08       /* lcd_data7.lcd_data7, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc0 0x08       /* lcd_data8.lcd_data8, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc4 0x08       /* lcd_data9.lcd_data9, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xc8 0x08       /* lcd_data10.lcd_data10, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xcc 0x08       /* lcd_data11.lcd_data11, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd0 0x08       /* lcd_data12.lcd_data12, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd4 0x08       /* lcd_data13.lcd_data13, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xd8 0x08       /* lcd_data14.lcd_data14, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xdc 0x08       /* lcd_data15.lcd_data15, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT | AM33XX_PULL_DISA */
-+			0xe0 0x00       /* lcd_vsync.lcd_vsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xe4 0x00       /* lcd_hsync.lcd_hsync, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xe8 0x00       /* lcd_pclk.lcd_pclk, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+			0xec 0x00       /* lcd_ac_bias_en.lcd_ac_bias_en, OMAP_MUX_MODE0 | AM33XX_PIN_OUTPUT */
-+		>;
-+	};
-+	nxp_hdmi_bonelt_off_pins: nxp_hdmi_bonelt_off_pins {
-+		pinctrl-single,pins = <
-+			0x1b0 0x03      /* xdma_event_intr0, OMAP_MUX_MODE3 | AM33XX_PIN_OUTPUT */
-+		>;
-+	};
-+};
-+
-+&lcdc {
-+	status = "okay";
-+};
-+
-+/ {
-+	hdmi {
-+		compatible = "ti,tilcdc,slave";
-+		i2c = <&i2c0>;
-+		pinctrl-names = "default", "off";
-+		pinctrl-0 = <&nxp_hdmi_bonelt_pins>;
-+		pinctrl-1 = <&nxp_hdmi_bonelt_off_pins>;
-+		status = "okay";
-+	};
-+};
-+
-+&rtc {
-+	system-power-controller;
-+};
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8eaf3e9a5c..b385de0447 100644
+index 8eaf3e9a5c..cde6c3ba32 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -556,6 +556,24 @@ static struct clk_synth cdce913_data = {
@@ -649,7 +44,7 @@ index 8eaf3e9a5c..b385de0447 100644
  #if defined(CONFIG_HW_WATCHDOG)
  	hw_watchdog_init();
  #endif
-@@ -651,8 +669,22 @@ int board_late_init(void)
+@@ -651,8 +669,26 @@ int board_late_init(void)
  #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
  	char *name = NULL;
  
@@ -659,6 +54,10 @@ index 8eaf3e9a5c..b385de0447 100644
 +		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
 +			puts("Model: BeagleBone Black Wireless\n");
 +			name = "BBBW";
++		}
++		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
++			puts("Model: BeagleBone Blue\n");
++			name = "BBBL";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 +			puts("Model: SanCloud BeagleBone Enhanced\n");
@@ -672,7 +71,7 @@ index 8eaf3e9a5c..b385de0447 100644
  	set_board_info_env(name);
  
  	/*
-@@ -788,18 +820,21 @@ int board_eth_init(bd_t *bis)
+@@ -788,18 +824,21 @@ int board_eth_init(bd_t *bis)
  	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
  
  #ifdef CONFIG_DRIVER_TI_CPSW
@@ -695,7 +94,7 @@ index 8eaf3e9a5c..b385de0447 100644
  		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
  				PHY_INTERFACE_MODE_RGMII;
-@@ -824,7 +859,7 @@ int board_eth_init(bd_t *bis)
+@@ -824,7 +863,7 @@ int board_eth_init(bd_t *bis)
  #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
  #define AR8051_RGMII_TX_CLK_DLY		0x100
  
@@ -704,41 +103,22 @@ index 8eaf3e9a5c..b385de0447 100644
  		const char *devname;
  		devname = miiphy_get_current_dev();
  
-@@ -854,17 +889,17 @@ int board_eth_init(bd_t *bis)
- #ifdef CONFIG_SPL_LOAD_FIT
- int board_fit_config_name_match(const char *name)
- {
--	if (board_is_gp_evm() && !strcmp(name, "am335x-evm"))
--		return 0;
--	else if (board_is_bone() && !strcmp(name, "am335x-bone"))
-+	if (board_is_bone() && !strcmp(name, "am335x-bone"))
- 		return 0;
- 	else if (board_is_bone_lt() && !strcmp(name, "am335x-boneblack"))
- 		return 0;
--	else if (board_is_evm_sk() && !strcmp(name, "am335x-evmsk"))
-+	else if (board_is_bbbw() && !strcmp(name, "am335x-boneblack"))
- 		return 0;
--	else if (board_is_bbg1() && !strcmp(name, "am335x-bonegreen"))
-+	else if (board_is_m10a() && !strcmp(name, "am335x-vsc8531bbb"))
-+		return 0;
-+	else if (board_is_bone_lt_enhanced() && !strcmp(name, "am335x-sancloud-bbe"))
- 		return 0;
--	else if (board_is_icev2() && !strcmp(name, "am335x-icev2"))
-+	else if (board_is_bbg1() && !strcmp(name, "am335x-bonegreen"))
- 		return 0;
- 	else
- 		return -1;
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 48c139a817..8e872bb1c7 100644
+index 48c139a817..fdf8c56258 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
-@@ -34,11 +34,26 @@ static inline int board_is_bone_lt(void)
+@@ -34,11 +34,31 @@ static inline int board_is_bone_lt(void)
  	return board_ti_is("A335BNLT");
  }
  
 +static inline int board_is_bbbw(void)
 +{
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BW", 2);
++}
++
++static inline int board_is_blue(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BLA", 3);
 +}
 +
  static inline int board_is_bbg1(void)
@@ -861,7 +241,7 @@ index 08c1e79f74..2988a46eb6 100644
 +CONFIG_OF_LIBFDT=y
 +CONFIG_OF_LIBFDT_OVERLAY=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index e0cb6dc2ec..cec33dd6dd 100644
+index e0cb6dc2ec..a6fab10469 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -18,6 +18,7 @@
@@ -910,8 +290,6 @@ index e0cb6dc2ec..cec33dd6dd 100644
 +			"echo board_rev=[$board_rev] ...; " \
 +			"if test $board_rev = GH01; then " \
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
-+			"elif test $board_rev = BLA0; then " \
-+				"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; " \
 +			"elif test $board_rev = BBG1; then " \
 +				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
 +			"elif test $board_rev = GW1A; then " \
@@ -935,6 +313,8 @@ index e0cb6dc2ec..cec33dd6dd 100644
 +			"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; fi; " \
 +		"if test $board_name = BBBW; then " \
 +			"setenv fdtfile am335x-boneblack-wireless.dtb; setenv fdtbase am335x-boneblack-wireless; fi; " \
++		"if test $board_name = BBBL; then " \
++			"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; fi; " \
 +		"if test $board_name = SBBE; then " \
 +			"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; fi; " \
  		"if test $board_name = A33515BB; then " \
@@ -977,7 +357,7 @@ index e0cb6dc2ec..cec33dd6dd 100644
  
  /*
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index d13fc94785..4b6cbb9e89 100644
+index dbe494a6e3..5ef1e8f18a 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -60,20 +60,60 @@
@@ -1277,10 +657,10 @@ index d13fc94785..4b6cbb9e89 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
-index 8814841e1f..5a9bdbfaf6 100644
+index 00ee3f10cd..eda5e59bbc 100644
 --- a/scripts/config_whitelist.txt
 +++ b/scripts/config_whitelist.txt
-@@ -3490,6 +3490,7 @@ CONFIG_PHY_LXT
+@@ -3441,6 +3441,7 @@ CONFIG_PHY_LXT
  CONFIG_PHY_M88E1111
  CONFIG_PHY_MARVELL
  CONFIG_PHY_MAX_ADDR
