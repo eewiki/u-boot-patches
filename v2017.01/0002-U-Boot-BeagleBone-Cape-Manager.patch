@@ -1,17 +1,19 @@
-From ac227f2e1683e8c4edd6fa02a16a43b933a7d325 Mon Sep 17 00:00:00 2001
+From f7afebcbca46efebf2c2232c9c5f24fd8eeee0ea Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 27 Jan 2017 11:13:55 -0600
+Date: Fri, 27 Jan 2017 16:01:17 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 225 ++++++++++++++++++++++++++++--
+ board/ti/am335x/board.c                   | 236 ++++++++++++++++++++++++++++--
  board/ti/am335x/board.h                   |  17 +++
+ board/ti/am335x/hash-string.h             |  59 ++++++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 132 ++++++++++++++++++
+ include/configs/ti_armv7_common.h         | 132 +++++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 6 files changed, 383 insertions(+), 10 deletions(-)
+ 7 files changed, 453 insertions(+), 10 deletions(-)
+ create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 index 7b841b2d55..119ca3d62c 100644
@@ -26,10 +28,18 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..3227bd97d9 100644
+index cde6c3ba32..24c812f8da 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
-@@ -72,9 +72,218 @@ void do_board_detect(void)
+@@ -36,6 +36,7 @@
+ #include <environment.h>
+ #include "../common/board_detect.h"
+ #include "board.h"
++#include "hash-string.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -72,9 +73,228 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -182,12 +192,28 @@ index cde6c3ba32..3227bd97d9 100644
 +				strncat(cape_overlay, cape_header->version, 4);
 +				strncat(cape_overlay, ".dtbo", 5);
 +
++				unsigned long cape_overlay_hash = hash_string(cape_overlay);
++
 +				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
 +				write_hex(addr);
-+				printf(": %s\n", cape_overlay);
++				printf(": %s [0x%lx]\n", cape_overlay, cape_overlay_hash);
 +
-+				switch(addr)
-+				{
++				switch(cape_overlay_hash) {
++					case 0x3c766f: /* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
++						virtual_video=0;
++						break;
++					case 0xfc93c8f: /* /lib/firmware/BB-BONE-LCD7-01-00A3.dtbo */
++						virtual_video=0;
++						break;
++					case 0xfe93c1f: /* /lib/firmware/BB-BONE-LCD4-01-00A1.dtbo */
++						virtual_video=0;
++						break;
++					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
++						virtual_video=0;
++						break;
++				}
++
++				switch(addr) {
 +					case CAPE_EEPROM_ADDR0:
 +						setenv("uboot_overlay_addr0", cape_overlay);
 +						break;
@@ -200,12 +226,6 @@ index cde6c3ba32..3227bd97d9 100644
 +					case CAPE_EEPROM_ADDR3:
 +						setenv("uboot_overlay_addr3", cape_overlay);
 +						break;
-+				}
-+
-+				virtual_emmc=0;
-+				virtual_video=0;
-+				if (virtual_wireless != 1) {
-+					virtual_wireless=0;
 +				}
 +			} else {
 +				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
@@ -248,7 +268,7 @@ index cde6c3ba32..3227bd97d9 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -670,20 +879,10 @@ int board_late_init(void)
+@@ -670,20 +890,10 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -269,7 +289,7 @@ index cde6c3ba32..3227bd97d9 100644
  	}
  
  	if (board_is_bbg1())
-@@ -732,6 +931,12 @@ int board_late_init(void)
+@@ -732,6 +942,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -316,6 +336,71 @@ index fdf8c56258..4962e610f4 100644
 +void enable_i2c2_pin_mux(void);
  void enable_board_pin_mux(void);
  #endif
+diff --git a/board/ti/am335x/hash-string.h b/board/ti/am335x/hash-string.h
+new file mode 100644
+index 0000000000..b267a87788
+--- /dev/null
++++ b/board/ti/am335x/hash-string.h
+@@ -0,0 +1,59 @@
++/* Description of GNU message catalog format: string hashing function.
++   Copyright (C) 1995, 1997, 1998, 2000, 2001 Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify it
++   under the terms of the GNU Library General Public License as published
++   by the Free Software Foundation; either version 2, or (at your option)
++   any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Library General Public License for more details.
++
++   You should have received a copy of the GNU Library General Public
++   License along with this program; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
++   USA.  */
++
++/* @@ end of prolog @@ */
++
++#ifndef PARAMS
++# if __STDC__ || defined __GNUC__ || defined __SUNPRO_C || defined __cplusplus || __PROTOTYPES
++#  define PARAMS(Args) Args
++# else
++#  define PARAMS(Args) ()
++# endif
++#endif
++
++/* We assume to have `unsigned long int' value with at least 32 bits.  */
++#define HASHWORDBITS 32
++
++
++/* Defines the so called `hashpjw' function by P.J. Weinberger
++   [see Aho/Sethi/Ullman, COMPILERS: Principles, Techniques and Tools,
++   1986, 1987 Bell Telephone Laboratories, Inc.]  */
++static unsigned long int hash_string PARAMS ((const char *__str_param));
++
++static inline unsigned long int
++hash_string (str_param)
++     const char *str_param;
++{
++  unsigned long int hval, g;
++  const char *str = str_param;
++
++  /* Compute the hash value for the given string.  */
++  hval = 0;
++  while (*str != '\0')
++    {
++      hval <<= 4;
++      hval += (unsigned long int) *str++;
++      g = hval & ((unsigned long int) 0xf << (HASHWORDBITS - 4));
++      if (g != 0)
++	{
++	  hval ^= g >> (HASHWORDBITS - 8);
++	  hval ^= g;
++	}
++    }
++  return hval;
++}
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
 index 6d65e99a1a..2ae077fb14 100644
 --- a/board/ti/am335x/mux.c
