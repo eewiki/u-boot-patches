@@ -1,17 +1,17 @@
-From 82a129a8b5dcac01a915ec7444eef3b348dadcd8 Mon Sep 17 00:00:00 2001
+From ac227f2e1683e8c4edd6fa02a16a43b933a7d325 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 26 Jan 2017 15:44:59 -0600
+Date: Fri, 27 Jan 2017 11:13:55 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 237 +++++++++++++++++++++++++++---
+ board/ti/am335x/board.c                   | 225 ++++++++++++++++++++++++++++--
  board/ti/am335x/board.h                   |  17 +++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 120 +++++++++++++++
+ include/configs/ti_armv7_common.h         | 132 ++++++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 6 files changed, 369 insertions(+), 24 deletions(-)
+ 6 files changed, 383 insertions(+), 10 deletions(-)
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 index 7b841b2d55..119ca3d62c 100644
@@ -26,10 +26,10 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..f4f0950015 100644
+index cde6c3ba32..3227bd97d9 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
-@@ -72,9 +72,216 @@ void do_board_detect(void)
+@@ -72,9 +72,218 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -207,6 +207,8 @@ index cde6c3ba32..f4f0950015 100644
 +				if (virtual_wireless != 1) {
 +					virtual_wireless=0;
 +				}
++			} else {
++				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
 +			}
 +		}
 +	}
@@ -246,38 +248,28 @@ index cde6c3ba32..f4f0950015 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -667,30 +874,6 @@ int board_late_init(void)
- #endif
+@@ -670,20 +879,10 @@ int board_late_init(void)
+ 	char *name = NULL;
  
- #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
--	char *name = NULL;
--
--	if (board_is_bone_lt()) {
+ 	if (board_is_bone_lt()) {
 -		puts("Board: BeagleBone Black\n");
 -		name = "A335BNLT";
 -		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
 -			puts("Model: BeagleBone Black Wireless\n");
 -			name = "BBBW";
 -		}
--		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
--			puts("Model: BeagleBone Blue\n");
--			name = "BBBL";
--		}
+ 		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
+ 			puts("Model: BeagleBone Blue\n");
+ 			name = "BBBL";
+ 		}
 -		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 -			puts("Model: SanCloud BeagleBone Enhanced\n");
 -			name = "SBBE";
 -		}
--	}
--
--	if (board_is_bbg1())
--		name = "BBG1";
--
--	set_board_info_env(name);
--
- 	/*
- 	 * Default FIT boot on HS devices. Non FIT images are not allowed
- 	 * on HS devices.
-@@ -732,6 +915,12 @@ int board_late_init(void)
+ 	}
+ 
+ 	if (board_is_bbg1())
+@@ -732,6 +931,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -372,10 +364,10 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 5ef1e8f18a..3500336caa 100644
+index 5ef1e8f18a..d0dd08fd3b 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -347,6 +347,126 @@
+@@ -347,6 +347,138 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -442,46 +434,58 @@ index 5ef1e8f18a..3500336caa 100644
 +					"fi; " \
 +				"fi;" \
 +				"if test -n ${uboot_emmc}; then " \
-+					"echo debug: [uboot_emmc=${uboot_emmc}] ... ;" \
-+					"if test -e ${devtype} ${bootpart} ${uboot_emmc}; then " \
-+						"echo loading ${uboot_emmc} ...;" \
-+						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_emmc};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"if test -n ${disable_uboot_overlay_emmc}; then " \
++						"echo uboot loading of [${uboot_emmc}] disabled by /boot/uEnv.txt [disable_uboot_overlay_emmc=1]...;" \
 +					"else " \
-+						"echo unable to find [${devtype} ${bootpart} ${uboot_emmc}]...;" \
-+					"fi; " \
++						"echo debug: [uboot_emmc=${uboot_emmc}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_emmc}; then " \
++							"echo loading ${uboot_emmc} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_emmc};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_emmc}]...;" \
++						"fi; " \
++					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_video}; then " \
-+					"echo debug: [uboot_video=${uboot_video}] ... ;" \
-+					"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
-+						"echo loading ${uboot_video} ...;" \
-+						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"if test -n ${disable_uboot_overlay_video}; then " \
++						"echo uboot loading of [${uboot_video}] disabled by /boot/uEnv.txt [disable_uboot_overlay_video=1]...;" \
 +					"else " \
-+						"echo unable to find [${devtype} ${bootpart} ${uboot_video}]...;" \
-+					"fi; " \
++						"echo debug: [uboot_video=${uboot_video}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
++							"echo loading ${uboot_video} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_video}]...;" \
++						"fi; " \
++					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_wireless}; then " \
-+					"echo debug: [uboot_wireless=${uboot_wireless}] ... ;" \
-+					"if test -e ${devtype} ${bootpart} ${uboot_wireless}; then " \
-+						"echo loading ${uboot_wireless} ...;" \
-+						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_wireless};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"if test -n ${disable_uboot_overlay_wireless}; then " \
++						"echo uboot loading of [${uboot_wireless}] disabled by /boot/uEnv.txt [disable_uboot_overlay_wireless=1]...;" \
 +					"else " \
-+						"echo unable to find [${devtype} ${bootpart} ${uboot_wireless}]...;" \
-+					"fi; " \
++						"echo debug: [uboot_wireless=${uboot_wireless}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_wireless}; then " \
++							"echo loading ${uboot_wireless} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_wireless};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_wireless}]...;" \
++						"fi; " \
++					"fi;" \
 +				"fi;" \
 +				"if test -n ${dtb_overlay}; then " \
 +					"echo debug: [dtb_overlay=${dtb_overlay}] ... ;" \
