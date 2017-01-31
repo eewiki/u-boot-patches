@@ -1,0 +1,610 @@
+From 94d5fdfddbcbdafb27fe080ace15b8d4b49b7833 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 31 Jan 2017 10:08:02 -0600
+Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
+ board/ti/am335x/board.c                   | 236 ++++++++++++++++++++++++++++--
+ board/ti/am335x/board.h                   |  17 +++
+ board/ti/am335x/hash-string.h             |  59 ++++++++
+ board/ti/am335x/mux.c                     |  15 ++
+ include/configs/ti_armv7_common.h         | 132 +++++++++++++++++
+ include/configs/ti_armv7_omap.h           |   3 +
+ 7 files changed, 453 insertions(+), 10 deletions(-)
+ create mode 100644 board/ti/am335x/hash-string.h
+
+diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
+index 7b841b2d55..119ca3d62c 100644
+--- a/arch/arm/mach-omap2/am33xx/clock_am33xx.c
++++ b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
+@@ -145,6 +145,7 @@ void enable_basic_clocks(void)
+ 		&cmper->gpio2clkctrl,
+ 		&cmper->gpio3clkctrl,
+ 		&cmper->i2c1clkctrl,
++		&cmper->i2c2clkctrl,
+ 		&cmper->cpgmac0clkctrl,
+ 		&cmper->spi0clkctrl,
+ 		&cmrtc->rtcclkctrl,
+diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
+index cde6c3ba32..24c812f8da 100644
+--- a/board/ti/am335x/board.c
++++ b/board/ti/am335x/board.c
+@@ -36,6 +36,7 @@
+ #include <environment.h>
+ #include "../common/board_detect.h"
+ #include "board.h"
++#include "hash-string.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -72,9 +73,228 @@ void do_board_detect(void)
+ 
+ 	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
+ 		printf("ti_i2c_eeprom_init failed\n");
++
++	//hack-ish, needs to mux'ed early, in do_cape_detect was too late...
++	enable_i2c2_pin_mux();
++	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
+ }
+ #endif
+ 
++#define CAPE_EEPROM_ADDR0	0x54
++#define CAPE_EEPROM_ADDR1	0x55
++#define CAPE_EEPROM_ADDR2	0x56
++#define CAPE_EEPROM_ADDR3	0x57
++
++void write_hex (unsigned char i)
++{
++	char cc;
++
++	cc = i >> 4;
++	cc &= 0xf;
++	if (cc > 9)
++		serial_putc (cc + 55);
++	else
++		serial_putc (cc + 48);
++	cc = i & 0xf;
++	if (cc > 9)
++		serial_putc (cc + 55);
++	else
++		serial_putc (cc + 48);
++}
++
++static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
++{
++	unsigned char addr;
++	/* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
++	/* 14 + 16 + 1 + 4 + 5 = 40 */
++	char cape_overlay[40];
++	const char s[2] = ".";
++	char *token;
++
++	char virtual_emmc=0;
++	/* 1 -> TDA998x, 2 -> ADV7511 */
++	char virtual_video=0;
++	/* 1 -> Black Wireless, 2 -> Green Wireless */
++	char virtual_wireless=0;
++
++	char *name = NULL;
++
++	if (board_is_bone_lt()) {
++		puts("BeagleBone Black:\n");
++		virtual_emmc=1;
++		virtual_video=1;
++		virtual_wireless=0;
++		name = "A335BNLT";
++
++		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
++			puts("Model: BeagleBoard.org BeagleBone Blue:\n");
++			virtual_emmc=0;
++			virtual_video=0;
++			virtual_wireless=0;
++			name = "BBBL";
++		}
++		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
++			puts("Model: BeagleBoard.org BeagleBone Black Wireless:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=1;
++			name = "BBBW";
++		}
++		if (!strncmp(board_ti_get_rev(), "BBG", 3)) {
++			/* catches again in board_is_bbg1() */
++			//puts("Model: SeeedStudio BeagleBone Green:\n");
++			virtual_emmc=1;
++			virtual_video=0;
++			virtual_wireless=0;
++			name = "BBG1";
++		}
++		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
++			puts("Model: SeeedStudio BeagleBone Green Wireless:\n");
++			virtual_emmc=1;
++			virtual_video=0;
++			virtual_wireless=2;
++		}
++		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
++			puts("Model: Arrow BeagleBone Black Industrial:\n");
++			virtual_emmc=1;
++			virtual_video=2;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "EIA", 3)) {
++			puts("Model: Element14 BeagleBone Black Industrial:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
++			puts("Model: SanCloud BeagleBone Enhanced:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++			name = "SBBE";
++		}
++		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
++			puts("Model: MENTOREL BeagleBone uSomIQ:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++		if (!strncmp(board_ti_get_rev(), "NAD", 3)) {
++			puts("Model: Neuromeka BeagleBone Air:\n");
++			virtual_emmc=1;
++			virtual_video=1;
++			virtual_wireless=0;
++		}
++	}
++
++	if (board_is_bbg1()) {
++		puts("Model: SeeedStudio BeagleBone Green:\n");
++		virtual_emmc=1;
++		virtual_video=0;
++		virtual_wireless=0;
++		name = "BBG1";
++	}
++
++	set_board_info_env(name);
++
++	i2c_set_bus_num(2);
++
++	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
++		if (i2c_probe(addr)) {
++			puts("BeagleBone: cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++		} else {
++			/* read the eeprom using i2c */
++			if (i2c_read(addr, 0, 2, (uchar *)cape_header,
++				     sizeof(struct am335x_cape_eeprom_id))) {
++				puts("BeagleBone: cape eeprom: Could not read the EEPROM; something fundamentally"
++					" wrong on the I2C bus.\n");
++				return -EIO;
++			}
++
++			if (cape_header->header == 0xEE3355AA) {
++				strlcpy(cape_overlay, "/lib/firmware/", 14 + 1);
++
++				/* cape_header->part_number stop at [.] */
++				token = strtok(cape_header->part_number, s);
++				strncat(cape_overlay, token, 16);
++
++				strncat(cape_overlay, "-", 1);
++				strncat(cape_overlay, cape_header->version, 4);
++				strncat(cape_overlay, ".dtbo", 5);
++
++				unsigned long cape_overlay_hash = hash_string(cape_overlay);
++
++				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
++				write_hex(addr);
++				printf(": %s [0x%lx]\n", cape_overlay, cape_overlay_hash);
++
++				switch(cape_overlay_hash) {
++					case 0x3c766f: /* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
++						virtual_video=0;
++						break;
++					case 0xfc93c8f: /* /lib/firmware/BB-BONE-LCD7-01-00A3.dtbo */
++						virtual_video=0;
++						break;
++					case 0xfe93c1f: /* /lib/firmware/BB-BONE-LCD4-01-00A1.dtbo */
++						virtual_video=0;
++						break;
++					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
++						virtual_video=0;
++						break;
++				}
++
++				switch(addr) {
++					case CAPE_EEPROM_ADDR0:
++						setenv("uboot_overlay_addr0", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR1:
++						setenv("uboot_overlay_addr1", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR2:
++						setenv("uboot_overlay_addr2", cape_overlay);
++						break;
++					case CAPE_EEPROM_ADDR3:
++						setenv("uboot_overlay_addr3", cape_overlay);
++						break;
++				}
++			} else {
++				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++			}
++		}
++	}
++
++	if (virtual_emmc == 1) {
++		setenv("uboot_emmc", "/lib/firmware/BB-BONE-eMMC1-01-00A0.dtbo");
++	}
++
++	if (virtual_video == 1) {
++		setenv("uboot_video", "/lib/firmware/BB-HDMI-TDA998x-00A0.dtbo");
++	}
++
++	if (virtual_video == 2) {
++		setenv("uboot_video", "/lib/firmware/BB-HDMI-ADV7511-00A0.dtbo");
++	}
++
++	if (virtual_wireless == 1) {
++		setenv("uboot_wireless", "/lib/firmware/BB-BBBW-WL1835-00A0.dtbo");
++	}
++
++	if (virtual_wireless == 2) {
++		setenv("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
++	}
++
++	i2c_set_bus_num(0);
++	return 0;
++}
++
++void do_cape_detect(void)
++{
++	struct am335x_cape_eeprom_id cape_header;
++
++	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
++	probe_cape_eeprom(&cape_header);
++}
++
+ #ifndef CONFIG_DM_SERIAL
+ struct serial_device *default_serial_console(void)
+ {
+@@ -670,20 +890,10 @@ int board_late_init(void)
+ 	char *name = NULL;
+ 
+ 	if (board_is_bone_lt()) {
+-		puts("Board: BeagleBone Black\n");
+-		name = "A335BNLT";
+-		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
+-			puts("Model: BeagleBone Black Wireless\n");
+-			name = "BBBW";
+-		}
+ 		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
+ 			puts("Model: BeagleBone Blue\n");
+ 			name = "BBBL";
+ 		}
+-		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
+-			puts("Model: SanCloud BeagleBone Enhanced\n");
+-			name = "SBBE";
+-		}
+ 	}
+ 
+ 	if (board_is_bbg1())
+@@ -732,6 +942,12 @@ int board_late_init(void)
+ 	}
+ #endif
+ 
++#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
++#ifdef CONFIG_TI_I2C_BOARD_DETECT
++	do_cape_detect();
++#endif
++#endif
++
+ 	return 0;
+ }
+ #endif
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index fdf8c56258..4962e610f4 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -11,6 +11,22 @@
+ #ifndef _BOARD_H_
+ #define _BOARD_H_
+ 
++struct am335x_cape_eeprom_id {
++	unsigned int header;
++	char eeprom_rev[2];
++	char board_name[32];
++	char version[4];
++	char manufacture[16];
++	char part_number[16];
++	char number_of_pins[2];
++	char serial_number[12];
++	char pin_usage[140];
++	char vdd_3v3exp[ 2];
++	char vdd_5v[ 2];
++	char sys_5v[2];
++	char dc_supplied[2];
++};
++
+ /**
+  * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
+  * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
+@@ -98,5 +114,6 @@ void enable_uart3_pin_mux(void);
+ void enable_uart4_pin_mux(void);
+ void enable_uart5_pin_mux(void);
+ void enable_i2c0_pin_mux(void);
++void enable_i2c2_pin_mux(void);
+ void enable_board_pin_mux(void);
+ #endif
+diff --git a/board/ti/am335x/hash-string.h b/board/ti/am335x/hash-string.h
+new file mode 100644
+index 0000000000..b267a87788
+--- /dev/null
++++ b/board/ti/am335x/hash-string.h
+@@ -0,0 +1,59 @@
++/* Description of GNU message catalog format: string hashing function.
++   Copyright (C) 1995, 1997, 1998, 2000, 2001 Free Software Foundation, Inc.
++
++   This program is free software; you can redistribute it and/or modify it
++   under the terms of the GNU Library General Public License as published
++   by the Free Software Foundation; either version 2, or (at your option)
++   any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Library General Public License for more details.
++
++   You should have received a copy of the GNU Library General Public
++   License along with this program; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
++   USA.  */
++
++/* @@ end of prolog @@ */
++
++#ifndef PARAMS
++# if __STDC__ || defined __GNUC__ || defined __SUNPRO_C || defined __cplusplus || __PROTOTYPES
++#  define PARAMS(Args) Args
++# else
++#  define PARAMS(Args) ()
++# endif
++#endif
++
++/* We assume to have `unsigned long int' value with at least 32 bits.  */
++#define HASHWORDBITS 32
++
++
++/* Defines the so called `hashpjw' function by P.J. Weinberger
++   [see Aho/Sethi/Ullman, COMPILERS: Principles, Techniques and Tools,
++   1986, 1987 Bell Telephone Laboratories, Inc.]  */
++static unsigned long int hash_string PARAMS ((const char *__str_param));
++
++static inline unsigned long int
++hash_string (str_param)
++     const char *str_param;
++{
++  unsigned long int hval, g;
++  const char *str = str_param;
++
++  /* Compute the hash value for the given string.  */
++  hval = 0;
++  while (*str != '\0')
++    {
++      hval <<= 4;
++      hval += (unsigned long int) *str++;
++      g = hval & ((unsigned long int) 0xf << (HASHWORDBITS - 4));
++      if (g != 0)
++	{
++	  hval ^= g >> (HASHWORDBITS - 8);
++	  hval ^= g;
++	}
++    }
++  return hval;
++}
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index 6d65e99a1a..2ae077fb14 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -120,6 +120,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
+ 	{-1},
+ };
+ 
++static struct module_pin_mux i2c2_pin_mux[] = {
++	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
++	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
++	{-1},
++};
++
+ static struct module_pin_mux spi0_pin_mux[] = {
+ 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
+ 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
+@@ -304,6 +312,11 @@ void enable_i2c0_pin_mux(void)
+ 	configure_module_pin_mux(i2c0_pin_mux);
+ }
+ 
++void enable_i2c2_pin_mux(void)
++{
++	configure_module_pin_mux(i2c2_pin_mux);
++}
++
+ /*
+  * The AM335x GP EVM, if daughter card(s) are connected, can have 8
+  * different profiles.  These profiles determine what peripherals are
+@@ -352,6 +365,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_gp_evm()) {
+ 		/* General Purpose EVM */
+ 		unsigned short profile = detect_daughter_board_profile();
+@@ -397,6 +411,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_icev2()) {
+ 		configure_module_pin_mux(mmc0_pin_mux);
+ 		configure_module_pin_mux(gpio0_18_pin_mux);
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 05d4976814..11ce81bee5 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -346,6 +346,138 @@
+ 					"fi;" \
+ 				"fi;" \
+ 			"fi; " \
++			"if test -n ${enable_uboot_overlays}; then " \
++				"setenv fdt_buffer 0x60000;" \
++				"if test -n ${uboot_fdt_buffer}; then " \
++					"setenv fdt_buffer ${uboot_fdt_buffer};" \
++				"fi;" \
++				"echo debug: [fdt_buffer=${fdt_buffer}] ... ;" \
++				"if test -n ${uboot_overlay_addr0}; then " \
++					"echo debug: [uboot_overlay_addr0=${uboot_overlay_addr0}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr0}; then " \
++						"echo loading ${uboot_overlay_addr0} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr0};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr0}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr1}; then " \
++					"echo debug: [uboot_overlay_addr1=${uboot_overlay_addr1}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr1}; then " \
++						"echo loading ${uboot_overlay_addr1} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr1};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr1}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr2}; then " \
++					"echo debug: [uboot_overlay_addr2=${uboot_overlay_addr2}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr2}; then " \
++						"echo loading ${uboot_overlay_addr2} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr2};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr2}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_overlay_addr3}; then " \
++					"echo debug: [uboot_overlay_addr3=${uboot_overlay_addr3}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr3}; then " \
++						"echo loading ${uboot_overlay_addr3} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr3};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${uboot_overlay_addr3}]...;" \
++					"fi; " \
++				"fi;" \
++				"if test -n ${uboot_emmc}; then " \
++					"if test -n ${disable_uboot_overlay_emmc}; then " \
++						"echo uboot loading of [${uboot_emmc}] disabled by /boot/uEnv.txt [disable_uboot_overlay_emmc=1]...;" \
++					"else " \
++						"echo debug: [uboot_emmc=${uboot_emmc}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_emmc}; then " \
++							"echo loading ${uboot_emmc} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_emmc};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_emmc}]...;" \
++						"fi; " \
++					"fi;" \
++				"fi;" \
++				"if test -n ${uboot_video}; then " \
++					"if test -n ${disable_uboot_overlay_video}; then " \
++						"echo uboot loading of [${uboot_video}] disabled by /boot/uEnv.txt [disable_uboot_overlay_video=1]...;" \
++					"else " \
++						"echo debug: [uboot_video=${uboot_video}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
++							"echo loading ${uboot_video} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_video}]...;" \
++						"fi; " \
++					"fi;" \
++				"fi;" \
++				"if test -n ${uboot_wireless}; then " \
++					"if test -n ${disable_uboot_overlay_wireless}; then " \
++						"echo uboot loading of [${uboot_wireless}] disabled by /boot/uEnv.txt [disable_uboot_overlay_wireless=1]...;" \
++					"else " \
++						"echo debug: [uboot_wireless=${uboot_wireless}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${uboot_wireless}; then " \
++							"echo loading ${uboot_wireless} ...;" \
++							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_wireless};" \
++							"fdt addr ${fdtaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"fdt apply ${rdaddr};" \
++							"fdt resize ${fdt_buffer};" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"echo unable to find [${devtype} ${bootpart} ${uboot_wireless}]...;" \
++						"fi; " \
++					"fi;" \
++				"fi;" \
++				"if test -n ${dtb_overlay}; then " \
++					"echo debug: [dtb_overlay=${dtb_overlay}] ... ;" \
++					"if test -e ${devtype} ${bootpart} ${dtb_overlay}; then " \
++						"echo loading ${dtb_overlay} ...;" \
++						"load ${devtype} ${bootpart} ${rdaddr} ${dtb_overlay};" \
++						"fdt addr ${fdtaddr};" \
++						"fdt resize ${fdt_buffer};" \
++						"fdt apply ${rdaddr};" \
++						"fdt resize ${fdt_buffer};" \
++					"else " \
++						"echo unable to find [${devtype} ${bootpart} ${dtb_overlay}]...;" \
++					"fi; " \
++				"fi;" \
++			"else " \
++				"echo add [enable_uboot_overlays=1] to /boot/uEnv.txt to enable...;" \
++			"fi;" \
+ 			"setenv rdfile initrd.img-${uname_r}; " \
+ 			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
+ 				"echo loading ${bootdir}/${rdfile} ...; "\
+diff --git a/include/configs/ti_armv7_omap.h b/include/configs/ti_armv7_omap.h
+index de14b8575a..08661c342d 100644
+--- a/include/configs/ti_armv7_omap.h
++++ b/include/configs/ti_armv7_omap.h
+@@ -20,6 +20,9 @@
+ #define CONFIG_SYS_OMAP24_I2C_SLAVE	1
+ #define CONFIG_SYS_I2C_OMAP24XX
+ 
++#define CONFIG_SYS_OMAP24_I2C_SPEED2	100000
++#define CONFIG_SYS_OMAP24_I2C_SLAVE2	1
++
+ /* SPI IP Block */
+ #define CONFIG_OMAP3_SPI
+ 
+-- 
+2.11.0
+
