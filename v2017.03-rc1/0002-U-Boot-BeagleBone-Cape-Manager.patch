@@ -1,18 +1,18 @@
-From 9d46c0ff612a7e0cea1411da907fce66414f12ec Mon Sep 17 00:00:00 2001
+From 1db4edd37a75dfafb5c2bb9faf547c47505d0923 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 7 Feb 2017 13:39:25 -0600
+Date: Tue, 7 Feb 2017 15:21:34 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 297 +++++++++++++++++++++++++++++-
+ board/ti/am335x/board.c                   | 301 +++++++++++++++++++++++++++++-
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 156 ++++++++++++++++
+ include/configs/ti_armv7_common.h         | 142 ++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 7 files changed, 538 insertions(+), 10 deletions(-)
+ 7 files changed, 528 insertions(+), 10 deletions(-)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -28,7 +28,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..f866a473c6 100644
+index cde6c3ba32..0aa32dcd71 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -39,7 +39,7 @@ index cde6c3ba32..f866a473c6 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,289 @@ void do_board_detect(void)
+@@ -72,9 +73,293 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -293,15 +293,19 @@ index cde6c3ba32..f866a473c6 100644
 +	switch(virtual_video) {
 +		case BBB_TDA998X_AUDIO:
 +			setenv("uboot_video", "/lib/firmware/BB-HDMI-TDA998x-00A0.dtbo");
++			setenv("uboot_video_naudio", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
 +			break;
 +		case BBB_TDA998X_NAUDIO:
 +			setenv("uboot_video", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
++			setenv("uboot_video_naudio", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
 +			break;
 +		case BBB_ADV7511_AUDIO:
 +			setenv("uboot_video", "/lib/firmware/BB-HDMI-ADV7511-00A0.dtbo");
++			setenv("uboot_video_naudio", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
 +			break;
 +		case BBB_ADV7511_NAUDIO:
 +			setenv("uboot_video", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
++			setenv("uboot_video_naudio", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
 +			break;
 +	}
 +
@@ -329,7 +333,7 @@ index cde6c3ba32..f866a473c6 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -670,20 +951,10 @@ int board_late_init(void)
+@@ -670,20 +955,10 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -350,7 +354,7 @@ index cde6c3ba32..f866a473c6 100644
  	}
  
  	if (board_is_bbg1())
-@@ -732,6 +1003,12 @@ int board_late_init(void)
+@@ -732,6 +1007,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -510,10 +514,18 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 05d4976814..3b29fa5770 100644
+index 05d4976814..e2ea852fc5 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -306,6 +306,19 @@
+@@ -112,6 +112,7 @@
+ 	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+ 	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
+ 	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"loadoverlay=fdt addr ${fdtaddr}; fdt resize ${fdt_buffer}; fdt apply ${rdaddr}; fdt resize ${fdt_buffer}\0" \
+ 	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
+ 		"ums 0 ${devtype} 1;\0" \
+ 	"envboot=mmc dev ${mmcdev}; " \
+@@ -306,6 +307,19 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -533,7 +545,7 @@ index 05d4976814..3b29fa5770 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -346,6 +359,149 @@
+@@ -346,6 +360,134 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -548,10 +560,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${uboot_silicon}; then " \
 +						"echo uboot_overlays: loading ${uboot_silicon} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_silicon};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_silicon}]...;" \
 +					"fi; " \
@@ -561,10 +570,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr0}; then " \
 +						"echo uboot_overlays: ${uboot_overlay_addr0} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr0};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay_addr0}]...;" \
@@ -575,10 +581,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr1}; then " \
 +						"echo uboot_overlays: loading ${uboot_overlay_addr1} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr1};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay_addr1}]...;" \
@@ -589,10 +592,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr2}; then " \
 +						"echo uboot_overlays: loading ${uboot_overlay_addr2} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr2};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay_addr2}]...;" \
@@ -603,10 +603,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${uboot_overlay_addr3}; then " \
 +						"echo uboot_overlays: loading ${uboot_overlay_addr3} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay_addr3};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay_addr3}]...;" \
@@ -620,10 +617,7 @@ index 05d4976814..3b29fa5770 100644
 +						"if test -e ${devtype} ${bootpart} ${uboot_emmc}; then " \
 +							"echo loading ${uboot_emmc} ...;" \
 +							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_emmc};" \
-+							"fdt addr ${fdtaddr};" \
-+							"fdt resize ${fdt_buffer};" \
-+							"fdt apply ${rdaddr};" \
-+							"fdt resize ${fdt_buffer};" \
++							"run loadoverlay;" \
 +						"else " \
 +							"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_emmc}]...;" \
 +						"fi; " \
@@ -633,17 +627,26 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -n ${disable_uboot_overlay_video}; then " \
 +						"echo uboot_overlays: uboot loading of [${uboot_video}] disabled by /boot/uEnv.txt [disable_uboot_overlay_video=1]...;" \
 +					"else " \
-+						"echo uboot_overlays: [uboot_video=${uboot_video}] ... ;" \
-+						"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
-+							"echo loading ${uboot_video} ...;" \
-+							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
-+							"fdt addr ${fdtaddr};" \
-+							"fdt resize ${fdt_buffer};" \
-+							"fdt apply ${rdaddr};" \
-+							"fdt resize ${fdt_buffer};" \
++						"if test -n ${disable_uboot_overlay_audio}; then " \
++							"echo uboot_overlays: uboot loading of [${uboot_video}] disabled by /boot/uEnv.txt [disable_uboot_overlay_audio=1]...;" \
++							"echo uboot_overlays: [uboot_video_naudio=${uboot_video_naudio}] ... ;" \
++							"if test -e ${devtype} ${bootpart} ${uboot_video_naudio}; then " \
++								"echo loading ${uboot_video_naudio} ...;" \
++								"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video_naudio};" \
++								"run loadoverlay;" \
++							"else " \
++								"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_video_naudio}]...;" \
++							"fi; " \
 +						"else " \
-+							"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_video}]...;" \
-+						"fi; " \
++							"echo uboot_overlays: [uboot_video=${uboot_video}] ... ;" \
++							"if test -e ${devtype} ${bootpart} ${uboot_video}; then " \
++								"echo loading ${uboot_video} ...;" \
++								"load ${devtype} ${bootpart} ${rdaddr} ${uboot_video};" \
++								"run loadoverlay;" \
++							"else " \
++								"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_video}]...;" \
++							"fi; " \
++						"fi;" \
 +					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_wireless}; then " \
@@ -654,10 +657,7 @@ index 05d4976814..3b29fa5770 100644
 +						"if test -e ${devtype} ${bootpart} ${uboot_wireless}; then " \
 +							"echo loading ${uboot_wireless} ...;" \
 +							"load ${devtype} ${bootpart} ${rdaddr} ${uboot_wireless};" \
-+							"fdt addr ${fdtaddr};" \
-+							"fdt resize ${fdt_buffer};" \
-+							"fdt apply ${rdaddr};" \
-+							"fdt resize ${fdt_buffer};" \
++							"run loadoverlay;" \
 +						"else " \
 +							"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_wireless}]...;" \
 +						"fi; " \
@@ -668,10 +668,7 @@ index 05d4976814..3b29fa5770 100644
 +					"if test -e ${devtype} ${bootpart} ${dtb_overlay}; then " \
 +						"echo uboot_overlays: loading ${dtb_overlay} ...;" \
 +						"load ${devtype} ${bootpart} ${rdaddr} ${dtb_overlay};" \
-+						"fdt addr ${fdtaddr};" \
-+						"fdt resize ${fdt_buffer};" \
-+						"fdt apply ${rdaddr};" \
-+						"fdt resize ${fdt_buffer};" \
++						"run loadoverlay;" \
 +						"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +					"else " \
 +						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${dtb_overlay}]...;" \
