@@ -633,22 +633,22 @@ index 05d4976814..ec13b31892 100644
 +						"else " \
 +							"if test -n ${disable_uboot_overlay_emmc}; then " \
 +								"if test -n ${disable_uboot_overlay_video}; then " \
-+									"setenv uboot_overlay /lib/firmware/univ-bbb-xxx.dtbo; " \
++									"setenv uboot_overlay /lib/firmware/univ-bbb-xxx-00A0.dtbo; " \
 +								"else " \
 +									"if test -n ${disable_uboot_overlay_audio}; then " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-xVx.dtbo; " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-xVx-00A0.dtbo; " \
 +									"else " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-xVA.dtbo; " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-xVA-00A0.dtbo; " \
 +									"fi;" \
 +								"fi;" \
 +							"else " \
 +								"if test -n ${disable_uboot_overlay_video}; then " \
-+									"setenv uboot_overlay /lib/firmware/univ-bbb-Exx.dtbo; " \
++									"setenv uboot_overlay /lib/firmware/univ-bbb-Exx-00A0.dtbo; " \
 +								"else " \
 +									"if test -n ${disable_uboot_overlay_audio}; then " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-EVx.dtbo; " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-EVx-00A0.dtbo; " \
 +									"else " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-EVA.dtbo; " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-EVA-00A0.dtbo; " \
 +									"fi;" \
 +								"fi;" \
 +							"fi;" \
