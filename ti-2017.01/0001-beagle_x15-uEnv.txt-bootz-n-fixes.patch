@@ -1,6 +1,6 @@
-From ba5a7214a271d73435211148547c24da4176cf61 Mon Sep 17 00:00:00 2001
+From bf6185c734977a52ba30b87b751e8fe05c3bcbf4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 23 Jan 2017 14:15:01 -0600
+Date: Wed, 15 Feb 2017 16:24:46 -0600
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -12,7 +12,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  4 files changed, 282 insertions(+), 53 deletions(-)
 
 diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
-index 2f5243ee7a..3843c641e9 100644
+index aff274c74f..ccd9f36d3a 100644
 --- a/board/ti/am57xx/mux_data.h
 +++ b/board/ti/am57xx/mux_data.h
 @@ -351,35 +351,35 @@ const struct pad_conf_entry core_padconf_array_essential_am572x_idk[] = {
@@ -80,11 +80,11 @@ index 2f5243ee7a..3843c641e9 100644
  	{MDIO_D, (M0 | PIN_INPUT)},	/* mdio_d.mdio_d */
  	{RGMII0_TXC, (M0 | PIN_OUTPUT_PULLDOWN | MANUAL_MODE)},	/* rgmii0_txc.rgmii0_txc */
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index a582055b37..a6a83dddc8 100644
+index 662bf2f440..62587e4ff3 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
-@@ -16,6 +16,10 @@ CONFIG_SPL=y
- CONFIG_SPL_STACK_R=y
+@@ -21,6 +21,10 @@ CONFIG_SPL_STACK_R=y
+ CONFIG_SPL_SEPARATE_BSS=y
  CONFIG_SPL_DMA_SUPPORT=y
  CONFIG_SPL_OS_BOOT=y
 +CONFIG_AUTOBOOT_KEYED=y
@@ -94,12 +94,15 @@ index a582055b37..a6a83dddc8 100644
  CONFIG_HUSH_PARSER=y
  CONFIG_FASTBOOT=y
  CONFIG_USB_FUNCTION_FASTBOOT=y
-@@ -83,3 +87,5 @@ CONFIG_G_DNL_MANUFACTURER="Texas Instruments"
- CONFIG_G_DNL_VENDOR_NUM=0x0451
- CONFIG_G_DNL_PRODUCT_NUM=0xd022
- CONFIG_SPL_OF_LIBFDT=y
+@@ -82,6 +86,8 @@ CONFIG_DM_SERIAL=y
+ CONFIG_SYS_NS16550=y
+ CONFIG_DM_SPI=y
+ CONFIG_TI_QSPI=y
 +CONFIG_OF_LIBFDT=y
 +CONFIG_OF_LIBFDT_OVERLAY=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ CONFIG_USB_XHCI_DWC3=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 905e1efa6e..0c70584032 100644
 --- a/include/configs/ti_armv7_common.h
@@ -371,11 +374,11 @@ index 905e1efa6e..0c70584032 100644
   * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
   * we say (for simplicity) that we have 1 bank, always, even when
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index f4ffeb8100..bfd0247bb6 100644
+index 272468742a..3658b7328d 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -101,26 +101,24 @@
- 			"setenv fdtfile am571x-idk.dtb; fi;" \
+@@ -109,26 +109,24 @@
+ 			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
 +	EEWIKI_USB_BOOT \
