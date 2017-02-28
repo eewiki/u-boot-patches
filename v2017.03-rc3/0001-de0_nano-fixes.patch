@@ -1,0 +1,149 @@
+From c28f99be238b7b3359324c28ce2a9158cb043da1 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 15 Feb 2017 16:38:14 -0600
+Subject: [PATCH] de0_nano fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ include/configs/socfpga_de0_nano_soc.h | 111 ++++++++++++++++++++++++++++-----
+ 1 file changed, 96 insertions(+), 15 deletions(-)
+
+diff --git a/include/configs/socfpga_de0_nano_soc.h b/include/configs/socfpga_de0_nano_soc.h
+index f6559722f4..ed2d4ae216 100644
+--- a/include/configs/socfpga_de0_nano_soc.h
++++ b/include/configs/socfpga_de0_nano_soc.h
+@@ -11,6 +11,7 @@
+ /* U-Boot Commands */
+ #define CONFIG_FAT_WRITE
+ #define CONFIG_HW_WATCHDOG
++#define CONFIG_SUPPORT_RAW_INITRD
+ 
+ /* Memory configurations */
+ #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
+@@ -18,7 +19,7 @@
+ /* Booting Linux */
+ #define CONFIG_BOOTFILE		"fitImage"
+ #define CONFIG_BOOTARGS		"console=ttyS0," __stringify(CONFIG_BAUDRATE)
+-#define CONFIG_BOOTCOMMAND	"run mmcload; run mmcboot"
++#define CONFIG_BOOTCOMMAND	"run mmcboot"
+ #define CONFIG_LOADADDR		0x01000000
+ #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
+ 
+@@ -32,20 +33,100 @@
+ 
+ /* Extra Environment */
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+-	"loadaddr=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
+-	"ramboot=setenv bootargs " CONFIG_BOOTARGS ";" \
+-		"bootm ${loadaddr} - ${fdt_addr}\0" \
+-	"bootimage=zImage\0" \
+-	"fdt_addr=100\0" \
+-	"fdtimage=socfpga.dtb\0" \
+-	"bootm ${loadaddr} - ${fdt_addr}\0" \
+-	"mmcroot=/dev/mmcblk0p2\0" \
+-	"mmcboot=setenv bootargs " CONFIG_BOOTARGS \
+-		" root=${mmcroot} rw rootwait;" \
+-		"bootz ${loadaddr} - ${fdt_addr}\0" \
+-	"mmcload=mmc rescan;" \
+-		"load mmc 0:1 ${loadaddr} ${bootimage};" \
+-		"load mmc 0:1 ${fdt_addr} ${fdtimage}\0" \
++	"console=ttyS0,115200\0" \
++	"loadaddr=0x01000000\0" \
++	"fdt_addr=0x07000000\0" \
++	"fdt_file=socfpga_cyclone5_de0_sockit.dtb\0" \
++	"rdaddr=0x07080000\0" \
++	"fpgadata=0x2000000\0" \
++	"devtype=mmc\0" \
++	"optargs=\0" \
++	"cmdline=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadfpga=load ${devtype} ${bootpart} ${fpgadata} ${bootdir}/${fpga_file}; setenv fpgadatasize ${filesize}\0" \
++	"uploadfpga=fpga load 0 ${fpgadata} ${fpgadatasize}\0" \
++	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load ${devtype} ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
++	"mmcboot=${devtype} dev ${mmcdev}; " \
++		"if ${devtype} rescan; then " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e ${devtype} ${bootpart} /boot/uEnv.txt; then " \
++					"load ${devtype} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdt_file ${dtb};" \
++						"echo Using: dtb=${fdt_file} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"if test -n ${fpgafile}; then " \
++			"setenv fpga_file ${fpgafile};" \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${fpga_file}; then " \
++				"echo loading ${bootdir}/${fpga_file} ...; "\
++				"run loadfpga;" \
++				"echo uploading to fpga ...; "\
++				"run uploadfpga;" \
++				"echo fpga loading complete ...; "\
++			"fi;" \
++		"fi;" \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e ${devtype} ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdt_file}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdt_file}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdt_file}; then " \
++						"run loadfdt;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
++			"else " \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
++			"fi;" \
++		"fi;\0"
+ 
+ /* The rest of the configuration is shared */
+ #include <configs/socfpga_common.h>
+-- 
+2.11.0
+
