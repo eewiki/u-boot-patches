@@ -1,18 +1,18 @@
-From 62b82d10d3de6a3150c55575be54c79e8ebd9f62 Mon Sep 17 00:00:00 2001
+From daf944253d76985eda76d924d5b9455cf510bfc0 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 8 Feb 2017 15:16:21 -0600
+Date: Fri, 3 Mar 2017 10:37:36 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 303 +++++++++++++++++++++++++++++-
+ board/ti/am335x/board.c                   | 330 +++++++++++++++++++++++++++++-
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 124 ++++++++++++
+ include/configs/ti_armv7_common.h         | 126 ++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 7 files changed, 512 insertions(+), 10 deletions(-)
+ 7 files changed, 541 insertions(+), 10 deletions(-)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -28,7 +28,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..af50cab113 100644
+index cde6c3ba32..8c3a0266bf 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -39,7 +39,7 @@ index cde6c3ba32..af50cab113 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,295 @@ void do_board_detect(void)
+@@ -72,9 +73,322 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -95,6 +95,9 @@ index cde6c3ba32..af50cab113 100644
 +/* Octavo, ti-cpufreq, detects extra 300Mhz mode, thus disabling cpufreq */
 +#define BBB_OSD3358_SILICON	0x2
 +
++#define CAPE_UNIVERSAL	0x0
++#define CAPE_UNIVERSAL_BBB	0x01
++
 +static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
 +{
 +	unsigned char addr;
@@ -109,6 +112,7 @@ index cde6c3ba32..af50cab113 100644
 +	char virtual_video=NOT_POP;
 +	char virtual_wireless=NOT_POP;
 +	char silicon=BBB_GENERIC_SILICON;
++	char cape_universal=CAPE_UNIVERSAL;
 +
 +	char *name = NULL;
 +
@@ -118,6 +122,7 @@ index cde6c3ba32..af50cab113 100644
 +		virtual_video=BBB_TDA998X_AUDIO;
 +		virtual_wireless=NOT_POP;
 +		silicon=BBB_AM335X_2_SILICON;
++		cape_universal=CAPE_UNIVERSAL_BBB;
 +		name = "A335BNLT";
 +
 +		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
@@ -128,6 +133,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=NOT_POP;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_OSD3358_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +			name = "BBBL";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
@@ -136,6 +142,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=BBBW_WL1835;
 +			silicon=BBB_OSD3358_SILICON;
++			cape_universal=CAPE_UNIVERSAL_BBB;
 +			name = "BBBW";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "BBG", 3)) {
@@ -145,6 +152,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=NOT_POP;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +			name = "BBG1";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
@@ -153,6 +161,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=NOT_POP;
 +			virtual_wireless=BBGW_WL1835;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
 +			puts("Model: Arrow BeagleBone Black Industrial:\n");
@@ -160,6 +169,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_ADV7511_AUDIO;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "EIA", 3)) {
 +			puts("Model: Element14 BeagleBone Black Industrial:\n");
@@ -167,6 +177,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL_BBB;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 +			puts("Model: SanCloud BeagleBone Enhanced:\n");
@@ -174,6 +185,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +			name = "SBBE";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
@@ -182,6 +194,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL_BBB;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "NAD", 3)) {
 +			puts("Model: Neuromeka BeagleBone Air:\n");
@@ -189,6 +202,7 @@ index cde6c3ba32..af50cab113 100644
 +			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
++			cape_universal=CAPE_UNIVERSAL;
 +		}
 +	}
 +
@@ -198,6 +212,7 @@ index cde6c3ba32..af50cab113 100644
 +		virtual_video=NOT_POP;
 +		virtual_wireless=NOT_POP;
 +		silicon=BBB_GENERIC_SILICON;
++		cape_universal=CAPE_UNIVERSAL;
 +		name = "BBG1";
 +	}
 +
@@ -238,13 +253,19 @@ index cde6c3ba32..af50cab113 100644
 +					case 0x3c766f: /* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
++					case 0x24f51cf: /* /lib/firmware/BB-BONE-CAM-VVDN-00A0.dtbo */
++						virtual_emmc=PINS_TAKEN;
++						break;
++					case 0x4b0c13f: /* /lib/firmware/NL-AB-BBCL-00B0.dtbo */
++						virtual_video=PINS_TAKEN;
++						break;
++					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
++						virtual_video=PINS_TAKEN;
++						break;
 +					case 0xfc93c8f: /* /lib/firmware/BB-BONE-LCD7-01-00A3.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
 +					case 0xfe93c1f: /* /lib/firmware/BB-BONE-LCD4-01-00A1.dtbo */
-+						virtual_video=PINS_TAKEN;
-+						break;
-+					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
 +				}
@@ -320,6 +341,12 @@ index cde6c3ba32..af50cab113 100644
 +			break;
 +	}
 +
++	switch(cape_universal) {
++		case CAPE_UNIVERSAL_BBB:
++			setenv("uboot_cape_universal_bbb", "1");
++			break;
++	}
++
 +	i2c_set_bus_num(0);
 +	return 0;
 +}
@@ -335,7 +362,7 @@ index cde6c3ba32..af50cab113 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -670,20 +957,10 @@ int board_late_init(void)
+@@ -670,20 +984,10 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -356,7 +383,7 @@ index cde6c3ba32..af50cab113 100644
  	}
  
  	if (board_is_bbg1())
-@@ -732,6 +1009,12 @@ int board_late_init(void)
+@@ -732,6 +1036,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -516,10 +543,10 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 05d4976814..ec13b31892 100644
+index a48441f4c6..c7fcd5fca9 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -112,6 +112,21 @@
+@@ -106,6 +106,21 @@
  	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
  	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
  	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
@@ -541,7 +568,7 @@ index 05d4976814..ec13b31892 100644
  	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
-@@ -306,6 +321,19 @@
+@@ -300,6 +315,19 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -561,7 +588,7 @@ index 05d4976814..ec13b31892 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -346,6 +374,102 @@
+@@ -340,6 +368,104 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -631,28 +658,30 @@ index 05d4976814..ec13b31892 100644
 +						"if test -n ${cape_uboot}; then " \
 +							"echo uboot_overlays: cape universal disabled, external cape enabled or detected...;" \
 +						"else " \
-+							"if test -n ${disable_uboot_overlay_emmc}; then " \
-+								"if test -n ${disable_uboot_overlay_video}; then " \
-+									"setenv uboot_overlay /lib/firmware/univ-bbb-xxx-00A0.dtbo; " \
-+								"else " \
-+									"if test -n ${disable_uboot_overlay_audio}; then " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-xVx-00A0.dtbo; " \
++							"if test -n ${uboot_cape_universal_bbb}; then " \
++								"if test -n ${disable_uboot_overlay_emmc}; then " \
++									"if test -n ${disable_uboot_overlay_video}; then " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-xxx-00A0.dtbo; " \
 +									"else " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-xVA-00A0.dtbo; " \
++										"if test -n ${disable_uboot_overlay_audio}; then " \
++											"setenv uboot_overlay /lib/firmware/univ-bbb-xVx-00A0.dtbo; " \
++										"else " \
++											"setenv uboot_overlay /lib/firmware/univ-bbb-xVA-00A0.dtbo; " \
++										"fi;" \
++									"fi;" \
++								"else " \
++									"if test -n ${disable_uboot_overlay_video}; then " \
++										"setenv uboot_overlay /lib/firmware/univ-bbb-Exx-00A0.dtbo; " \
++									"else " \
++										"if test -n ${disable_uboot_overlay_audio}; then " \
++											"setenv uboot_overlay /lib/firmware/univ-bbb-EVx-00A0.dtbo; " \
++										"else " \
++											"setenv uboot_overlay /lib/firmware/univ-bbb-EVA-00A0.dtbo; " \
++										"fi;" \
 +									"fi;" \
 +								"fi;" \
-+							"else " \
-+								"if test -n ${disable_uboot_overlay_video}; then " \
-+									"setenv uboot_overlay /lib/firmware/univ-bbb-Exx-00A0.dtbo; " \
-+								"else " \
-+									"if test -n ${disable_uboot_overlay_audio}; then " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-EVx-00A0.dtbo; " \
-+									"else " \
-+										"setenv uboot_overlay /lib/firmware/univ-bbb-EVA-00A0.dtbo; " \
-+									"fi;" \
-+								"fi;" \
++								"run capeloadoverlay;" \
 +							"fi;" \
-+							"run capeloadoverlay;" \
 +						"fi;" \
 +					"else " \
 +						"echo uboot_overlays: add [enable_uboot_cape_universal=1] to /boot/uEnv.txt to enable...;" \
