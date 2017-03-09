@@ -1,6 +1,6 @@
-From dc7f784ed6b5a33e2ea7854706ae83095a03acdd Mon Sep 17 00:00:00 2001
+From e59fa72280acd6f9077ba20a7a0c1330c0187843 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 15 Feb 2017 16:17:54 -0600
+Date: Thu, 9 Mar 2017 14:49:03 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,9 +10,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/mux.c              |   9 +-
  configs/am335x_boneblack_defconfig |   3 +-
  configs/am335x_evm_defconfig       |  26 ++--
- include/configs/am335x_evm.h       |  57 ++++++--
+ include/configs/am335x_evm.h       |  59 ++++++--
  include/configs/ti_armv7_common.h  | 276 +++++++++++++++++++++++++++++++++++--
- 7 files changed, 394 insertions(+), 40 deletions(-)
+ 7 files changed, 396 insertions(+), 40 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index 8eaf3e9a5c..cde6c3ba32 100644
@@ -249,7 +249,7 @@ index 73df55d2de..6fcfa5216f 100644
 +CONFIG_OF_LIBFDT_OVERLAY=y
  CONFIG_PHY_MSCC=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 164beb1966..45097398a1 100644
+index 164beb1966..c15d243172 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -18,6 +18,7 @@
@@ -285,7 +285,7 @@ index 164beb1966..45097398a1 100644
  	func(PXE, pxe, na) \
  	func(DHCP, dhcp, na)
  
-@@ -134,12 +139,39 @@
+@@ -134,12 +139,41 @@
  		"run ramargs; " \
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
  	"findfdt="\
@@ -300,6 +300,8 @@ index 164beb1966..45097398a1 100644
 +				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
 +			"elif test $board_rev = BBG1; then " \
 +				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
++			"elif test $board_rev = BP00; then " \
++				"setenv fdtfile am335x-pocketbone.dtb; setenv fdtbase am335x-pocketbone; " \
 +			"elif test $board_rev = GW1A; then " \
 +				"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; " \
 +			"elif test $board_rev = AIA0; then " \
@@ -328,7 +330,7 @@ index 164beb1966..45097398a1 100644
  		"if test $board_name = A33515BB; then " \
  			"setenv fdtfile am335x-evm.dtb; fi; " \
  		"if test $board_name = A335X_SK; then " \
-@@ -147,13 +179,20 @@
+@@ -147,13 +181,20 @@
  		"if test $board_name = A335_ICE; then " \
  			"setenv fdtfile am335x-icev2.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
@@ -350,7 +352,7 @@ index 164beb1966..45097398a1 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -274,9 +313,7 @@
+@@ -274,9 +315,7 @@
  #endif
  
  #ifdef CONFIG_USB_MUSB_GADGET
