@@ -1,18 +1,18 @@
-From e4bc2ba06ffc19f9eec46a3d17c4b4634c0fe742 Mon Sep 17 00:00:00 2001
+From 7b4994e1c6a1234678b9e1eb1635bdd6c21bac46 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 5 Apr 2017 14:13:24 -0500
+Date: Wed, 5 Apr 2017 16:50:01 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 360 +++++++++++++++++++++++++++++-
+ board/ti/am335x/board.c                   | 364 +++++++++++++++++++++++++++++-
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 174 +++++++++++++++
+ include/configs/ti_armv7_common.h         | 190 ++++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 7 files changed, 619 insertions(+), 10 deletions(-)
+ 7 files changed, 639 insertions(+), 10 deletions(-)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -28,7 +28,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..d4a06617f1 100644
+index cde6c3ba32..da2e624cf4 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -39,7 +39,7 @@ index cde6c3ba32..d4a06617f1 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,352 @@ void do_board_detect(void)
+@@ -72,9 +73,356 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -100,6 +100,7 @@ index cde6c3ba32..d4a06617f1 100644
 +#define CAPE_UNIVERSAL	0x0
 +#define CAPE_UNIVERSAL_BBB	0x01
 +#define CAPE_UNIVERSAL_BBG	0x02
++#define CAPE_UNIVERSAL_BBGW	0x03
 +
 +static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
 +{
@@ -161,7 +162,7 @@ index cde6c3ba32..d4a06617f1 100644
 +			virtual_video=NOT_POP;
 +			virtual_wireless=BBGW_WL1835;
 +			silicon=BBB_GENERIC_SILICON;
-+			cape_universal=CAPE_UNIVERSAL;
++			cape_universal=CAPE_UNIVERSAL_BBGW;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
 +			puts("Model: Arrow BeagleBone Black Industrial:\n");
@@ -199,7 +200,7 @@ index cde6c3ba32..d4a06617f1 100644
 +		virtual_wireless=NOT_POP;
 +		virtual_adc=BBB_ADC;
 +		silicon=BBB_GENERIC_SILICON;
-+		cape_universal=CAPE_UNIVERSAL;
++		cape_universal=CAPE_UNIVERSAL_BBG;
 +		name = "BBG1";
 +	}
 +
@@ -375,6 +376,9 @@ index cde6c3ba32..d4a06617f1 100644
 +		case CAPE_UNIVERSAL_BBG:
 +			setenv("uboot_cape_universal_bbg", "1");
 +			break;
++		case CAPE_UNIVERSAL_BBGW:
++			setenv("uboot_cape_universal_bbgw", "1");
++			break;
 +	}
 +
 +	i2c_set_bus_num(0);
@@ -392,7 +396,7 @@ index cde6c3ba32..d4a06617f1 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -670,20 +1014,10 @@ int board_late_init(void)
+@@ -670,20 +1018,10 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -413,7 +417,7 @@ index cde6c3ba32..d4a06617f1 100644
  	}
  
  	if (board_is_bbg1())
-@@ -732,6 +1066,12 @@ int board_late_init(void)
+@@ -732,6 +1070,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -573,7 +577,7 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index bb3676b57f..99483d1abe 100644
+index bb3676b57f..b4f656e472 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -106,6 +106,21 @@
@@ -618,7 +622,7 @@ index bb3676b57f..99483d1abe 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -340,6 +368,152 @@
+@@ -340,6 +368,168 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -757,6 +761,22 @@ index bb3676b57f..99483d1abe 100644
 +									"setenv uboot_overlay /lib/firmware/univ-bbb-xxx-00A0.dtbo; " \
 +								"else " \
 +									"setenv uboot_overlay /lib/firmware/univ-bbb-Exx-00A0.dtbo; " \
++								"fi;" \
++								"run capeloadoverlay;" \
++							"fi;" \
++							"if test -n ${uboot_cape_universal_bbgw}; then " \
++								"if test -n ${disable_uboot_overlay_emmc}; then " \
++									"if test -n ${disable_uboot_overlay_wireless}; then " \
++										"setenv uboot_overlay /lib/firmware/univ-bbgw-xx-00A0.dtbo; " \
++									"else " \
++										"setenv uboot_overlay /lib/firmware/univ-bbgw-xW-00A0.dtbo; " \
++									"fi;" \
++								"else " \
++									"if test -n ${disable_uboot_overlay_wireless}; then " \
++										"setenv uboot_overlay /lib/firmware/univ-bbgw-Ex-00A0.dtbo; " \
++									"else " \
++										"setenv uboot_overlay /lib/firmware/univ-bbgw-EW-00A0.dtbo; " \
++									"fi;" \
 +								"fi;" \
 +								"run capeloadoverlay;" \
 +							"fi;" \
