@@ -1,18 +1,18 @@
-From 827ab32386032c90d744f1e9eb88373d0f9fea28 Mon Sep 17 00:00:00 2001
+From 077a24b6ceabff4d800ff07149a6596ba27f2abd Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 28 Mar 2017 15:29:52 -0500
+Date: Tue, 4 Apr 2017 21:25:54 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 362 +++++++++++++++++++++++++++++-
+ board/ti/am335x/board.c                   | 356 +++++++++++++++++++++++++++++-
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 158 +++++++++++++
+ include/configs/ti_armv7_common.h         | 166 ++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- 7 files changed, 605 insertions(+), 10 deletions(-)
+ 7 files changed, 607 insertions(+), 10 deletions(-)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -28,7 +28,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index cde6c3ba32..c0eceec030 100644
+index cde6c3ba32..74f18612b9 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -39,7 +39,7 @@ index cde6c3ba32..c0eceec030 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,354 @@ void do_board_detect(void)
+@@ -72,9 +73,348 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -86,6 +86,8 @@ index cde6c3ba32..c0eceec030 100644
 +#define BBB_ADV7511_AUDIO	0x3
 +#define BBB_ADV7511_NAUDIO	0x4
 +
++#define BBB_ADC		0x1
++
 +#define BBBW_WL1835	0x1
 +#define BBGW_WL1835	0x2
 +
@@ -113,6 +115,7 @@ index cde6c3ba32..c0eceec030 100644
 +	char virtual_wireless=NOT_POP;
 +	char silicon=BBB_GENERIC_SILICON;
 +	char cape_universal=CAPE_UNIVERSAL;
++	char virtual_adc=NOT_POP;
 +
 +	char *name = NULL;
 +
@@ -121,6 +124,7 @@ index cde6c3ba32..c0eceec030 100644
 +		virtual_emmc=BBB_EMMC;
 +		virtual_video=BBB_TDA998X_AUDIO;
 +		virtual_wireless=NOT_POP;
++		virtual_adc=BBB_ADC;
 +		silicon=BBB_AM335X_2_SILICON;
 +		cape_universal=CAPE_UNIVERSAL_BBB;
 +		name = "A335BNLT";
@@ -132,32 +136,27 @@ index cde6c3ba32..c0eceec030 100644
 +			virtual_emmc=NOT_POP;
 +			virtual_video=NOT_POP;
 +			virtual_wireless=NOT_POP;
++			virtual_adc=NOT_POP;
 +			silicon=BBB_OSD3358_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +			name = "BBBL";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "BW", 2)) {
 +			puts("Model: BeagleBoard.org BeagleBone Black Wireless:\n");
-+			virtual_emmc=BBB_EMMC;
-+			virtual_video=BBB_TDA998X_AUDIO;
 +			virtual_wireless=BBBW_WL1835;
 +			silicon=BBB_OSD3358_SILICON;
-+			cape_universal=CAPE_UNIVERSAL_BBB;
 +			name = "BBBW";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "BBG", 3)) {
 +			/* catches again in board_is_bbg1() */
 +			//puts("Model: SeeedStudio BeagleBone Green:\n");
-+			virtual_emmc=BBB_EMMC;
 +			virtual_video=NOT_POP;
-+			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +			name = "BBG1";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
 +			puts("Model: SeeedStudio BeagleBone Green Wireless:\n");
-+			virtual_emmc=BBB_EMMC;
 +			virtual_video=NOT_POP;
 +			virtual_wireless=BBGW_WL1835;
 +			silicon=BBB_GENERIC_SILICON;
@@ -165,42 +164,28 @@ index cde6c3ba32..c0eceec030 100644
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
 +			puts("Model: Arrow BeagleBone Black Industrial:\n");
-+			virtual_emmc=BBB_EMMC;
 +			virtual_video=BBB_ADV7511_AUDIO;
-+			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "EIA", 3)) {
 +			puts("Model: Element14 BeagleBone Black Industrial:\n");
-+			virtual_emmc=BBB_EMMC;
-+			virtual_video=BBB_TDA998X_AUDIO;
-+			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
-+			cape_universal=CAPE_UNIVERSAL_BBB;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 +			puts("Model: SanCloud BeagleBone Enhanced:\n");
-+			virtual_emmc=BBB_EMMC;
-+			virtual_video=BBB_TDA998X_AUDIO;
-+			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +			name = "SBBE";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
 +			puts("Model: MENTOREL BeagleBone uSomIQ:\n");
-+			virtual_emmc=BBB_EMMC;
-+			virtual_video=BBB_TDA998X_AUDIO;
-+			virtual_wireless=NOT_POP;
++			virtual_video=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
-+			cape_universal=CAPE_UNIVERSAL_BBB;
++			cape_universal=CAPE_UNIVERSAL;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "NAD", 3)) {
 +			puts("Model: Neuromeka BeagleBone Air:\n");
-+			virtual_emmc=BBB_EMMC;
-+			virtual_video=BBB_TDA998X_AUDIO;
-+			virtual_wireless=NOT_POP;
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +		}
@@ -211,6 +196,7 @@ index cde6c3ba32..c0eceec030 100644
 +		virtual_emmc=BBB_EMMC;
 +		virtual_video=NOT_POP;
 +		virtual_wireless=NOT_POP;
++		virtual_adc=BBB_ADC;
 +		silicon=BBB_GENERIC_SILICON;
 +		cape_universal=CAPE_UNIVERSAL;
 +		name = "BBG1";
@@ -264,6 +250,7 @@ index cde6c3ba32..c0eceec030 100644
 +						break;
 +					case 0xfc93c8f: /* /lib/firmware/BB-BONE-LCD7-01-00A3.dtbo */
 +						virtual_video=PINS_TAKEN;
++						virtual_adc=PINS_TAKEN;
 +						break;
 +					//fe131
 +					case 0xfe1313f: /* /lib/firmware/BB-BONE-4D5R-01-00A1.dtbo */
@@ -299,6 +286,7 @@ index cde6c3ba32..c0eceec030 100644
 +						break;
 +					case 0xfe93c1f: /* /lib/firmware/BB-BONE-LCD4-01-00A1.dtbo */
 +						virtual_video=PINS_TAKEN;
++						virtual_adc=PINS_TAKEN;
 +						break;
 +				}
 +
@@ -373,6 +361,12 @@ index cde6c3ba32..c0eceec030 100644
 +			break;
 +	}
 +
++	switch(virtual_adc) {
++		case BBB_ADC:
++			setenv("uboot_adc", "/lib/firmware/BB-ADC-00A0.dtbo");
++			break;
++	}
++
 +	switch(cape_universal) {
 +		case CAPE_UNIVERSAL_BBB:
 +			setenv("uboot_cape_universal_bbb", "1");
@@ -394,7 +388,7 @@ index cde6c3ba32..c0eceec030 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -670,20 +1016,10 @@ int board_late_init(void)
+@@ -670,20 +1010,10 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -415,7 +409,7 @@ index cde6c3ba32..c0eceec030 100644
  	}
  
  	if (board_is_bbg1())
-@@ -732,6 +1068,12 @@ int board_late_init(void)
+@@ -732,6 +1062,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -575,7 +569,7 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index a48441f4c6..1d4e1e76ab 100644
+index a48441f4c6..89f67a633e 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -106,6 +106,21 @@
@@ -620,7 +614,7 @@ index a48441f4c6..1d4e1e76ab 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -340,6 +368,136 @@
+@@ -340,6 +368,144 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -709,6 +703,14 @@ index a48441f4c6..1d4e1e76ab 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_wireless}] disabled by /boot/uEnv.txt [disable_uboot_overlay_wireless=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_wireless}; " \
++						"run virtualloadoverlay;" \
++					"fi;" \
++				"fi;" \
++				"if test -n ${uboot_adc}; then " \
++					"if test -n ${disable_uboot_overlay_adc}; then " \
++						"echo uboot_overlays: uboot loading of [${uboot_adc}] disabled by /boot/uEnv.txt [disable_uboot_overlay_adc=1]...;" \
++					"else " \
++						"setenv uboot_overlay ${uboot_adc}; " \
 +						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
