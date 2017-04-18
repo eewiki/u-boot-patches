@@ -1,89 +1,21 @@
-From bf6185c734977a52ba30b87b751e8fe05c3bcbf4 Mon Sep 17 00:00:00 2001
+From 66ac8e360e2ef26243bc683d5597eaf74e7693fe Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 15 Feb 2017 16:24:46 -0600
+Date: Mon, 17 Apr 2017 20:58:07 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am57xx/mux_data.h        |  56 ++++-----
- configs/am57xx_evm_defconfig      |   6 +
- include/configs/ti_armv7_common.h | 247 ++++++++++++++++++++++++++++++++++++--
- include/configs/ti_omap5_common.h |  26 ++--
- 4 files changed, 282 insertions(+), 53 deletions(-)
+ configs/am57xx_evm_defconfig      |   6 ++
+ include/configs/ti_armv7_common.h | 202 ++++++++++++++++++++++++++++++++++++++
+ include/configs/ti_omap5_common.h |  26 +++--
+ include/environment/ti/mmc.h      |  45 ++++++---
+ 4 files changed, 254 insertions(+), 25 deletions(-)
 
-diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
-index aff274c74f..ccd9f36d3a 100644
---- a/board/ti/am57xx/mux_data.h
-+++ b/board/ti/am57xx/mux_data.h
-@@ -351,35 +351,35 @@ const struct pad_conf_entry core_padconf_array_essential_am572x_idk[] = {
- 	{VIN2A_D21, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d21.rgmii1_rxd2 */
- 	{VIN2A_D22, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d22.rgmii1_rxd1 */
- 	{VIN2A_D23, (M3 | PIN_INPUT_PULLUP | MANUAL_MODE)},	/* vin2a_d23.rgmii1_rxd0 */
--	{VOUT1_CLK, (M0 | PIN_OUTPUT)},	/* vout1_clk.vout1_clk */
--	{VOUT1_DE, (M0 | PIN_OUTPUT)},	/* vout1_de.vout1_de */
-+	{VOUT1_CLK, (M15 | PIN_OUTPUT)},	/* vout1_clk.vout1_clk */
-+	{VOUT1_DE, (M15 | PIN_OUTPUT)},		/* vout1_de.vout1_de */
- 	{VOUT1_FLD, (M14 | PIN_OUTPUT)},	/* vout1_fld.gpio4_21 */
--	{VOUT1_HSYNC, (M0 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
--	{VOUT1_VSYNC, (M0 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
--	{VOUT1_D0, (M0 | PIN_OUTPUT)},	/* vout1_d0.vout1_d0 */
--	{VOUT1_D1, (M0 | PIN_OUTPUT)},	/* vout1_d1.vout1_d1 */
--	{VOUT1_D2, (M0 | PIN_OUTPUT)},	/* vout1_d2.vout1_d2 */
--	{VOUT1_D3, (M0 | PIN_OUTPUT)},	/* vout1_d3.vout1_d3 */
--	{VOUT1_D4, (M0 | PIN_OUTPUT)},	/* vout1_d4.vout1_d4 */
--	{VOUT1_D5, (M0 | PIN_OUTPUT)},	/* vout1_d5.vout1_d5 */
--	{VOUT1_D6, (M0 | PIN_OUTPUT)},	/* vout1_d6.vout1_d6 */
--	{VOUT1_D7, (M0 | PIN_OUTPUT)},	/* vout1_d7.vout1_d7 */
--	{VOUT1_D8, (M0 | PIN_OUTPUT)},	/* vout1_d8.vout1_d8 */
--	{VOUT1_D9, (M0 | PIN_OUTPUT)},	/* vout1_d9.vout1_d9 */
--	{VOUT1_D10, (M0 | PIN_OUTPUT)},	/* vout1_d10.vout1_d10 */
--	{VOUT1_D11, (M0 | PIN_OUTPUT)},	/* vout1_d11.vout1_d11 */
--	{VOUT1_D12, (M0 | PIN_OUTPUT)},	/* vout1_d12.vout1_d12 */
--	{VOUT1_D13, (M0 | PIN_OUTPUT)},	/* vout1_d13.vout1_d13 */
--	{VOUT1_D14, (M0 | PIN_OUTPUT)},	/* vout1_d14.vout1_d14 */
--	{VOUT1_D15, (M0 | PIN_OUTPUT)},	/* vout1_d15.vout1_d15 */
--	{VOUT1_D16, (M0 | PIN_OUTPUT)},	/* vout1_d16.vout1_d16 */
--	{VOUT1_D17, (M0 | PIN_OUTPUT)},	/* vout1_d17.vout1_d17 */
--	{VOUT1_D18, (M0 | PIN_OUTPUT)},	/* vout1_d18.vout1_d18 */
--	{VOUT1_D19, (M0 | PIN_OUTPUT)},	/* vout1_d19.vout1_d19 */
--	{VOUT1_D20, (M0 | PIN_OUTPUT)},	/* vout1_d20.vout1_d20 */
--	{VOUT1_D21, (M0 | PIN_OUTPUT)},	/* vout1_d21.vout1_d21 */
--	{VOUT1_D22, (M0 | PIN_OUTPUT)},	/* vout1_d22.vout1_d22 */
--	{VOUT1_D23, (M0 | PIN_OUTPUT)},	/* vout1_d23.vout1_d23 */
-+	{VOUT1_HSYNC, (M15 | PIN_OUTPUT)},	/* vout1_hsync.vout1_hsync */
-+	{VOUT1_VSYNC, (M15 | PIN_OUTPUT)},	/* vout1_vsync.vout1_vsync */
-+	{VOUT1_D0, (M15 | PIN_OUTPUT)},	/* vout1_d0.vout1_d0 */
-+	{VOUT1_D1, (M15 | PIN_OUTPUT)},	/* vout1_d1.vout1_d1 */
-+	{VOUT1_D2, (M15 | PIN_OUTPUT)},	/* vout1_d2.vout1_d2 */
-+	{VOUT1_D3, (M15 | PIN_OUTPUT)},	/* vout1_d3.vout1_d3 */
-+	{VOUT1_D4, (M15 | PIN_OUTPUT)},	/* vout1_d4.vout1_d4 */
-+	{VOUT1_D5, (M15 | PIN_OUTPUT)},	/* vout1_d5.vout1_d5 */
-+	{VOUT1_D6, (M15 | PIN_OUTPUT)},	/* vout1_d6.vout1_d6 */
-+	{VOUT1_D7, (M15 | PIN_OUTPUT)},	/* vout1_d7.vout1_d7 */
-+	{VOUT1_D8, (M15 | PIN_OUTPUT)},	/* vout1_d8.vout1_d8 */
-+	{VOUT1_D9, (M15 | PIN_OUTPUT)},	/* vout1_d9.vout1_d9 */
-+	{VOUT1_D10, (M15 | PIN_OUTPUT)},	/* vout1_d10.vout1_d10 */
-+	{VOUT1_D11, (M15 | PIN_OUTPUT)},	/* vout1_d11.vout1_d11 */
-+	{VOUT1_D12, (M15 | PIN_OUTPUT)},	/* vout1_d12.vout1_d12 */
-+	{VOUT1_D13, (M15 | PIN_OUTPUT)},	/* vout1_d13.vout1_d13 */
-+	{VOUT1_D14, (M15 | PIN_OUTPUT)},	/* vout1_d14.vout1_d14 */
-+	{VOUT1_D15, (M15 | PIN_OUTPUT)},		/* vout1_d15.vout1_d15 */
-+	{VOUT1_D16, (M15 | PIN_OUTPUT)},		/* vout1_d16.vout1_d16 */
-+	{VOUT1_D17, (M15 | PIN_OUTPUT)},		/* vout1_d17.vout1_d17 */
-+	{VOUT1_D18, (M15 | PIN_OUTPUT)},	/* vout1_d18.vout1_d18 */
-+	{VOUT1_D19, (M15 | PIN_OUTPUT)},	/* vout1_d19.vout1_d19 */
-+	{VOUT1_D20, (M15 | PIN_OUTPUT)},	/* vout1_d20.vout1_d20 */
-+	{VOUT1_D21, (M15 | PIN_OUTPUT)},	/* vout1_d21.vout1_d21 */
-+	{VOUT1_D22, (M15 | PIN_OUTPUT)},	/* vout1_d22.vout1_d22 */
-+	{VOUT1_D23, (M15 | PIN_OUTPUT)},	/* vout1_d23.vout1_d23 */
- 	{MDIO_MCLK, (M0 | PIN_OUTPUT_PULLDOWN)},	/* mdio_mclk.mdio_mclk */
- 	{MDIO_D, (M0 | PIN_INPUT)},	/* mdio_d.mdio_d */
- 	{RGMII0_TXC, (M0 | PIN_OUTPUT_PULLDOWN | MANUAL_MODE)},	/* rgmii0_txc.rgmii0_txc */
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index 662bf2f440..62587e4ff3 100644
+index e32989d079..6a49585063 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
-@@ -21,6 +21,10 @@ CONFIG_SPL_STACK_R=y
+@@ -22,6 +22,10 @@ CONFIG_SPL_STACK_R=y
  CONFIG_SPL_SEPARATE_BSS=y
  CONFIG_SPL_DMA_SUPPORT=y
  CONFIG_SPL_OS_BOOT=y
@@ -94,7 +26,7 @@ index 662bf2f440..62587e4ff3 100644
  CONFIG_HUSH_PARSER=y
  CONFIG_FASTBOOT=y
  CONFIG_USB_FUNCTION_FASTBOOT=y
-@@ -82,6 +86,8 @@ CONFIG_DM_SERIAL=y
+@@ -84,6 +88,8 @@ CONFIG_DM_SERIAL=y
  CONFIG_SYS_NS16550=y
  CONFIG_DM_SPI=y
  CONFIG_TI_QSPI=y
@@ -104,69 +36,12 @@ index 662bf2f440..62587e4ff3 100644
  CONFIG_USB_XHCI_HCD=y
  CONFIG_USB_XHCI_DWC3=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 905e1efa6e..0c70584032 100644
+index 6c692e13d1..f00c06f056 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -60,22 +60,45 @@
- #define DEFAULT_MMC_TI_ARGS \
- 	"mmcdev=0\0" \
- 	"mmcrootfstype=ext4 rootwait\0" \
--	"finduuid=part uuid mmc ${bootpart} uuid\0" \
-+	"finduuid=part uuid ${interface} ${bootpart} uuid\0" \
- 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
- 		"${optargs} " \
--		"root=PARTUUID=${uuid} rw " \
--		"rootfstype=${mmcrootfstype}\0" \
--	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
--	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
-+		"root=PARTUUID=${uuid} ro " \
-+		"rootfstype=${mmcrootfstype} " \
-+		"${cmdline}\0" \
-+	"args_mmc_old=setenv bootargs console=${console} " \
-+		"${optargs} " \
-+		"root=${oldroot} ro " \
-+		"rootfstype=${mmcrootfstype} " \
-+		"${cmdline}\0" \
-+	"args_mmc_uuid=setenv bootargs console=${console} " \
-+		"${optargs} " \
-+		"root=UUID=${uuid} ro " \
-+		"rootfstype=${mmcrootfstype} " \
-+		"${cmdline}\0" \
-+	"args_uenv_root=setenv bootargs console=${console} " \
-+		"${optargs} " \
-+		"root=${uenv_root} ro " \
-+		"rootfstype=${mmcrootfstype} " \
-+		"${musb} ${cmdline}\0" \
-+	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
-+		"${optargs} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
-+		"root=/dev/ram rw " \
-+		"${cmdline}\0" \
-+	"loadbootscript=load ${interface} ${mmcdev} ${loadaddr} boot.scr\0" \
-+	"bootscript=echo Running bootscript from ${interface}${mmcdev} ...; " \
- 		"source ${loadaddr}\0" \
- 	"bootenvfile=uEnv.txt\0" \
--	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
-+	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
- 		"env import -t ${loadaddr} ${filesize}\0" \
--	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
--	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
--	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
--	"envboot=mmc dev ${mmcdev}; " \
--		"if mmc rescan; then " \
-+	"loadbootenv=fatload ${interface} ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
-+	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
-+	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
-+	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
-+	"envboot=${interface} dev ${mmcdev}; " \
-+		"if ${interface} rescan; then " \
- 			"echo SD/MMC found on device ${mmcdev};" \
- 			"if run loadbootscript; then " \
- 				"run bootscript;" \
-@@ -126,6 +149,208 @@
- 	"args_fit=setenv bootargs console=${console} \0" \
- 	"loadfit=run args_fit; bootm ${loadaddr}#${fdtfile};\0" \
+@@ -112,6 +112,208 @@
+ 
+ /* GPIO block */
  
 +#define EEWIKI_MMC_BOOT \
 +	"mmc_boot=${interface} dev ${mmcdev}; " \
@@ -371,13 +246,13 @@ index 905e1efa6e..0c70584032 100644
 +		"fi;\0" \
 +
  /*
-  * DDR information.  If the CONFIG_NR_DRAM_BANKS is not defined,
-  * we say (for simplicity) that we have 1 bank, always, even when
+  * The following are general good-enough settings for U-Boot.  We set a
+  * large malloc pool as we generally have a lot of DDR, and we opt for
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 272468742a..3658b7328d 100644
+index 62f1518f6b..12151904a6 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -109,26 +109,24 @@
+@@ -111,26 +111,24 @@
  			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -416,6 +291,67 @@ index 272468742a..3658b7328d 100644
  	""
  
  /*
+diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
+index b987f71516..86f94d81f6 100644
+--- a/include/environment/ti/mmc.h
++++ b/include/environment/ti/mmc.h
+@@ -9,22 +9,45 @@
+ #define DEFAULT_MMC_TI_ARGS \
+ 	"mmcdev=0\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+-	"finduuid=part uuid mmc ${bootpart} uuid\0" \
++	"finduuid=part uuid ${interface} ${bootpart} uuid\0" \
+ 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"root=PARTUUID=${uuid} rw " \
+-		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${oldroot} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_uuid=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${musb} ${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/ram rw " \
++		"${cmdline}\0" \
++	"loadbootscript=load ${interface} ${mmcdev} ${loadaddr} boot.scr\0" \
++	"bootscript=echo Running bootscript from ${interface}${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+ 	"bootenvfile=uEnv.txt\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
+-	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+-	"envboot=mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
++	"loadbootenv=fatload ${interface} ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"envboot=${interface} dev ${mmcdev}; " \
++		"if ${interface} rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+ 			"if run loadbootscript; then " \
+ 				"run bootscript;" \
 -- 
 2.11.0
 
