@@ -1,6 +1,6 @@
-From 0a749006f9a37fa6c923efe8a0d26233002ad340 Mon Sep 17 00:00:00 2001
+From bc66fce5f3e823c3079382df61c669e5e2811f61 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 28 Apr 2017 10:16:37 -0500
+Date: Mon, 1 May 2017 16:14:44 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 175 +++++++++++++++
+ include/configs/ti_armv7_common.h         | 181 +++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 642 insertions(+)
+ 8 files changed, 648 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -560,7 +560,7 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index c401ed7b99..2492af692e 100644
+index c401ed7b99..b33522001a 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -272,6 +272,19 @@
@@ -583,10 +583,12 @@ index c401ed7b99..2492af692e 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -312,6 +325,168 @@
+@@ -312,6 +325,174 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
++			"if test $board_name = BBBL; then " \
++				"env delete -f enable_uboot_overlays; fi; " \
 +			"if test -n ${enable_uboot_overlays}; then " \
 +				"setenv fdt_buffer 0x60000;" \
 +				"if test -n ${uboot_fdt_buffer}; then " \
@@ -682,6 +684,10 @@ index c401ed7b99..2492af692e 100644
 +						"setenv uboot_overlay ${uboot_adc}; " \
 +						"run virtualloadoverlay;" \
 +					"fi;" \
++				"fi;" \
++				"if test -n ${uboot_overlay_pru}; then " \
++					"setenv uboot_overlay ${uboot_overlay_pru}; " \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${dtb_overlay}; then " \
 +					"setenv uboot_overlay ${dtb_overlay}; " \
