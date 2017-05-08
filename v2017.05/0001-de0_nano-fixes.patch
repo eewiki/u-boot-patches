@@ -1,0 +1,34 @@
+From 79057410fbc162d86a5ed9d210c8a4a775b49ca5 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Mon, 8 May 2017 15:26:20 -0500
+Subject: [PATCH] de0_nano fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/socfpga_de0_nano_soc_defconfig | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/configs/socfpga_de0_nano_soc_defconfig b/configs/socfpga_de0_nano_soc_defconfig
+index 0697e2ec37..3992658924 100644
+--- a/configs/socfpga_de0_nano_soc_defconfig
++++ b/configs/socfpga_de0_nano_soc_defconfig
+@@ -8,7 +8,7 @@ CONFIG_FIT=y
+ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
+ CONFIG_SYS_CONSOLE_ENV_OVERWRITE=y
+-CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_de0_nano_soc.dtb"
++CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_de0_sockit.dtb"
+ CONFIG_VERSION_VARIABLE=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL=y
+@@ -21,6 +21,7 @@ CONFIG_CMD_ASKENV=y
+ CONFIG_CMD_GREPENV=y
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_I2C=y
+-- 
+2.11.0
+
