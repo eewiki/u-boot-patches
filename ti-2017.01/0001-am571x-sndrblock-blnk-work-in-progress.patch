@@ -1,6 +1,6 @@
-From ce434788611177287474bfbb83e199d4cef35b4a Mon Sep 17 00:00:00 2001
+From 5ae914e924079e57062d84a4b500196c79979bf7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 12 May 2017 17:21:42 -0500
+Date: Mon, 15 May 2017 17:05:09 -0500
 Subject: [PATCH] am571x-sndrblock: blnk work in progress
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -8,13 +8,12 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/dts/Makefile                     |   1 +
  arch/arm/dts/am571x-sndrblock-common.dtsi | 603 ++++++++++++++++++++++++++++++
  arch/arm/dts/am571x-sndrblock.dts         | 119 ++++++
- board/ti/am57xx/board.c                   |  24 +-
- board/ti/common/board_detect.c            |  11 +
+ board/ti/am57xx/board.c                   |  31 +-
  configs/am57xx_evm_defconfig              |   6 +-
- include/configs/ti_armv7_common.h         | 267 +++++++++++++
- include/configs/ti_omap5_common.h         |  31 +-
+ include/configs/ti_armv7_common.h         | 300 +++++++++++++++
+ include/configs/ti_omap5_common.h         |  34 +-
  include/environment/ti/mmc.h              |  45 ++-
- 9 files changed, 1078 insertions(+), 29 deletions(-)
+ 8 files changed, 1108 insertions(+), 31 deletions(-)
  create mode 100644 arch/arm/dts/am571x-sndrblock-common.dtsi
  create mode 100644 arch/arm/dts/am571x-sndrblock.dts
 
@@ -765,93 +764,86 @@ index 0000000000..3097086b1d
 +	/delete-property/ mmc-hs200-1_8v;
 +};
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index af6b7f6303..f30c8c278c 100644
+index af6b7f6303..2520f45981 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
-@@ -43,6 +43,10 @@
+@@ -43,6 +43,11 @@
  				 (strncmp("A.30", board_ti_get_rev(), 3) <= 0))
  #define board_is_am572x_idk()	board_ti_is("AM572IDK")
  #define board_is_am571x_idk()	board_ti_is("AM571IDK")
 +#define board_is_am571x_sndrblock()	board_ti_is("AM571SBA")
-+//#define board_is_am571x_sndrblock_blnk()	board_ti_is("AM57BLNK")
 +
-+#define board_is_am571x_sndrblock_blnk() 1
++//#define board_is_am571x_blank()		board_ti_is("AM57BLNK")
++
++#define board_is_am571x_blank() 1
  
  #ifdef CONFIG_DRIVER_TI_CPSW
  #include <cpsw.h>
-@@ -88,7 +92,7 @@ static const struct dmm_lisa_map_regs am571x_idk_lisa_regs = {
+@@ -88,7 +93,7 @@ static const struct dmm_lisa_map_regs am571x_idk_lisa_regs = {
  
  void emif_get_dmm_regs(const struct dmm_lisa_map_regs **dmm_lisa_regs)
  {
 -	if (board_is_am571x_idk())
-+	if (board_is_am571x_idk() || board_is_am571x_sndrblock() || board_is_am571x_sndrblock_blnk())
++	if (board_is_am571x_idk() || board_is_am571x_sndrblock() || board_is_am571x_blank())
  		*dmm_lisa_regs = &am571x_idk_lisa_regs;
  	else
  		*dmm_lisa_regs = &beagle_x15_lisa_regs;
-@@ -401,6 +405,10 @@ void do_board_detect(void)
- 
- 	if (board_is_x15())
- 		bname = "BeagleBoard X15";
+@@ -407,6 +412,10 @@ void do_board_detect(void)
+ 		bname = "AM572x IDK";
+ 	else if (board_is_am571x_idk())
+ 		bname = "AM571x IDK";
 +	else if (board_is_am571x_sndrblock())
-+		bname = "AM571x sndrBlock";
-+	else if (board_is_am571x_sndrblock_blnk())
-+		bname = "AM57BLNK";
- 	else if (board_is_am572x_evm())
- 		bname = "AM572x EVM";
- 	else if (board_is_am572x_idk())
-@@ -428,6 +436,10 @@ static void setup_board_eeprom_env(void)
- 			name = "beagle_x15_revb1";
- 		else
- 			name = "beagle_x15";
++		bname = "AM571x sndrblock";
++	else
++		bname = "AM571x sndrblock blank";
+ 
+ 	if (bname)
+ 		snprintf(sysinfo.board_string, SYSINFO_BOARD_NAME_MAX_LEN,
+@@ -415,13 +424,13 @@ void do_board_detect(void)
+ 
+ static void setup_board_eeprom_env(void)
+ {
+-	char *name = "beagle_x15";
++	char *name = "NULL";
+ 	int rc;
+ 
+ 	rc = ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
+ 				  CONFIG_EEPROM_CHIP_ADDRESS);
+ 	if (rc)
+-		goto invalid_eeprom;
++		printf("ti_i2c_eeprom_init failed %d\n", rc);
+ 
+ 	if (board_is_x15()) {
+ 		if (board_is_x15_revb1())
+@@ -437,12 +446,15 @@ static void setup_board_eeprom_env(void)
+ 		name = "am572x_idk";
+ 	} else if (board_is_am571x_idk()) {
+ 		name = "am571x_idk";
 +	} else if (board_is_am571x_sndrblock()) {
 +		name = "am571x_sndrblock";
-+	} else if (board_is_am571x_sndrblock_blnk()) {
-+		name = "AM57BLNK";
- 	} else if (board_is_am572x_evm()) {
- 		if (board_is_am572x_evm_reva3())
- 			name = "am57xx_evm_reva3";
-@@ -443,6 +455,7 @@ static void setup_board_eeprom_env(void)
+ 	} else {
+-		printf("Unidentified board claims %s in eeprom header\n",
+-		       board_ti_get_name());
++		name = "am571x_sndrblock_blank";
++		setenv("board_eeprom_header", "BLANK");
  	}
  
  invalid_eeprom:
-+	name = "AM57BLNK";
++	printf("setup_board_eeprom_env: %s\n", name);
  	set_board_info_env(name);
  }
  
-@@ -493,7 +506,7 @@ void am57x_idk_lcd_detect(void)
- 	uint8_t buf = 0;
- 
- 	/* Only valid for IDKs */
--	if (board_is_x15() || board_is_am572x_evm())
-+	if (board_is_x15() || board_is_am572x_evm() || board_is_am571x_sndrblock() || board_is_am571x_sndrblock_blnk())
+@@ -496,6 +508,9 @@ void am57x_idk_lcd_detect(void)
+ 	if (board_is_x15() || board_is_am572x_evm())
  		return;
  
++	if (board_is_am571x_sndrblock() || board_is_am571x_blank())
++		return;
++
  	/* Only AM571x IDK has gpio control detect.. so check that */
-@@ -600,6 +613,7 @@ void recalibrate_iodelay(void)
- 		pconf_sz = ARRAY_SIZE(core_padconf_array_essential_am572x_idk);
- 		iod = iodelay_cfg_array_am572x_idk;
- 		iod_sz = ARRAY_SIZE(iodelay_cfg_array_am572x_idk);
-+	//} else if (board_is_am571x_idk() || board_is_am571x_sndrblock()) {
- 	} else if (board_is_am571x_idk()) {
- 		pconf = core_padconf_array_essential_am571x_idk;
- 		pconf_sz = ARRAY_SIZE(core_padconf_array_essential_am571x_idk);
-@@ -629,6 +643,7 @@ void recalibrate_iodelay(void)
- 	do_set_mux32((*ctrl)->control_padconf_core_base, pconf, pconf_sz);
- 
- 	/* Now do the weird minor deltas that should be safe */
-+//	if (board_is_x15() || board_is_am572x_evm() || board_is_am571x_sndrblock()) {
- 	if (board_is_x15() || board_is_am572x_evm()) {
- 		if (board_is_x15_revb1() || board_is_am572x_evm_reva3()) {
- 			pconf = core_padconf_array_delta_x15_sr2_0;
-@@ -640,6 +655,7 @@ void recalibrate_iodelay(void)
- 		do_set_mux32((*ctrl)->control_padconf_core_base, pconf, pconf_sz);
- 	}
- 
-+	//if (board_is_am571x_idk() || board_is_am571x_sndrblock()) {
- 	if (board_is_am571x_idk()) {
- 		if (am571x_idk_needs_lcd()) {
- 			pconf = core_padconf_array_vout_am571x_idk;
-@@ -984,6 +1000,8 @@ int board_fit_config_name_match(const char *name)
+ 	if (board_is_am571x_idk() && !am571x_idk_needs_lcd())
+ 		goto out;
+@@ -984,6 +999,8 @@ int board_fit_config_name_match(const char *name)
  		} else if (!strcmp(name, "am57xx-beagle-x15")) {
  			return 0;
  		}
@@ -860,37 +852,19 @@ index af6b7f6303..f30c8c278c 100644
  	} else if (board_is_am572x_evm()) {
  		if (board_is_am572x_evm_reva3()) {
  			if (!strcmp(name, "am57xx-evm-reva3"))
-@@ -995,6 +1013,8 @@ int board_fit_config_name_match(const char *name)
+@@ -995,8 +1012,12 @@ int board_fit_config_name_match(const char *name)
  		return 0;
  	} else if (board_is_am571x_idk() && !strcmp(name, "am571x-idk")) {
  		return 0;
-+	} else if (board_is_am571x_sndrblock_blnk()) {
++	} else if (board_is_am571x_blank() && !strcmp(name, "am571x-sndrblock")) {
 +		return 0;
  	}
  
++	printf("CONFIG_SPL_LOAD_FIT: %s\n", name);
++
  	return -1;
-diff --git a/board/ti/common/board_detect.c b/board/ti/common/board_detect.c
-index 854141eb49..8c6294ec07 100644
---- a/board/ti/common/board_detect.c
-+++ b/board/ti/common/board_detect.c
-@@ -209,6 +209,17 @@ int __maybe_unused ti_i2c_eeprom_dra7_get(int bus_addr, int dev_addr)
- 
- 	rc = ti_i2c_eeprom_get(bus_addr, dev_addr, DRA7_EEPROM_HEADER_MAGIC,
- 			       sizeof(dra7_ep), (uint8_t *)&dra7_ep);
-+	if (rc < 0) {
-+		ep->header = DRA7_EEPROM_HEADER_MAGIC;
-+
-+		strlcpy(ep->name, "AM57BLNK", TI_EEPROM_HDR_NAME_LEN + 1);
-+		ti_eeprom_string_cleanup(ep->name);
-+
-+		strlcpy(ep->version, "EMMC", TI_EEPROM_HDR_REV_LEN + 1);
-+		ti_eeprom_string_cleanup(ep->version);
-+
-+		return 0;
-+	}
- 	if (rc)
- 		return rc;
- 
+ }
+ #endif
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
 index e32989d079..4e243b3844 100644
 --- a/configs/am57xx_evm_defconfig
@@ -916,15 +890,16 @@ index e32989d079..4e243b3844 100644
  CONFIG_SPL_DM=y
  CONFIG_REGMAP=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6c692e13d1..19d3f74848 100644
+index 6c692e13d1..f7826f6f36 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -112,6 +112,273 @@
+@@ -112,6 +112,306 @@
  
  /* GPIO block */
  
 +#define EEPROM_PROGRAMMING \
 +	"eeprom_blank=i2c dev 0; " \
++		"i2c md 0x50 0x00.2 10; " \
 +		"i2c mw 0x50 0x00.2 00; " \
 +		"i2c mw 0x50 0x01.2 00; " \
 +		"i2c mw 0x50 0x02.2 00; " \
@@ -935,12 +910,28 @@ index 6c692e13d1..19d3f74848 100644
 +		"i2c mw 0x50 0x07.2 00; " \
 +		"i2c mw 0x50 0x08.2 00; " \
 +		"i2c mw 0x50 0x09.2 00; " \
-+		"i2c mw 0x50 0x0A.2 00; " \
-+		"i2c mw 0x50 0x0B.2 00; " \
-+		"i2c mw 0x50 0x0C.2 00; " \
++		"i2c mw 0x50 0x0a.2 00; " \
++		"i2c mw 0x50 0x0b.2 00; " \
++		"i2c mw 0x50 0x0c.2 00; " \
++		"i2c mw 0x50 0x0d.2 00; " \
++		"i2c mw 0x50 0x0e.2 00; " \
++		"i2c mw 0x50 0x0f.2 00; " \
++		"i2c mw 0x50 0x10.2 00; " \
++		"i2c mw 0x50 0x11.2 00; " \
++		"i2c mw 0x50 0x12.2 00; " \
++		"i2c mw 0x50 0x13.2 00; " \
++		"i2c mw 0x50 0x14.2 00; " \
++		"i2c mw 0x50 0x15.2 00; " \
++		"i2c mw 0x50 0x16.2 00; " \
++		"i2c mw 0x50 0x17.2 00; " \
++		"i2c mw 0x50 0x18.2 00; " \
++		"i2c mw 0x50 0x19.2 00; " \
++		"i2c mw 0x50 0x1a.2 00; " \
++		"i2c mw 0x50 0x1b.2 00; " \
 +		"i2c md 0x50 0x00.2 10; " \
-+		"reset;\0" \
++		"\0" \
 +	"eeprom_x15_b1=i2c dev 0; " \
++		"i2c md 0x50 0x00.2 10; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -970,8 +961,9 @@ index 6c692e13d1..19d3f74848 100644
 +		"i2c mw 0x50 0x1a.2 30; " \
 +		"i2c mw 0x50 0x1b.2 30; " \
 +		"i2c md 0x50 0x00.2 10; " \
-+		"reset;\0" \
++		"\0" \
 +	"eeprom_sndrblock=i2c dev 0; " \
++		"i2c md 0x50 0x00.2 10; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -982,11 +974,26 @@ index 6c692e13d1..19d3f74848 100644
 +		"i2c mw 0x50 0x07.2 37; " \
 +		"i2c mw 0x50 0x08.2 31; " \
 +		"i2c mw 0x50 0x09.2 53; " \
-+		"i2c mw 0x50 0x0A.2 42; " \
-+		"i2c mw 0x50 0x0B.2 41; " \
-+		"i2c mw 0x50 0x0C.2 00; " \
++		"i2c mw 0x50 0x0a.2 42; " \
++		"i2c mw 0x50 0x0b.2 41; " \
++		"i2c mw 0x50 0x0c.2 00; " \
++		"i2c mw 0x50 0x0d.2 41; " \
++		"i2c mw 0x50 0x0e.2 00; " \
++		"i2c mw 0x50 0x0f.2 00; " \
++		"i2c mw 0x50 0x10.2 00; " \
++		"i2c mw 0x50 0x11.2 00; " \
++		"i2c mw 0x50 0x12.2 00; " \
++		"i2c mw 0x50 0x13.2 00; " \
++		"i2c mw 0x50 0x14.2 00; " \
++		"i2c mw 0x50 0x15.2 00; " \
++		"i2c mw 0x50 0x16.2 00; " \
++		"i2c mw 0x50 0x17.2 00; " \
++		"i2c mw 0x50 0x18.2 00; " \
++		"i2c mw 0x50 0x19.2 00; " \
++		"i2c mw 0x50 0x1a.2 00; " \
++		"i2c mw 0x50 0x1b.2 00; " \
 +		"i2c md 0x50 0x00.2 10; " \
-+		"reset;\0" \
++		"\0" \
 +
 +#define EEWIKI_MMC_BOOT \
 +	"mmc_boot=${interface} dev ${mmcdev}; " \
@@ -1194,18 +1201,33 @@ index 6c692e13d1..19d3f74848 100644
   * The following are general good-enough settings for U-Boot.  We set a
   * large malloc pool as we generally have a lot of DDR, and we opt for
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 62f1518f6b..9da1996251 100644
+index 62f1518f6b..8583f77261 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -109,28 +109,29 @@
+@@ -73,11 +73,15 @@
+ 	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=zImage\0" \
++	"board_eeprom_header=undefined\0" \
+ 	"usbtty=cdc_acm\0" \
+ 	"vram=16M\0" \
+ 	"partitions=" PARTS_DEFAULT "\0" \
+ 	"optargs=\0" \
+ 	"dofastboot=0\0" \
++	"read_board_eeprom="\
++		"if test $board_eeprom_header = BLANK; then " \
++			"run eeprom_sndrblock; reset; fi;  \0" \
+ 	"findfdt="\
+ 		"if test $board_name = omap5_uevm; then " \
+ 			"setenv fdtfile omap5-uevm.dtb; fi; " \
+@@ -109,28 +113,30 @@
  			"setenv fdtfile am571x-idk-lcd-osd101t2045.dtb; fi;" \
  		"if test $board_name = am571x_idk && test $idk_lcd = osd101t2587; then " \
  			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
 +		"if test $board_name = am571x_sndrblock; then " \
 +			"setenv fdtfile am571x-sndrblock.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
--			"echo WARNING: Could not determine device tree to use; fi; \0" \
-+			"run eeprom_sndrblock; fi; \0" \
+ 			"echo WARNING: Could not determine device tree to use; fi; \0" \
 +	EEWIKI_USB_BOOT \
 +	EEWIKI_SCSI_BOOT \
 +	EEWIKI_MMC_BOOT \
@@ -1224,6 +1246,7 @@ index 62f1518f6b..9da1996251 100644
 -	"if test ${boot_fit} -eq 1; then "	\
 -		"run update_to_fit;"	\
 -	"fi;"	\
++	"run read_board_eeprom; " \
  	"run findfdt; " \
 -	"run envboot; " \
 -	"run mmcboot;" \
