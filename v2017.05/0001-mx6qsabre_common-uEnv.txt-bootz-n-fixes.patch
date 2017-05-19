@@ -1,19 +1,19 @@
-From f9abe5fbbf2110214481c6501b6cd37f55269252 Mon Sep 17 00:00:00 2001
+From ae775c1ed929ccec58f55993c8b949ba8363cbf3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 3 May 2017 13:03:38 -0500
+Date: Fri, 19 May 2017 14:57:19 -0500
 Subject: [PATCH] mx6qsabre_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/mx6qsabresd_defconfig     |   5 +-
+ configs/mx6qsabresd_defconfig     |   6 +-
  include/configs/mx6sabre_common.h | 287 ++++++++++++++++++++++----------------
- 2 files changed, 172 insertions(+), 120 deletions(-)
+ 2 files changed, 173 insertions(+), 120 deletions(-)
 
 diff --git a/configs/mx6qsabresd_defconfig b/configs/mx6qsabresd_defconfig
-index cef7f1a5b3..3abefdaff3 100644
+index cef7f1a5b3..97e3ccd44f 100644
 --- a/configs/mx6qsabresd_defconfig
 +++ b/configs/mx6qsabresd_defconfig
-@@ -3,11 +3,14 @@ CONFIG_ARCH_MX6=y
+@@ -3,15 +3,19 @@ CONFIG_ARCH_MX6=y
  CONFIG_TARGET_MX6SABRESD=y
  CONFIG_VIDEO=y
  CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/freescale/mx6sabresd/mx6q_4x_mt41j128.cfg,MX6Q"
@@ -29,6 +29,11 @@ index cef7f1a5b3..3abefdaff3 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMLS is not set
  # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_USB=y
 diff --git a/include/configs/mx6sabre_common.h b/include/configs/mx6sabre_common.h
 index 9b0fe5a3c2..aae2e7892e 100644
 --- a/include/configs/mx6sabre_common.h
