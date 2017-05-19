@@ -1,13 +1,13 @@
-From ae775c1ed929ccec58f55993c8b949ba8363cbf3 Mon Sep 17 00:00:00 2001
+From 52895af8de1e70733fbaa772371e849eb8fc2d2d Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 19 May 2017 14:57:19 -0500
+Date: Fri, 19 May 2017 16:16:14 -0500
 Subject: [PATCH] mx6qsabre_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/mx6qsabresd_defconfig     |   6 +-
- include/configs/mx6sabre_common.h | 287 ++++++++++++++++++++++----------------
- 2 files changed, 173 insertions(+), 120 deletions(-)
+ include/configs/mx6sabre_common.h | 221 ++++++++++++++++++++++++++------------
+ 2 files changed, 155 insertions(+), 72 deletions(-)
 
 diff --git a/configs/mx6qsabresd_defconfig b/configs/mx6qsabresd_defconfig
 index cef7f1a5b3..97e3ccd44f 100644
@@ -35,71 +35,28 @@ index cef7f1a5b3..97e3ccd44f 100644
  CONFIG_CMD_I2C=y
  CONFIG_CMD_USB=y
 diff --git a/include/configs/mx6sabre_common.h b/include/configs/mx6sabre_common.h
-index 9b0fe5a3c2..aae2e7892e 100644
+index 9b0fe5a3c2..c2af5daeb6 100644
 --- a/include/configs/mx6sabre_common.h
 +++ b/include/configs/mx6sabre_common.h
-@@ -39,45 +39,41 @@
- #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
- #endif
- 
--#ifdef CONFIG_SUPPORT_EMMC_BOOT
--#define EMMC_ENV \
--	"emmcdev=2\0" \
--	"update_emmc_firmware=" \
--		"if test ${ip_dyn} = yes; then " \
--			"setenv get_cmd dhcp; " \
--		"else " \
--			"setenv get_cmd tftp; " \
--		"fi; " \
--		"if ${get_cmd} ${update_sd_firmware_filename}; then " \
--			"if mmc dev ${emmcdev} 1; then "	\
--				"setexpr fw_sz ${filesize} / 0x200; " \
--				"setexpr fw_sz ${fw_sz} + 1; "	\
--				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
--			"fi; "	\
--		"fi\0"
-+/* Framebuffer */
-+#define CONFIG_VIDEO_IPUV3
-+#define CONFIG_VIDEO_BMP_RLE8
-+#define CONFIG_SPLASH_SCREEN
-+#define CONFIG_SPLASH_SCREEN_ALIGN
-+#define CONFIG_BMP_16BPP
-+#define CONFIG_VIDEO_LOGO
-+#define CONFIG_VIDEO_BMP_LOGO
-+#ifdef CONFIG_MX6DL
-+#define CONFIG_IPUV3_CLK 198000000
- #else
--#define EMMC_ENV ""
-+#define CONFIG_IPUV3_CLK 264000000
- #endif
-+#define CONFIG_CMD_HDMIDETECT
-+#define CONFIG_IMX_HDMI
-+#define CONFIG_IMX_VIDEO_SKIP
- 
- #define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
--
- #define CONFIG_EXTRA_ENV_SETTINGS \
--	"script=boot.scr\0" \
--	"image=zImage\0" \
--	"fdt_file=undefined\0" \
+@@ -68,16 +68,25 @@
+ 	"fdt_addr=0x18000000\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+-	"console=" CONSOLE_DEV "\0" \
 +	"console=ttymxc0,115200\0" \
 +	"splashpos=m,m\0" \
 +	"fdtfile=undefined\0" \
-+	"fdt_high=0xffffffff\0" \
-+	"initrd_high=0xffffffff\0" \
 +	"rdaddr=0x12A00000\0" \
-+	"fdt_addr_r=0x18000000\0" \
- 	"fdt_addr=0x18000000\0" \
--	"boot_fdt=try\0" \
- 	"ip_dyn=yes\0" \
--	"console=" CONSOLE_DEV "\0" \
--	"dfuspi=dfu 0 sf 0:0:10000000:0\0" \
--	"dfu_alt_info_spl=spl raw 0x400\0" \
--	"dfu_alt_info_img=u-boot raw 0x10000\0" \
--	"dfu_alt_info=spl raw 0x400\0" \
--	"fdt_high=0xffffffff\0"	  \
--	"initrd_high=0xffffffff\0" \
+ 	"dfuspi=dfu 0 sf 0:0:10000000:0\0" \
+ 	"dfu_alt_info_spl=spl raw 0x400\0" \
+ 	"dfu_alt_info_img=u-boot raw 0x10000\0" \
+ 	"dfu_alt_info=spl raw 0x400\0" \
+ 	"fdt_high=0xffffffff\0"	  \
+ 	"initrd_high=0xffffffff\0" \
 -	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
++	"fdt_addr_r=0x18000000\0" \
++	"fdt_addr=0x18000000\0" \
++	"ip_dyn=yes\0" \
 +	"optargs=\0" \
 +	"cmdline=\0" \
 +	"mmcdev=0\0" \
@@ -107,15 +64,13 @@ index 9b0fe5a3c2..aae2e7892e 100644
 -	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
 +	"mmcroot=/dev/mmcblk0p2 ro\0" \
 +	"mmcrootfstype=ext4 rootwait\0" \
-+	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
  			"setenv get_cmd dhcp; " \
-@@ -91,85 +87,154 @@
- 				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
+@@ -92,84 +101,154 @@
  			"fi; "	\
  		"fi\0" \
--	EMMC_ENV	  \
+ 	EMMC_ENV	  \
 -	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 -		"root=${mmcroot}\0" \
 -	"loadbootscript=" \
@@ -135,27 +90,64 @@ index 9b0fe5a3c2..aae2e7892e 100644
 -				"else " \
 -					"echo WARN: Cannot load the DT; " \
 -				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootz; " \
+-		"fi;\0" \
+-	"netargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=/dev/nfs " \
+-		"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
+-	"netboot=echo Booting from net ...; " \
+-		"run netargs; " \
+-		"if test ${ip_dyn} = yes; then " \
+-			"setenv get_cmd dhcp; " \
+-		"else " \
+-			"setenv get_cmd tftp; " \
+-		"fi; " \
+-		"${get_cmd} ${image}; " \
+-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
+-				"bootz ${loadaddr} - ${fdt_addr}; " \
+-			"else " \
+-				"if test ${boot_fdt} = try; then " \
+-					"bootz; " \
+-				"else " \
+-					"echo WARN: Cannot load the DT; " \
+-				"fi; " \
+-			"fi; " \
+-		"else " \
+-			"bootz; " \
+-		"fi;\0" \
 +	"mmcargs=setenv bootargs console=${console} " \
 +		"${optargs} " \
 +		"root=${mmcroot} " \
 +		"rootfstype=${mmcrootfstype} " \
 +		"${cmdline}\0" \
-+	"findfdt="\
-+		"if test $fdt_file = undefined; then " \
-+			"if test $board_name = SABREAUTO && test $board_rev = MX6QP ; then " \
-+				"setenv fdtfile imx6qp-sabreauto.dtb; fi; " \
-+			"if test $board_name = SABREAUTO && test $board_rev = MX6Q ; then " \
-+				"setenv fdtfile imx6q-sabreauto.dtb; fi; " \
-+			"if test $board_name = SABREAUTO && test $board_rev = MX6DL ; then " \
-+				"setenv fdtfile imx6dl-sabreauto.dtb; fi; " \
-+			"if test $board_name = SABRESD && test $board_rev = MX6QP ; then " \
-+				"setenv fdtfile imx6qp-sabresd.dtb; fi; " \
-+			"if test $board_name = SABRESD && test $board_rev = MX6Q ; then " \
-+				"setenv fdtfile imx6q-sabresd.dtb; fi; " \
-+			"if test $board_name = SABRESD && test $board_rev = MX6DL ; then " \
-+				"setenv fdtfile imx6dl-sabresd.dtb; fi; " \
+ 		"findfdt="\
+-			"if test $fdt_file = undefined; then " \
 +			"if test $fdtfile = undefined; then " \
-+				"echo WARNING: Could not determine dtb to use; fi; " \
+ 				"if test $board_name = SABREAUTO && test $board_rev = MX6QP; then " \
+-					"setenv fdt_file imx6qp-sabreauto.dtb; fi; " \
++					"setenv fdtfile imx6qp-sabreauto.dtb; fi; " \
+ 				"if test $board_name = SABREAUTO && test $board_rev = MX6Q; then " \
+-					"setenv fdt_file imx6q-sabreauto.dtb; fi; " \
++					"setenv fdtfile imx6q-sabreauto.dtb; fi; " \
+ 				"if test $board_name = SABREAUTO && test $board_rev = MX6DL; then " \
+-					"setenv fdt_file imx6dl-sabreauto.dtb; fi; " \
++					"setenv fdtfile imx6dl-sabreauto.dtb; fi; " \
+ 				"if test $board_name = SABRESD && test $board_rev = MX6QP; then " \
+-					"setenv fdt_file imx6qp-sabresd.dtb; fi; " \
++					"setenv fdtfile imx6qp-sabresd.dtb; fi; " \
+ 				"if test $board_name = SABRESD && test $board_rev = MX6Q; then " \
+-					"setenv fdt_file imx6q-sabresd.dtb; fi; " \
++					"setenv fdtfile imx6q-sabresd.dtb; fi; " \
+ 				"if test $board_name = SABRESD && test $board_rev = MX6DL; then " \
+-					"setenv fdt_file imx6dl-sabresd.dtb; fi; " \
+-				"if test $fdt_file = undefined; then " \
++					"setenv fdtfile imx6dl-sabresd.dtb; fi; " \
++				"if test $fdtfile = undefined; then " \
+ 					"echo WARNING: Could not determine dtb to use; fi; " \
+-			"fi;\0" \
 +		"fi;\0" \
 +	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 +	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
@@ -174,9 +166,7 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +					"echo Running uenvcmd ...;" \
 +					"run uenvcmd;" \
 +				"fi;" \
- 			"fi; " \
--		"else " \
--			"bootz; " \
++			"fi; " \
 +			"echo Checking for: /boot/uEnv.txt ...;" \
 +			"for i in 1 2 3 4 5 6 7 ; do " \
 +				"setenv mmcpart ${i};" \
@@ -199,21 +189,7 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +					"fi;" \
 +				"fi;" \
 +			"done;" \
- 		"fi;\0" \
--	"netargs=setenv bootargs console=${console},${baudrate} " \
--		"root=/dev/nfs " \
--		"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
--	"netboot=echo Booting from net ...; " \
--		"run netargs; " \
--		"if test ${ip_dyn} = yes; then " \
--			"setenv get_cmd dhcp; " \
--		"else " \
--			"setenv get_cmd tftp; " \
--		"fi; " \
--		"${get_cmd} ${image}; " \
--		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
--			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
--				"bootz ${loadaddr} - ${fdt_addr}; " \
++		"fi;\0" \
 +	"uname_boot="\
 +		"setenv bootdir /boot; " \
 +		"setenv bootfile vmlinuz-${uname_r}; " \
@@ -223,15 +199,11 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +			"setenv fdtdir /boot/dtbs/${uname_r}; " \
 +			"if test -e ${interface} ${bootpart} ${fdtdir}/${fdtfile}; then " \
 +				"run loadfdt;" \
- 			"else " \
--				"if test ${boot_fdt} = try; then " \
--					"bootz; " \
++			"else " \
 +				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
 +				"if test -e ${interface} ${bootpart} ${fdtdir}/${fdtfile}; then " \
 +					"run loadfdt;" \
- 				"else " \
--					"echo WARN: Cannot load the DT; " \
--				"fi; " \
++				"else " \
 +					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
 +					"if test -e ${interface} ${bootpart} ${fdtdir}/${fdtfile}; then " \
 +						"run loadfdt;" \
@@ -263,9 +235,7 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +						"fi;" \
 +					"fi;" \
 +				"fi;" \
- 			"fi; " \
--		"else " \
--			"bootz; " \
++			"fi; " \
 +			"setenv rdfile initrd.img-${uname_r}; " \
 +			"if test -e ${interface} ${bootpart} ${bootdir}/${rdfile}; then " \
 +				"echo loading ${bootdir}/${rdfile} ...; "\
@@ -283,24 +253,7 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +				"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
 +				"bootz ${loadaddr} - ${fdt_addr}; " \
 +			"fi;" \
- 		"fi;\0" \
--		"findfdt="\
--			"if test $fdt_file = undefined; then " \
--				"if test $board_name = SABREAUTO && test $board_rev = MX6QP; then " \
--					"setenv fdt_file imx6qp-sabreauto.dtb; fi; " \
--				"if test $board_name = SABREAUTO && test $board_rev = MX6Q; then " \
--					"setenv fdt_file imx6q-sabreauto.dtb; fi; " \
--				"if test $board_name = SABREAUTO && test $board_rev = MX6DL; then " \
--					"setenv fdt_file imx6dl-sabreauto.dtb; fi; " \
--				"if test $board_name = SABRESD && test $board_rev = MX6QP; then " \
--					"setenv fdt_file imx6qp-sabresd.dtb; fi; " \
--				"if test $board_name = SABRESD && test $board_rev = MX6Q; then " \
--					"setenv fdt_file imx6q-sabresd.dtb; fi; " \
--				"if test $board_name = SABRESD && test $board_rev = MX6DL; then " \
--					"setenv fdt_file imx6dl-sabresd.dtb; fi; " \
--				"if test $fdt_file = undefined; then " \
--					"echo WARNING: Could not determine dtb to use; fi; " \
--			"fi;\0" \
++		"fi;\0" \
 +	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
 +	"pxefile_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
 +	"ramdisk_addr_r=0x13000000\0" \
@@ -313,7 +266,7 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +	func(MMC, mmc, 1)
  
  #define CONFIG_BOOTCOMMAND \
--	"run findfdt;" \
+ 	"run findfdt;" \
 -	"mmc dev ${mmcdev};" \
 -	"if mmc rescan; then " \
 -		"if run loadbootscript; then " \
@@ -325,19 +278,18 @@ index 9b0fe5a3c2..aae2e7892e 100644
 -			"fi; " \
 -		"fi; " \
 -	"else run netboot; fi"
-+	   "run findfdt; " \
-+	   "setenv interface mmc;" \
-+	   "setenv mmcdev 0;" \
-+	   "run mmcboot;" \
-+	   "setenv mmcdev 1;" \
-+	   "run mmcboot;" \
-+	   "run distro_bootcmd"
++	"setenv interface mmc;" \
++	"setenv mmcdev 0;" \
++	"run mmcboot;" \
++	"setenv mmcdev 1;" \
++	"run mmcboot;" \
++	"run distro_bootcmd;"
 +
 +#include <config_distro_bootcmd.h>
  
  #define CONFIG_ARP_TIMEOUT     200UL
  
-@@ -191,7 +256,7 @@
+@@ -191,7 +270,7 @@
  	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
  
  /* Environment organization */
@@ -345,29 +297,6 @@ index 9b0fe5a3c2..aae2e7892e 100644
 +#define CONFIG_ENV_SIZE			(10 * 1024)
  
  #define CONFIG_ENV_IS_IN_MMC
- 
-@@ -199,22 +264,6 @@
- #define CONFIG_ENV_OFFSET		(768 * 1024)
- #endif
- 
--/* Framebuffer */
--#define CONFIG_VIDEO_IPUV3
--#define CONFIG_VIDEO_BMP_RLE8
--#define CONFIG_SPLASH_SCREEN
--#define CONFIG_SPLASH_SCREEN_ALIGN
--#define CONFIG_BMP_16BPP
--#define CONFIG_VIDEO_LOGO
--#define CONFIG_VIDEO_BMP_LOGO
--#ifdef CONFIG_MX6DL
--#define CONFIG_IPUV3_CLK 198000000
--#else
--#define CONFIG_IPUV3_CLK 264000000
--#endif
--#define CONFIG_IMX_HDMI
--#define CONFIG_IMX_VIDEO_SKIP
--
- #ifndef CONFIG_SPL
- #define CONFIG_USBD_HS
  
 -- 
 2.11.0
