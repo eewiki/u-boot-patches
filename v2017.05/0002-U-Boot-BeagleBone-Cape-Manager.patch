@@ -1,19 +1,19 @@
-From bc66fce5f3e823c3079382df61c669e5e2811f61 Mon Sep 17 00:00:00 2001
+From 7dc87c47c4a594ef9ccc01ef449fcf65ff717a40 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 1 May 2017 16:14:44 -0500
+Date: Mon, 22 May 2017 11:13:00 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 357 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 363 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
  include/configs/ti_armv7_common.h         | 181 +++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 648 insertions(+)
+ 8 files changed, 654 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 22b7e16483..8552874c16 100644
+index 22b7e16483..20aae7df15 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -40,7 +40,7 @@ index 22b7e16483..8552874c16 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,359 @@ void do_board_detect(void)
+@@ -72,9 +73,365 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -79,6 +79,7 @@ index 22b7e16483..8552874c16 100644
 +#define UNK_BASE_DTB	0x0
 +#define BBB_BASE_DTB	0x1
 +#define BBBL_BASE_DTB	0x2
++#define BBE_BASE_DTB	0x3
 +
 +#define BBB_EMMC	0x1
 +
@@ -177,8 +178,9 @@ index 22b7e16483..8552874c16 100644
 +		}
 +		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 +			puts("Model: SanCloud BeagleBone Enhanced:\n");
++			base_dtb=BBE_BASE_DTB;
 +			silicon=BBB_GENERIC_SILICON;
-+			cape_universal=CAPE_UNIVERSAL;
++			cape_universal=CAPE_UNIVERSAL_BBB;
 +			name = "SBBE";
 +		}
 +		if (!strncmp(board_ti_get_rev(), "ME0", 3)) {
@@ -321,6 +323,10 @@ index 22b7e16483..8552874c16 100644
 +			setenv("uboot_base_dtb", "am335x-boneblack-uboot.dtb");
 +			setenv("uboot_try_cape_universal", "1");
 +			break;
++		case BBE_BASE_DTB:
++			setenv("uboot_base_dtb", "am335x-sancloud-bbe-uboot.dtb");
++			setenv("uboot_try_cape_universal", "1");
++			break;
 +		case BBBL_BASE_DTB:
 +			setenv("uboot_base_dtb", "am335x-boneblue.dtb");
 +			break;
@@ -400,7 +406,7 @@ index 22b7e16483..8552874c16 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -735,6 +1086,12 @@ int board_late_init(void)
+@@ -735,6 +1092,12 @@ int board_late_init(void)
  	}
  #endif
  
