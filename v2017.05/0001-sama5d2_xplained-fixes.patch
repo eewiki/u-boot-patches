@@ -1,19 +1,19 @@
-From 29e24cadf3247049db44292317b437da7d9a9701 Mon Sep 17 00:00:00 2001
+From 876e54283dcc2a887eab1a9ca6731ee81228cbea Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 18 Oct 2016 15:14:29 -0500
+Date: Mon, 22 May 2017 16:41:02 -0500
 Subject: [PATCH] sama5d2_xplained fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/sama5d2_xplained_mmc_defconfig |  4 ++++
- include/configs/sama5d2_xplained.h     | 10 +++++-----
- 2 files changed, 9 insertions(+), 5 deletions(-)
+ configs/sama5d2_xplained_mmc_defconfig | 5 +++++
+ include/configs/sama5d2_xplained.h     | 8 +++-----
+ 2 files changed, 8 insertions(+), 5 deletions(-)
 
 diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
-index 23ab4d6..390d4ef 100644
+index 500f497a03..d3907249e6 100644
 --- a/configs/sama5d2_xplained_mmc_defconfig
 +++ b/configs/sama5d2_xplained_mmc_defconfig
-@@ -14,6 +14,10 @@ CONFIG_BOOTDELAY=3
+@@ -15,12 +15,17 @@ CONFIG_BOOTDELAY=3
  # CONFIG_DISPLAY_BOARDINFO is not set
  CONFIG_SPL=y
  CONFIG_HUSH_PARSER=y
@@ -24,19 +24,18 @@ index 23ab4d6..390d4ef 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMI is not set
  # CONFIG_CMD_IMLS is not set
+ # CONFIG_CMD_LOADS is not set
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_USB=y
 diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
-index e684d2a..95d396c 100644
+index ea28fce6ef..65d21a21d3 100644
 --- a/include/configs/sama5d2_xplained.h
 +++ b/include/configs/sama5d2_xplained.h
-@@ -101,19 +101,19 @@
- #endif
- 
- #ifdef CONFIG_SYS_USE_MMC
-+#define CONFIG_PARTITION_UUIDS
-+#define CONFIG_CMD_PART
- 
- /* bootstrap + u-boot + env in sd card */
- #undef FAT_ENV_DEVICE_AND_PART
+@@ -72,13 +72,11 @@
  #undef CONFIG_BOOTCOMMAND
  
  #define FAT_ENV_DEVICE_AND_PART	"1"
@@ -54,5 +53,5 @@ index e684d2a..95d396c 100644
  
  /* SPL */
 -- 
-2.9.3
+2.11.0
 
