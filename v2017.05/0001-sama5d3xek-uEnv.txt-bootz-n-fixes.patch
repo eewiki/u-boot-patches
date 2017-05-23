@@ -1,27 +1,39 @@
-From 47e8e8a2b961a0897745604144aaa0ee5c8c7e76 Mon Sep 17 00:00:00 2001
+From 062d4ffd88c705b38917a602d1ebc4439fe012c2 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 20 Jun 2016 14:26:00 -0500
+Date: Tue, 23 May 2017 14:03:51 -0500
 Subject: [PATCH] sama5d3xek: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/at91-sama5_common.h | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ configs/sama5d3xek_mmc_defconfig    | 5 +++++
+ include/configs/at91-sama5_common.h | 7 +++----
+ 2 files changed, 8 insertions(+), 4 deletions(-)
 
+diff --git a/configs/sama5d3xek_mmc_defconfig b/configs/sama5d3xek_mmc_defconfig
+index 994bc048ba..ea7c3f9b9e 100644
+--- a/configs/sama5d3xek_mmc_defconfig
++++ b/configs/sama5d3xek_mmc_defconfig
+@@ -20,10 +20,15 @@ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ CONFIG_SPL=y
+ CONFIG_SPL_SEPARATE_BSS=y
+ CONFIG_HUSH_PARSER=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_IMI is not set
+ # CONFIG_CMD_LOADS is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_USB=y
+ # CONFIG_CMD_FPGA is not set
 diff --git a/include/configs/at91-sama5_common.h b/include/configs/at91-sama5_common.h
-index dc955b2..f9b5786 100644
+index dbd4d843eb..afc59e01ef 100644
 --- a/include/configs/at91-sama5_common.h
 +++ b/include/configs/at91-sama5_common.h
-@@ -49,6 +49,8 @@
-  */
- 
- #ifdef CONFIG_SYS_USE_MMC
-+#define CONFIG_PARTITION_UUIDS
-+#define CONFIG_CMD_PART
- 
- #ifdef CONFIG_ENV_IS_IN_MMC
- /* Use raw reserved sectors to save environment */
-@@ -68,12 +70,11 @@
+@@ -64,12 +64,11 @@
  #define CONFIG_BOOTCOMMAND	"if test ! -n ${dtb_name}; then "	\
  				    "setenv dtb_name at91-${board_name}.dtb; " \
  				"fi; "					\
@@ -38,5 +50,5 @@ index dc955b2..f9b5786 100644
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\
 -- 
-2.8.1
+2.11.0
 
