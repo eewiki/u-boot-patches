@@ -1,76 +1,109 @@
-From 9405e2e4ce516160cfb36ffd36d835c17406e817 Mon Sep 17 00:00:00 2001
+From 43893758e91c60e08677a051d421461c29d5c73e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 20 Jun 2016 17:05:54 -0500
+Date: Tue, 23 May 2017 16:21:18 -0500
 Subject: [PATCH] ls1021atwr fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/ls1021atwr.h | 42 +++++++++++++++++++++++++++++++++---------
- 1 file changed, 33 insertions(+), 9 deletions(-)
+ configs/ls1021atwr_sdcard_qspi_defconfig |  4 +++
+ include/configs/ls1021atwr.h             | 43 +++++++++++++++++++++++++++-----
+ 2 files changed, 41 insertions(+), 6 deletions(-)
 
+diff --git a/configs/ls1021atwr_sdcard_qspi_defconfig b/configs/ls1021atwr_sdcard_qspi_defconfig
+index 5ccfc96e9d..2618a58b99 100644
+--- a/configs/ls1021atwr_sdcard_qspi_defconfig
++++ b/configs/ls1021atwr_sdcard_qspi_defconfig
+@@ -6,6 +6,7 @@ CONFIG_SPL_MMC_SUPPORT=y
+ CONFIG_SPL_SERIAL_SUPPORT=y
+ CONFIG_SPL_WATCHDOG_SUPPORT=y
+ CONFIG_VIDEO=y
++CONFIG_DISTRO_DEFAULTS=y
+ CONFIG_DEFAULT_DEVICE_TREE="ls1021a-twr-duart"
+ CONFIG_FIT=y
+ CONFIG_FIT_VERBOSE=y
+@@ -39,7 +40,10 @@ CONFIG_CMD_MII=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_BMP=y
+ CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
+ CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
+ # CONFIG_SPL_EFI_PARTITION is not set
+ CONFIG_OF_CONTROL=y
+ CONFIG_DM=y
 diff --git a/include/configs/ls1021atwr.h b/include/configs/ls1021atwr.h
-index 0fb28ef..a34f59f 100644
+index 1ff3d9ee9e..d554d75929 100644
 --- a/include/configs/ls1021atwr.h
 +++ b/include/configs/ls1021atwr.h
-@@ -418,17 +418,40 @@
+@@ -7,6 +7,8 @@
+ #ifndef __CONFIG_H
+ #define __CONFIG_H
  
++#include <config_distro_defaults.h>
++
+ #define CONFIG_ARMV7_PSCI_1_0
+ 
+ #define CONFIG_ARMV7_SECURE_BASE	OCRAM_BASE_S_ADDR
+@@ -136,6 +138,10 @@
+ #define CONFIG_SYS_TEXT_BASE		0x40010000
+ #endif
+ 
++#ifndef CONFIG_LOADADDR
++#define CONFIG_LOADADDR			0x82000000
++#endif
++
+ #ifndef CONFIG_SYS_TEXT_BASE
+ #define CONFIG_SYS_TEXT_BASE		0x60100000
+ #endif
+@@ -370,16 +376,41 @@
  
  #ifdef CONFIG_LPUART
--#define CONFIG_EXTRA_ENV_SETTINGS       \
+ #define CONFIG_EXTRA_ENV_SETTINGS       \
 -	"bootargs=root=/dev/ram0 rw console=ttyLP0,115200\0" \
 -	"initrd_high=0xffffffff\0"      \
 -	"fdt_high=0xffffffff\0"
-+#define CONFIG_CONSOLE_DEV	"ttyLP0"
++	"console=ttyLP0,115200\0" \
++	"ftdfile=ls1021a-twr.dtb\0" \
++	"initrd_high=0xffffffff\0" \
++	"fdt_high=0xffffffff\0" \
++	"fdt_addr_r=0x8f000000\0" \
++	"fdt_addr=0x8f000000\0" \
++	"findfdt=setenv fdtfile ls1021a-twr.dtb; \0" \
++	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
++	"pxefile_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
++	"scriptaddr=" __stringify(CONFIG_LOADADDR) "\0" \
++	BOOTENV
  #else
--#define CONFIG_EXTRA_ENV_SETTINGS	\
+ #define CONFIG_EXTRA_ENV_SETTINGS	\
 -	"bootargs=root=/dev/ram0 rw console=ttyS0,115200\0" \
 -	"initrd_high=0xffffffff\0"      \
 -	"fdt_high=0xffffffff\0"
-+#define CONFIG_CONSOLE_DEV	"ttyS0"
- #endif
- 
-+#ifndef CONFIG_SPL_BUILD
-+#define CONFIG_EXTRA_ENV_SETTINGS \
-+	"console=" CONFIG_CONSOLE_DEV ",115200\0" \
-+	"fdtfile=ls1021a-twr.dtb\0" \
-+	"fdt_high=0xffffffff\0" \
++	"console=ttyS0,115200\0" \
++	"ftdfile=ls1021a-twr.dtb\0" \
 +	"initrd_high=0xffffffff\0" \
-+	"fdt_addr_r=0x18000000\0" \
-+	"fdt_addr=0x18000000\0" \
-+	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
-+	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0"  \
-+	"pxe_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
-+	"ramdisk_addr_r=0x13000000\0" \
-+	"ramdiskaddr=0x13000000\0" \
++	"fdt_high=0xffffffff\0" \
++	"fdt_addr_r=0x8f000000\0" \
++	"fdt_addr=0x8f000000\0" \
++	"findfdt=setenv fdtfile ls1021a-twr.dtb; \0" \
++	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
++	"pxefile_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
 +	"scriptaddr=" __stringify(CONFIG_LOADADDR) "\0" \
 +	BOOTENV
-+
-+#define CONFIG_BOOTCOMMAND \
-+	"run distro_bootcmd"
-+
+ #endif
+ 
 +#define BOOT_TARGET_DEVICES(func) \
 +	func(MMC, mmc, 0)
 +
-+#include <config_distro_defaults.h>
-+#include <config_distro_bootcmd.h>
++#define CONFIG_BOOTCOMMAND \
++	   "run findfdt; " \
++	   "run distro_bootcmd"
 +
-+#else
-+#define CONFIG_EXTRA_ENV_SETTINGS
-+#endif /* CONFIG_SPL_BUILD */
++#include <config_distro_bootcmd.h>
 +
  /*
   * Miscellaneous configurable options
   */
-@@ -443,7 +466,8 @@
- #define CONFIG_SYS_MEMTEST_START	0x80000000
- #define CONFIG_SYS_MEMTEST_END		0x9fffffff
- 
--#define CONFIG_SYS_LOAD_ADDR		0x82000000
-+#define CONFIG_LOADADDR			0x82000000
-+#define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
- 
- #define CONFIG_LS102XA_STREAM_ID
- 
 -- 
-2.8.1
+2.11.0
 
