@@ -1,21 +1,21 @@
-From 9b205b9fa9ca5d61726e554dedf814202c8f0812 Mon Sep 17 00:00:00 2001
+From fd7c766f556034c3183704331fd27b465a07c68b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 18 Oct 2016 15:23:34 -0500
+Date: Tue, 23 May 2017 14:16:27 -0500
 Subject: [PATCH] sama5d4_xplained: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/sama5d4_xplained_mmc_defconfig | 4 ++++
- include/configs/at91-sama5_common.h    | 9 +++++----
- 2 files changed, 9 insertions(+), 4 deletions(-)
+ configs/sama5d4_xplained_mmc_defconfig | 5 +++++
+ include/configs/at91-sama5_common.h    | 7 +++----
+ 2 files changed, 8 insertions(+), 4 deletions(-)
 
 diff --git a/configs/sama5d4_xplained_mmc_defconfig b/configs/sama5d4_xplained_mmc_defconfig
-index 5ff4688..9d90f37 100644
+index 4fc44e5747..b24a3b1663 100644
 --- a/configs/sama5d4_xplained_mmc_defconfig
 +++ b/configs/sama5d4_xplained_mmc_defconfig
-@@ -14,6 +14,10 @@ CONFIG_BOOTDELAY=3
- # CONFIG_DISPLAY_BOARDINFO is not set
+@@ -18,12 +18,17 @@ CONFIG_BOOTDELAY=3
  CONFIG_SPL=y
+ CONFIG_SPL_SEPARATE_BSS=y
  CONFIG_HUSH_PARSER=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
@@ -24,20 +24,18 @@ index 5ff4688..9d90f37 100644
  CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_IMI is not set
  # CONFIG_CMD_IMLS is not set
+ # CONFIG_CMD_LOADS is not set
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_USB=y
+ # CONFIG_CMD_FPGA is not set
 diff --git a/include/configs/at91-sama5_common.h b/include/configs/at91-sama5_common.h
-index b09ef33..c528275 100644
+index dbd4d843eb..afc59e01ef 100644
 --- a/include/configs/at91-sama5_common.h
 +++ b/include/configs/at91-sama5_common.h
-@@ -45,6 +45,8 @@
-  */
- 
- #ifdef CONFIG_SYS_USE_MMC
-+#define CONFIG_PARTITION_UUIDS
-+#define CONFIG_CMD_PART
- 
- #ifdef CONFIG_ENV_IS_IN_MMC
- /* Use raw reserved sectors to save environment */
-@@ -64,12 +66,11 @@
+@@ -64,12 +64,11 @@
  #define CONFIG_BOOTCOMMAND	"if test ! -n ${dtb_name}; then "	\
  				    "setenv dtb_name at91-${board_name}.dtb; " \
  				"fi; "					\
@@ -54,5 +52,5 @@ index b09ef33..c528275 100644
  #define CONFIG_BOOTARGS							\
  	"console=ttyS0,115200 earlyprintk "				\
 -- 
-2.9.3
+2.11.0
 
