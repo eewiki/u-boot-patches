@@ -1,19 +1,19 @@
-From 7dc87c47c4a594ef9ccc01ef449fcf65ff717a40 Mon Sep 17 00:00:00 2001
+From 2463894be1587330365ef1e036b6600ae7c58ce0 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 22 May 2017 11:13:00 -0500
+Date: Thu, 1 Jun 2017 11:36:54 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 363 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 369 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 181 +++++++++++++++
+ include/configs/ti_armv7_common.h         | 185 +++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 654 insertions(+)
+ 8 files changed, 664 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 7b841b2d55..119ca3d62c 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 22b7e16483..20aae7df15 100644
+index 22b7e16483..858c567bd6 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -36,6 +36,7 @@
@@ -40,7 +40,7 @@ index 22b7e16483..20aae7df15 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -72,9 +73,365 @@ void do_board_detect(void)
+@@ -72,9 +73,371 @@ void do_board_detect(void)
  
  	if (ti_i2c_eeprom_am_get(-1, CONFIG_SYS_I2C_EEPROM_ADDR))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -253,6 +253,12 @@ index 22b7e16483..20aae7df15 100644
 +					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
++					//d15bb
++					case 0xd15b80f: /* /lib/firmware/DLPDLCR2000-00A0.dtbo */
++						virtual_video=PINS_TAKEN;
++						//FIXME: still needs to be tested on hardware...
++						setenv("overlay_i2c_script", "i2c dev 2; i2c mw 0x1b 0x0b.2 0x00; i2c mw 0x1b 0x0c.2 0x1b;");
++						break;
 +					case 0xe3f55df: /* /lib/firmware/BB-BONE-NH7C-01-A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
@@ -406,7 +412,7 @@ index 22b7e16483..20aae7df15 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -735,6 +1092,12 @@ int board_late_init(void)
+@@ -735,6 +1098,12 @@ int board_late_init(void)
  	}
  #endif
  
@@ -566,7 +572,7 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index c401ed7b99..b33522001a 100644
+index c401ed7b99..e161a9d2b9 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -272,6 +272,19 @@
@@ -589,7 +595,7 @@ index c401ed7b99..b33522001a 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -312,6 +325,174 @@
+@@ -312,6 +325,178 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -699,6 +705,10 @@ index c401ed7b99..b33522001a 100644
 +					"setenv uboot_overlay ${dtb_overlay}; " \
 +					"echo uboot_overlays: [dtb_overlay=${uboot_overlay}] ... ;" \
 +					"run capeloadoverlay;" \
++				"fi;" \
++				"if test -n ${overlay_i2c_script}; then " \
++					"echo running: [${overlay_i2c_script}] ... ;" \
++					"run overlay_i2c_script;" \
 +				"fi;" \
 +				"if test -n ${uboot_try_cape_universal}; then " \
 +					"if test -n ${enable_uboot_cape_universal}; then " \
