@@ -1,6 +1,6 @@
-From 822f8548d42ad88da8002408416797c63b6cac90 Mon Sep 17 00:00:00 2001
+From 73be35d309a879137ef6f7b9e13d23dd0aba3bb2 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 16 May 2017 10:14:11 -0500
+Date: Mon, 5 Jun 2017 11:11:31 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/dts/am571x-sndrblock.dts         | 119 ++++++
  board/ti/am57xx/board.c                   |  52 ++-
  configs/am57xx_evm_defconfig              |   8 +-
- include/configs/ti_armv7_common.h         | 322 ++++++++++++++++
+ include/configs/ti_armv7_common.h         | 315 ++++++++++++++++
  include/configs/ti_omap5_common.h         |  36 +-
  include/environment/ti/mmc.h              |  45 ++-
- 8 files changed, 1151 insertions(+), 35 deletions(-)
+ 8 files changed, 1144 insertions(+), 35 deletions(-)
  create mode 100644 arch/arm/dts/am571x-sndrblock-common.dtsi
  create mode 100644 arch/arm/dts/am571x-sndrblock.dts
 
@@ -764,7 +764,7 @@ index 0000000000..3097086b1d
 +	/delete-property/ mmc-hs200-1_8v;
 +};
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index af6b7f6303..50d05ea747 100644
+index b8798d6f2a..e0f204da16 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
 @@ -43,6 +43,17 @@
@@ -794,7 +794,7 @@ index af6b7f6303..50d05ea747 100644
  		*dmm_lisa_regs = &am571x_idk_lisa_regs;
  	else
  		*dmm_lisa_regs = &beagle_x15_lisa_regs;
-@@ -407,6 +418,12 @@ void do_board_detect(void)
+@@ -455,6 +466,12 @@ void do_board_detect(void)
  		bname = "AM572x IDK";
  	else if (board_is_am571x_idk())
  		bname = "AM571x IDK";
@@ -807,7 +807,7 @@ index af6b7f6303..50d05ea747 100644
  
  	if (bname)
  		snprintf(sysinfo.board_string, SYSINFO_BOARD_NAME_MAX_LEN,
-@@ -415,13 +432,13 @@ void do_board_detect(void)
+@@ -463,13 +480,13 @@ void do_board_detect(void)
  
  static void setup_board_eeprom_env(void)
  {
@@ -823,7 +823,7 @@ index af6b7f6303..50d05ea747 100644
  
  	if (board_is_x15()) {
  		if (board_is_x15_revb1())
-@@ -437,12 +454,17 @@ static void setup_board_eeprom_env(void)
+@@ -485,12 +502,17 @@ static void setup_board_eeprom_env(void)
  		name = "am572x_idk";
  	} else if (board_is_am571x_idk()) {
  		name = "am571x_idk";
@@ -845,7 +845,7 @@ index af6b7f6303..50d05ea747 100644
  	set_board_info_env(name);
  }
  
-@@ -496,6 +518,12 @@ void am57x_idk_lcd_detect(void)
+@@ -546,6 +568,12 @@ void am57x_idk_lcd_detect(void)
  	if (board_is_x15() || board_is_am572x_evm())
  		return;
  
@@ -858,7 +858,7 @@ index af6b7f6303..50d05ea747 100644
  	/* Only AM571x IDK has gpio control detect.. so check that */
  	if (board_is_am571x_idk() && !am571x_idk_needs_lcd())
  		goto out;
-@@ -629,8 +657,8 @@ void recalibrate_iodelay(void)
+@@ -679,8 +707,8 @@ void recalibrate_iodelay(void)
  	do_set_mux32((*ctrl)->control_padconf_core_base, pconf, pconf_sz);
  
  	/* Now do the weird minor deltas that should be safe */
@@ -869,7 +869,7 @@ index af6b7f6303..50d05ea747 100644
  			pconf = core_padconf_array_delta_x15_sr2_0;
  			pconf_sz = ARRAY_SIZE(core_padconf_array_delta_x15_sr2_0);
  		} else {
-@@ -984,6 +1012,8 @@ int board_fit_config_name_match(const char *name)
+@@ -1034,6 +1062,8 @@ int board_fit_config_name_match(const char *name)
  		} else if (!strcmp(name, "am57xx-beagle-x15")) {
  			return 0;
  		}
@@ -878,7 +878,7 @@ index af6b7f6303..50d05ea747 100644
  	} else if (board_is_am572x_evm()) {
  		if (board_is_am572x_evm_reva3()) {
  			if (!strcmp(name, "am57xx-evm-reva3"))
-@@ -995,6 +1025,10 @@ int board_fit_config_name_match(const char *name)
+@@ -1045,6 +1075,10 @@ int board_fit_config_name_match(const char *name)
  		return 0;
  	} else if (board_is_am571x_idk() && !strcmp(name, "am571x-idk")) {
  		return 0;
@@ -923,59 +923,55 @@ index e32989d079..4bdf17e96f 100644
  CONFIG_USB_XHCI_HCD=y
  CONFIG_USB_XHCI_DWC3=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6c692e13d1..731aec9463 100644
+index 6c692e13d1..2008e1d2b0 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -112,6 +112,328 @@
+@@ -112,6 +112,321 @@
  
  /* GPIO block */
  
 +#define EEPROM_PROGRAMMING \
 +	"eeprom_dump=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +	"eeprom_blank=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
-+		"i2c mw 0x50 0x00.2 00; " \
-+		"i2c mw 0x50 0x01.2 00; " \
-+		"i2c mw 0x50 0x02.2 00; " \
-+		"i2c mw 0x50 0x03.2 00; " \
-+		"i2c mw 0x50 0x04.2 00; " \
-+		"i2c mw 0x50 0x05.2 00; " \
-+		"i2c mw 0x50 0x06.2 00; " \
-+		"i2c mw 0x50 0x07.2 00; " \
-+		"i2c mw 0x50 0x08.2 00; " \
-+		"i2c mw 0x50 0x09.2 00; " \
-+		"i2c mw 0x50 0x0a.2 00; " \
-+		"i2c mw 0x50 0x0b.2 00; " \
-+		"i2c mw 0x50 0x0c.2 00; " \
-+		"i2c mw 0x50 0x0d.2 00; " \
-+		"i2c mw 0x50 0x0e.2 00; " \
-+		"i2c mw 0x50 0x0f.2 00; " \
-+		"i2c mw 0x50 0x10.2 00; " \
-+		"i2c mw 0x50 0x11.2 00; " \
-+		"i2c mw 0x50 0x12.2 00; " \
-+		"i2c mw 0x50 0x13.2 00; " \
-+		"i2c mw 0x50 0x14.2 00; " \
-+		"i2c mw 0x50 0x15.2 00; " \
-+		"i2c mw 0x50 0x16.2 00; " \
-+		"i2c mw 0x50 0x17.2 00; " \
-+		"i2c mw 0x50 0x18.2 00; " \
-+		"i2c mw 0x50 0x19.2 00; " \
-+		"i2c mw 0x50 0x1a.2 00; " \
-+		"i2c mw 0x50 0x1b.2 00; " \
-+		"i2c mw 0x50 0x1c.2 00; " \
-+		"i2c mw 0x50 0x1d.2 00; " \
-+		"i2c mw 0x50 0x1e.2 00; " \
-+		"i2c mw 0x50 0x1f.2 00; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c md 0x50 0x00.2 20; " \
++		"i2c mw 0x50 0x00.2 ff; " \
++		"i2c mw 0x50 0x01.2 ff; " \
++		"i2c mw 0x50 0x02.2 ff; " \
++		"i2c mw 0x50 0x03.2 ff; " \
++		"i2c mw 0x50 0x04.2 ff; " \
++		"i2c mw 0x50 0x05.2 ff; " \
++		"i2c mw 0x50 0x06.2 ff; " \
++		"i2c mw 0x50 0x07.2 ff; " \
++		"i2c mw 0x50 0x08.2 ff; " \
++		"i2c mw 0x50 0x09.2 ff; " \
++		"i2c mw 0x50 0x0a.2 ff; " \
++		"i2c mw 0x50 0x0b.2 ff; " \
++		"i2c mw 0x50 0x0c.2 ff; " \
++		"i2c mw 0x50 0x0d.2 ff; " \
++		"i2c mw 0x50 0x0e.2 ff; " \
++		"i2c mw 0x50 0x0f.2 ff; " \
++		"i2c mw 0x50 0x10.2 ff; " \
++		"i2c mw 0x50 0x11.2 ff; " \
++		"i2c mw 0x50 0x12.2 ff; " \
++		"i2c mw 0x50 0x13.2 ff; " \
++		"i2c mw 0x50 0x14.2 ff; " \
++		"i2c mw 0x50 0x15.2 ff; " \
++		"i2c mw 0x50 0x16.2 ff; " \
++		"i2c mw 0x50 0x17.2 ff; " \
++		"i2c mw 0x50 0x18.2 ff; " \
++		"i2c mw 0x50 0x19.2 ff; " \
++		"i2c mw 0x50 0x1a.2 ff; " \
++		"i2c mw 0x50 0x1b.2 ff; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +	"eeprom_x15_b1=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -1004,16 +1000,14 @@ index 6c692e13d1..731aec9463 100644
 +		"i2c mw 0x50 0x19.2 30; " \
 +		"i2c mw 0x50 0x1a.2 30; " \
 +		"i2c mw 0x50 0x1b.2 30; " \
-+		"i2c mw 0x50 0x1c.2 00; " \
-+		"i2c mw 0x50 0x1d.2 00; " \
-+		"i2c mw 0x50 0x1e.2 00; " \
-+		"i2c mw 0x50 0x1f.2 00; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +	"eeprom_sndrblock=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -1026,28 +1020,27 @@ index 6c692e13d1..731aec9463 100644
 +		"i2c mw 0x50 0x09.2 53; " \
 +		"i2c mw 0x50 0x0a.2 42; " \
 +		"i2c mw 0x50 0x0b.2 41; " \
-+		"i2c mw 0x50 0x0c.2 00; " \
-+		"i2c mw 0x50 0x0d.2 00; " \
-+		"i2c mw 0x50 0x0e.2 00; " \
-+		"i2c mw 0x50 0x0f.2 00; " \
-+		"i2c mw 0x50 0x10.2 00; " \
-+		"i2c mw 0x50 0x11.2 00; " \
-+		"i2c mw 0x50 0x12.2 00; " \
-+		"i2c mw 0x50 0x13.2 00; " \
-+		"i2c mw 0x50 0x14.2 00; " \
-+		"i2c mw 0x50 0x15.2 00; " \
-+		"i2c mw 0x50 0x16.2 00; " \
-+		"i2c mw 0x50 0x17.2 00; " \
-+		"i2c mw 0x50 0x18.2 00; " \
-+		"i2c mw 0x50 0x19.2 00; " \
-+		"i2c mw 0x50 0x1a.2 00; " \
-+		"i2c mw 0x50 0x1b.2 00; " \
-+		"i2c mw 0x50 0x1c.2 00; " \
-+		"i2c mw 0x50 0x1d.2 00; " \
-+		"i2c mw 0x50 0x1e.2 00; " \
-+		"i2c mw 0x50 0x1f.2 00; " \
-+		"i2c md 0x50 0x00.2 10; " \
-+		"i2c md 0x50 0x10.2 10; " \
++		"i2c mw 0x50 0x0c.2 ff; " \
++		"i2c mw 0x50 0x0d.2 ff; " \
++		"i2c mw 0x50 0x0e.2 ff; " \
++		"i2c mw 0x50 0x0f.2 ff; " \
++		"i2c mw 0x50 0x10.2 ff; " \
++		"i2c mw 0x50 0x11.2 ff; " \
++		"i2c mw 0x50 0x12.2 ff; " \
++		"i2c mw 0x50 0x13.2 ff; " \
++		"i2c mw 0x50 0x14.2 ff; " \
++		"i2c mw 0x50 0x15.2 ff; " \
++		"i2c mw 0x50 0x16.2 ff; " \
++		"i2c mw 0x50 0x17.2 ff; " \
++		"i2c mw 0x50 0x18.2 ff; " \
++		"i2c mw 0x50 0x19.2 ff; " \
++		"i2c mw 0x50 0x1a.2 ff; " \
++		"i2c mw 0x50 0x1b.2 ff; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
++		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +
 +#define EEWIKI_MMC_BOOT \
