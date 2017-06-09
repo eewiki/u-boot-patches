@@ -1,0 +1,694 @@
+From ec2c10fbe7ba254b34e6cf5b4055804beb79241d Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Fri, 9 Jun 2017 15:10:11 -0500
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/ti/am335x/board.c            |  41 +++++--
+ board/ti/am335x/board.h            |  20 ++++
+ board/ti/am335x/mux.c              |   9 +-
+ configs/am335x_boneblack_defconfig |   4 +-
+ configs/am335x_evm_defconfig       |  28 ++---
+ include/configs/am335x_evm.h       |  61 +++++++---
+ include/configs/ti_armv7_common.h  | 220 +++++++++++++++++++++++++++++++++++++
+ include/environment/ti/mmc.h       |  56 ++++++++--
+ 8 files changed, 386 insertions(+), 53 deletions(-)
+
+diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
+index 517965c0f0..2fb58e6ed8 100644
+--- a/board/ti/am335x/board.c
++++ b/board/ti/am335x/board.c
+@@ -294,9 +294,6 @@ const struct dpll_params *get_dpll_mpu_params(void)
+ 	if (bone_not_connected_to_ac_power())
+ 		freq = MPUPLL_M_600;
+ 
+-	if (board_is_bone_lt())
+-		freq = MPUPLL_M_1000;
+-
+ 	switch (freq) {
+ 	case MPUPLL_M_1000:
+ 		return &dpll_mpu_opp[ind][5];
+@@ -336,13 +333,6 @@ static void scale_vcores_bone(int freq)
+ 	if (bone_not_connected_to_ac_power())
+ 		freq = MPUPLL_M_600;
+ 
+-	/*
+-	 * Override what we have detected since we know if we have
+-	 * a Beaglebone Black it supports 1GHz.
+-	 */
+-	if (board_is_bone_lt())
+-		freq = MPUPLL_M_1000;
+-
+ 	if (freq == MPUPLL_M_1000) {
+ 		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1800MA;
+ 		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1325MV;
+@@ -618,6 +608,24 @@ static struct clk_synth cdce913_data = {
+  */
+ int board_init(void)
+ {
++	u32 sys_reboot;
++
++	sys_reboot = readl(PRM_RSTST);
++	if (sys_reboot & (1 << 9))
++		puts("Reset Source: IcePick reset has occurred.\n");
++
++	if (sys_reboot & (1 << 5))
++		puts("Reset Source: Global external warm reset has occurred.\n");
++
++	if (sys_reboot & (1 << 4))
++		puts("Reset Source: watchdog reset has occurred.\n");
++
++	if (sys_reboot & (1 << 1))
++		puts("Reset Source: Global warm SW reset has occurred.\n");
++
++	if (sys_reboot & (1 << 0))
++		puts("Reset Source: Power-on reset has occurred.\n");
++
+ #if defined(CONFIG_HW_WATCHDOG)
+ 	hw_watchdog_init();
+ #endif
+@@ -714,6 +722,8 @@ int board_late_init(void)
+ 	char *name = NULL;
+ 
+ 	if (board_is_bone_lt()) {
++		puts("Board: BeagleBone Black\n");
++		name = "A335BNLT";
+ 		/* BeagleBoard.org BeagleBone Black Wireless: */
+ 		if (!strncmp(board_ti_get_rev(), "BWA", 3)) {
+ 			name = "BBBW";
+@@ -726,6 +736,10 @@ int board_late_init(void)
+ 		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
+ 			name = "BBBL";
+ 		}
++		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
++			puts("Model: SanCloud BeagleBone Enhanced\n");
++			name = "SBBE";
++		}
+ 	}
+ 
+ 	if (board_is_bbg1())
+@@ -865,18 +879,21 @@ int board_eth_init(bd_t *bis)
+ 	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
+ 
+ #ifdef CONFIG_DRIVER_TI_CPSW
+-	if (board_is_bone() || board_is_bone_lt() ||
++	if (board_is_bone() || (board_is_bone_lt() && !board_is_bone_lt_enhanced() && !board_is_m10a()) ||
+ 	    board_is_idk()) {
++		puts("eth0: MII MODE\n");
+ 		writel(MII_MODE_ENABLE, &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+ 				PHY_INTERFACE_MODE_MII;
+ 	} else if (board_is_icev2()) {
++		puts("eth0: icev2: RGMII MODE\n");
+ 		writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
+ 		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
+ 		cpsw_slaves[0].phy_addr = 1;
+ 		cpsw_slaves[1].phy_addr = 3;
+ 	} else {
++		puts("eth0: RGMII MODE\n");
+ 		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+ 				PHY_INTERFACE_MODE_RGMII;
+@@ -901,7 +918,7 @@ int board_eth_init(bd_t *bis)
+ #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
+ #define AR8051_RGMII_TX_CLK_DLY		0x100
+ 
+-	if (board_is_evm_sk() || board_is_gp_evm()) {
++	if (board_is_evm_sk() || board_is_gp_evm() || board_is_bone_lt_enhanced() || board_is_m10a()) {
+ 		const char *devname;
+ 		devname = miiphy_get_current_dev();
+ 
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index 48c139a817..fdf8c56258 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -34,11 +34,31 @@ static inline int board_is_bone_lt(void)
+ 	return board_ti_is("A335BNLT");
+ }
+ 
++static inline int board_is_bbbw(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BW", 2);
++}
++
++static inline int board_is_blue(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BLA", 3);
++}
++
+ static inline int board_is_bbg1(void)
+ {
+ 	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BBG1", 4);
+ }
+ 
++static inline int board_is_bone_lt_enhanced(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "SE", 2);
++}
++
++static inline int board_is_m10a(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "M10A", 4);
++}
++
+ static inline int board_is_evm_sk(void)
+ {
+ 	return board_ti_is("A335X_SK");
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index ad85b3a19a..6d65e99a1a 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -381,7 +381,14 @@ void enable_board_pin_mux(void)
+ 		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
+ 	} else if (board_is_bone_lt()) {
+ 		/* Beaglebone LT pinmux */
+-		configure_module_pin_mux(mii1_pin_mux);
++		if(board_is_bone_lt_enhanced() || board_is_m10a()) {
++			/* SanCloud Beaglebone LT Enhanced pinmux */
++			configure_module_pin_mux(rgmii1_pin_mux);
++		}
++		else {
++			/* Beaglebone LT pinmux */
++			configure_module_pin_mux(mii1_pin_mux);
++		}
+ 		configure_module_pin_mux(mmc0_pin_mux);
+ #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
+ 		configure_module_pin_mux(nand_pin_mux);
+diff --git a/configs/am335x_boneblack_defconfig b/configs/am335x_boneblack_defconfig
+index 487ece4582..fba4bbbbe8 100644
+--- a/configs/am335x_boneblack_defconfig
++++ b/configs/am335x_boneblack_defconfig
+@@ -6,7 +6,6 @@ CONFIG_TARGET_AM335X_EVM=y
+ # CONFIG_SPL_NAND_SUPPORT is not set
+ CONFIG_SPL_STACK_R_ADDR=0x82000000
+ CONFIG_DISTRO_DEFAULTS=y
+-CONFIG_SYS_EXTRA_OPTIONS="EMMC_BOOT"
+ CONFIG_SYS_CONSOLE_INFO_QUIET=y
+ CONFIG_VERSION_VARIABLE=y
+ CONFIG_ARCH_MISC_INIT=y
+@@ -20,6 +19,7 @@ CONFIG_AUTOBOOT_DELAY_STR="d"
+ CONFIG_AUTOBOOT_STOP_STR=" "
+ # CONFIG_CMD_IMLS is not set
+ # CONFIG_CMD_FLASH is not set
++CONFIG_CMD_USB_MASS_STORAGE=y
+ # CONFIG_CMD_SETEXPR is not set
+ CONFIG_DFU_TFTP=y
+ CONFIG_DFU_MMC=y
+@@ -38,3 +38,5 @@ CONFIG_G_DNL_MANUFACTURER="Texas Instruments"
+ CONFIG_G_DNL_VENDOR_NUM=0x0451
+ CONFIG_G_DNL_PRODUCT_NUM=0xd022
+ CONFIG_OF_LIBFDT=y
++CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_PHY_MSCC=y
+diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
+index 962bb65443..fba4bbbbe8 100644
+--- a/configs/am335x_evm_defconfig
++++ b/configs/am335x_evm_defconfig
+@@ -3,48 +3,40 @@ CONFIG_ARCH_OMAP2PLUS=y
+ CONFIG_TI_COMMON_CMD_OPTIONS=y
+ CONFIG_AM33XX=y
+ CONFIG_TARGET_AM335X_EVM=y
++# CONFIG_SPL_NAND_SUPPORT is not set
+ CONFIG_SPL_STACK_R_ADDR=0x82000000
+-CONFIG_DEFAULT_DEVICE_TREE="am335x-evm"
+ CONFIG_DISTRO_DEFAULTS=y
+-CONFIG_SPL_LOAD_FIT=y
+-CONFIG_SYS_EXTRA_OPTIONS="NAND"
+ CONFIG_SYS_CONSOLE_INFO_QUIET=y
+ CONFIG_VERSION_VARIABLE=y
+ CONFIG_ARCH_MISC_INIT=y
+ CONFIG_SPL=y
+ CONFIG_SPL_STACK_R=y
+-CONFIG_SPL_MTD_SUPPORT=y
+ CONFIG_SPL_MUSB_NEW_SUPPORT=y
+ CONFIG_SPL_OS_BOOT=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ # CONFIG_CMD_IMLS is not set
+ # CONFIG_CMD_FLASH is not set
++CONFIG_CMD_USB_MASS_STORAGE=y
+ # CONFIG_CMD_SETEXPR is not set
+-CONFIG_OF_CONTROL=y
+-CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
+-# CONFIG_BLK is not set
++CONFIG_DFU_TFTP=y
+ CONFIG_DFU_MMC=y
+-CONFIG_DFU_NAND=y
+ CONFIG_DFU_RAM=y
+-CONFIG_DM_I2C=y
+-CONFIG_MISC=y
+-CONFIG_DM_MMC=y
+-# CONFIG_DM_MMC_OPS is not set
+ CONFIG_MMC_OMAP_HS=y
+ CONFIG_SPI_FLASH=y
+ CONFIG_SPI_FLASH_WINBOND=y
+-CONFIG_DM_ETH=y
+ CONFIG_SYS_NS16550=y
+-CONFIG_TIMER=y
+-CONFIG_OMAP_TIMER=y
+ CONFIG_USB=y
+-CONFIG_DM_USB=y
+ CONFIG_USB_MUSB_HOST=y
+ CONFIG_USB_MUSB_GADGET=y
+-CONFIG_USB_MUSB_TI=y
+ CONFIG_USB_STORAGE=y
+ CONFIG_USB_GADGET=y
+ CONFIG_USB_GADGET_DOWNLOAD=y
+ CONFIG_G_DNL_MANUFACTURER="Texas Instruments"
+ CONFIG_G_DNL_VENDOR_NUM=0x0451
+ CONFIG_G_DNL_PRODUCT_NUM=0xd022
+-CONFIG_RSA=y
++CONFIG_OF_LIBFDT=y
++CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_PHY_MSCC=y
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index 0c6d2880da..05b2902450 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -17,6 +17,7 @@
+ #define __CONFIG_AM335X_EVM_H
+ 
+ #include <configs/ti_am335x_common.h>
++#define CONFIG_ENV_IS_NOWHERE
+ 
+ #ifndef CONFIG_SPL_BUILD
+ # define CONFIG_TIMESTAMP
+@@ -60,9 +61,14 @@
+ 
+ #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	"bootcmd_" #devtypel #instance "=" \
++	"gpio clear 56; " \
++	"gpio clear 55; " \
++	"gpio clear 54; " \
++	"gpio set 53; " \
++	"setenv devtype mmc; " \
+ 	"setenv mmcdev " #instance"; "\
+-	"setenv bootpart " #instance":2 ; "\
+-	"run mmcboot\0"
++	"setenv bootpart " #instance":1 ; "\
++	"run boot\0"
+ 
+ #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	#devtypel #instance " "
+@@ -79,7 +85,6 @@
+ 	func(LEGACY_MMC, legacy_mmc, 0) \
+ 	func(MMC, mmc, 1) \
+ 	func(LEGACY_MMC, legacy_mmc, 1) \
+-	func(NAND, nand, 0) \
+ 	func(PXE, pxe, na) \
+ 	func(DHCP, dhcp, na)
+ 
+@@ -136,18 +141,43 @@
+ 		"run ramargs; " \
+ 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
+ 	"findfdt="\
++		"echo board_name=[$board_name] ...; " \
+ 		"if test $board_name = A335BONE; then " \
+-			"setenv fdtfile am335x-bone.dtb; fi; " \
++			"setenv fdtfile am335x-bone.dtb; setenv fdtbase am335x-bone; fi; " \
+ 		"if test $board_name = A335BNLT; then " \
+-			"setenv fdtfile am335x-boneblack.dtb; fi; " \
++			"echo board_rev=[$board_rev] ...; " \
++			"if test $board_rev = GH01; then " \
++				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++			"elif test $board_rev = BBG1; then " \
++				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
++			"elif test $board_rev = BP00; then " \
++				"setenv fdtfile am335x-pocketbone.dtb; setenv fdtbase am335x-pocketbone; " \
++			"elif test $board_rev = GW1A; then " \
++				"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; " \
++			"elif test $board_rev = AIA0; then " \
++				"setenv fdtfile am335x-abbbi.dtb; setenv fdtbase am335x-abbbi; " \
++			"elif test $board_rev = EIA0; then " \
++				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++			"elif test $board_rev = SE0A; then " \
++				"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; " \
++			"elif test $board_rev = ME06; then " \
++				"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; " \
++			"elif test $board_rev = M10A; then " \
++				"setenv fdtfile am335x-vsc8531bbb.dtb; setenv fdtbase am335x-vsc8531bbb; " \
++			"else " \
++				"setenv fdtfile am335x-boneblack.dtb; setenv fdtbase am335x-boneblack; " \
++			"fi; " \
++		"fi; " \
+ 		"if test $board_name = BBBW; then " \
+-			"setenv fdtfile am335x-boneblack-wireless.dtb; fi; " \
++			"setenv fdtfile am335x-boneblack-wireless.dtb; setenv fdtbase am335x-boneblack-wireless; fi; " \
+ 		"if test $board_name = BBG1; then " \
+-			"setenv fdtfile am335x-bonegreen.dtb; fi; " \
++			"setenv fdtfile am335x-bonegreen.dtb; setenv fdtbase am335x-bonegreen; fi; " \
+ 		"if test $board_name = BBGW; then " \
+-			"setenv fdtfile am335x-bonegreen-wireless.dtb; fi; " \
++			"setenv fdtfile am335x-bonegreen-wireless.dtb; setenv fdtbase am335x-bonegreen-wireless; fi; " \
+ 		"if test $board_name = BBBL; then " \
+-			"setenv fdtfile am335x-boneblue.dtb; fi; " \
++			"setenv fdtfile am335x-boneblue.dtb; setenv fdtbase am335x-boneblue; fi; " \
++		"if test $board_name = SBBE; then " \
++			"setenv fdtfile am335x-sancloud-bbe.dtb; setenv fdtbase am335x-sancloud-bbe; fi; " \
+ 		"if test $board_name = A33515BB; then " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
+ 		"if test $board_name = A335X_SK; then " \
+@@ -155,13 +185,20 @@
+ 		"if test $board_name = A335_ICE; then " \
+ 			"setenv fdtfile am335x-icev2.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+-			"echo WARNING: Could not determine device tree to use; fi; \0" \
++			"setenv board_name A335BNLT; " \
++			"setenv board_rev EMMC; " \
++			"setenv fdtbase am335x-boneblack-emmc-overlay; " \
++			"setenv fdtfile am335x-boneblack-emmc-overlay.dtb; " \
++		"fi; \0" \
+ 	"init_console=" \
+ 		"if test $board_name = A335_ICE; then "\
+ 			"setenv console ttyO3,115200n8;" \
+ 		"else " \
+ 			"setenv console ttyO0,115200n8;" \
+ 		"fi;\0" \
++	EEWIKI_NFS \
++	EEWIKI_BOOT \
++	EEWIKI_UNAME_BOOT \
+ 	NANDARGS \
+ 	NETARGS \
+ 	DFUARGS \
+@@ -280,9 +317,7 @@
+ #endif
+ 
+ #ifdef CONFIG_USB_MUSB_GADGET
+-#define CONFIG_USB_ETHER
+-#define CONFIG_USB_ETH_RNDIS
+-#define CONFIG_USBNET_HOST_ADDR	"de:ad:be:af:00:00"
++#define CONFIG_USB_FUNCTION_MASS_STORAGE
+ #endif /* CONFIG_USB_MUSB_GADGET */
+ 
+ /*
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index a4676d3a7f..d85f5fbd4c 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -132,6 +132,226 @@
+ /* Boot Argument Buffer Size */
+ #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
+ 
++#define EEWIKI_NFS \
++	"server_ip=192.168.1.100\0" \
++	"gw_ip=192.168.1.1\0" \
++	"netmask=255.255.255.0\0" \
++	"hostname=\0" \
++	"device=eth0\0" \
++	"autoconf=off\0" \
++	"root_dir=/home/userid/targetNFS\0" \
++	"tftp_dir=\0" \
++	"nfs_options=,vers=3\0" \
++	"nfsrootfstype=ext4 rootwait fixrtc\0" \
++	"nfsargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=/dev/nfs rw " \
++		"rootfstype=${nfsrootfstype} " \
++		"nfsroot=${nfsroot} " \
++		"ip=${ip} " \
++		"${cmdline}\0" \
++	"nfsboot=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${tftp_dir}${bootfile}; " \
++		"tftp ${fdtaddr} ${tftp_dir}dtbs/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"nfsboot_uname_r=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${tftp_dir}vmlinuz-${uname_r}; " \
++		"tftp ${fdtaddr} ${tftp_dir}dtbs/${uname_r}/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++
++#define EEWIKI_BOOT \
++	"boot=${devtype} dev ${mmcdev}; " \
++		"if ${devtype} rescan; then " \
++			"gpio set 54;" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"if test -e ${devtype} ${bootpart} /etc/fstab; then " \
++				"setenv mmcpart 1;" \
++			"fi; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e ${devtype} ${bootpart} /uEnv.txt; then " \
++				"if run loadbootenv; then " \
++					"gpio set 55;" \
++					"echo Loaded environment from /uEnv.txt;" \
++					"run importbootenv;" \
++				"fi;" \
++				"if test -n ${cape}; then " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtbase}-${cape}.dtb; then " \
++						"setenv fdtfile ${fdtbase}-${cape}.dtb; " \
++					"fi; " \
++					"echo using: $fdtfile...; " \
++				"fi; " \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"gpio set 56; " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++				"echo Checking if client_ip is set ...;" \
++				"if test -n ${client_ip}; then " \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
++					"fi;" \
++					"gpio set 56; " \
++					"if test -n ${uname_r}; then " \
++						"echo Running nfsboot_uname_r ...;" \
++						"run nfsboot_uname_r;" \
++					"fi;" \
++					"echo Running nfsboot ...;" \
++					"run nfsboot;" \
++				"fi;" \
++			"fi; " \
++			"echo Checking for: /${script} ...;" \
++			"if test -e ${devtype} ${bootpart} /${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile ${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/${script} ...;" \
++			"if test -e ${devtype} ${bootpart} /boot/${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile /boot/${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e ${devtype} ${bootpart} /boot/uEnv.txt; then " \
++					"gpio set 55;" \
++					"load ${devtype} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${cape}; then " \
++						"echo debug: [cape=${cape}] ... ;" \
++						"setenv fdtfile ${fdtbase}-${cape}.dtb; " \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi; " \
++					"if test -n ${dtb}; then " \
++						"echo debug: [dtb=${dtb}] ... ;" \
++						"setenv fdtfile ${dtb};" \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"gpio set 56; " \
++						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
++						"echo Running uname_boot ...;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++
++#define EEWIKI_UNAME_BOOT \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e ${devtype} ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"if test -e ${devtype} ${bootpart} ${fdtfile}; then " \
++											"run loadfdt;" \
++										"else " \
++											"echo; echo unable to find [dtb=${fdtfile}] did you name it correctly? ...; " \
++											"run failumsboot;" \
++										"fi;" \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uuid}; then " \
++					"run args_mmc_uuid;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++			"else " \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
++		"fi;\0" \
++
+ /*
+  * When we have SPI, NOR or NAND flash we expect to be making use of
+  * mtdparts, both for ease of use in U-Boot and for passing information
+diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
+index b987f71516..a338febbbe 100644
+--- a/include/environment/ti/mmc.h
++++ b/include/environment/ti/mmc.h
+@@ -9,20 +9,60 @@
+ #define DEFAULT_MMC_TI_ARGS \
+ 	"mmcdev=0\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+-	"finduuid=part uuid mmc ${bootpart} uuid\0" \
++	"finduuid=part uuid ${devtype} ${bootpart} uuid\0" \
+ 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"root=PARTUUID=${uuid} rw " \
+-		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=${oldroot} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_uuid=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=/dev/ram rw " \
++		"${cmdline}\0" \
++	"script=boot.scr\0" \
++	"scriptfile=${script}\0" \
++	"loadbootscript=load ${devtype} ${bootpart} ${loadaddr} ${scriptfile};\0" \
++	"bootscript=echo Running bootscript from mmc${bootpart} ...; " \
+ 		"source ${loadaddr}\0" \
+ 	"bootenvfile=uEnv.txt\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"bootenv=uEnv.txt\0" \
++	"importbootenv=echo Importing environment from ${devtype} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"loadbootenv=load ${devtype} ${bootpart} ${loadaddr} ${bootenvfile}\0" \
+ 	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
++		"ums 0 ${devtype} 1;\0" \
+ 	"envboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+-- 
+2.11.0
+
