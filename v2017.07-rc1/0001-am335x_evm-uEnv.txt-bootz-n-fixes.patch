@@ -1,49 +1,68 @@
-From ec2c10fbe7ba254b34e6cf5b4055804beb79241d Mon Sep 17 00:00:00 2001
+From 698d7c904dde41acf462e9c9e9032610925fd794 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 9 Jun 2017 15:10:11 -0500
+Date: Sun, 11 Jun 2017 12:35:17 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c            |  41 +++++--
- board/ti/am335x/board.h            |  20 ++++
+ board/ti/am335x/board.c            |  46 +++++---
+ board/ti/am335x/board.h            |  25 +++++
  board/ti/am335x/mux.c              |   9 +-
  configs/am335x_boneblack_defconfig |   4 +-
  configs/am335x_evm_defconfig       |  28 ++---
  include/configs/am335x_evm.h       |  61 +++++++---
  include/configs/ti_armv7_common.h  | 220 +++++++++++++++++++++++++++++++++++++
  include/environment/ti/mmc.h       |  56 ++++++++--
- 8 files changed, 386 insertions(+), 53 deletions(-)
+ 8 files changed, 395 insertions(+), 54 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 517965c0f0..2fb58e6ed8 100644
+index 517965c0f0..550d2a9ae2 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
-@@ -294,9 +294,6 @@ const struct dpll_params *get_dpll_mpu_params(void)
- 	if (bone_not_connected_to_ac_power())
- 		freq = MPUPLL_M_600;
+@@ -343,14 +343,6 @@ static void scale_vcores_bone(int freq)
+ 	if (board_is_bone_lt())
+ 		freq = MPUPLL_M_1000;
  
--	if (board_is_bone_lt())
--		freq = MPUPLL_M_1000;
+-	if (freq == MPUPLL_M_1000) {
+-		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1800MA;
+-		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1325MV;
+-	} else {
+-		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1300MA;
+-		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1275MV;
+-	}
 -
  	switch (freq) {
  	case MPUPLL_M_1000:
- 		return &dpll_mpu_opp[ind][5];
-@@ -336,13 +333,6 @@ static void scale_vcores_bone(int freq)
- 	if (bone_not_connected_to_ac_power())
- 		freq = MPUPLL_M_600;
- 
--	/*
--	 * Override what we have detected since we know if we have
--	 * a Beaglebone Black it supports 1GHz.
--	 */
--	if (board_is_bone_lt())
--		freq = MPUPLL_M_1000;
--
- 	if (freq == MPUPLL_M_1000) {
- 		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1800MA;
  		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1325MV;
-@@ -618,6 +608,24 @@ static struct clk_synth cdce913_data = {
+@@ -358,15 +350,16 @@ static void scale_vcores_bone(int freq)
+ 		break;
+ 	case MPUPLL_M_800:
+ 		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1275MV;
+-		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1800MA;
++		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1300MA;
+ 		break;
+ 	case MPUPLL_M_720:
+ 		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1200MV;
+-		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1800MA;
++		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1300MA;
+ 		break;
+ 	case MPUPLL_M_600:
+ 	case MPUPLL_M_500:
+ 	case MPUPLL_M_300:
++	default:
+ 		mpu_vdd = TPS65217_DCDC_VOLT_SEL_1100MV;
+ 		usb_cur_lim = TPS65217_USB_INPUT_CUR_LIMIT_1300MA;
+ 		break;
+@@ -469,7 +462,7 @@ void scale_vcores(void)
+ 	gpi2c_init();
+ 	freq = am335x_get_efuse_mpu_max_freq(cdev);
+ 
+-	if (board_is_bone())
++	if (board_is_beaglebonex())
+ 		scale_vcores_bone(freq);
+ 	else
+ 		scale_vcores_generic(freq);
+@@ -618,6 +611,24 @@ static struct clk_synth cdce913_data = {
   */
  int board_init(void)
  {
@@ -68,7 +87,7 @@ index 517965c0f0..2fb58e6ed8 100644
  #if defined(CONFIG_HW_WATCHDOG)
  	hw_watchdog_init();
  #endif
-@@ -714,6 +722,8 @@ int board_late_init(void)
+@@ -714,6 +725,8 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -77,7 +96,7 @@ index 517965c0f0..2fb58e6ed8 100644
  		/* BeagleBoard.org BeagleBone Black Wireless: */
  		if (!strncmp(board_ti_get_rev(), "BWA", 3)) {
  			name = "BBBW";
-@@ -726,6 +736,10 @@ int board_late_init(void)
+@@ -726,6 +739,10 @@ int board_late_init(void)
  		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
  			name = "BBBL";
  		}
@@ -88,7 +107,7 @@ index 517965c0f0..2fb58e6ed8 100644
  	}
  
  	if (board_is_bbg1())
-@@ -865,18 +879,21 @@ int board_eth_init(bd_t *bis)
+@@ -865,18 +882,21 @@ int board_eth_init(bd_t *bis)
  	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
  
  #ifdef CONFIG_DRIVER_TI_CPSW
@@ -111,7 +130,7 @@ index 517965c0f0..2fb58e6ed8 100644
  		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
  				PHY_INTERFACE_MODE_RGMII;
-@@ -901,7 +918,7 @@ int board_eth_init(bd_t *bis)
+@@ -901,7 +921,7 @@ int board_eth_init(bd_t *bis)
  #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
  #define AR8051_RGMII_TX_CLK_DLY		0x100
  
@@ -121,10 +140,10 @@ index 517965c0f0..2fb58e6ed8 100644
  		devname = miiphy_get_current_dev();
  
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 48c139a817..fdf8c56258 100644
+index 48c139a817..93d7c04d08 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
-@@ -34,11 +34,31 @@ static inline int board_is_bone_lt(void)
+@@ -34,11 +34,36 @@ static inline int board_is_bone_lt(void)
  	return board_ti_is("A335BNLT");
  }
  
@@ -151,6 +170,11 @@ index 48c139a817..fdf8c56258 100644
 +static inline int board_is_m10a(void)
 +{
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "M10A", 4);
++}
++
++static inline int board_is_beaglebonex(void)
++{
++	return board_is_bone() || board_is_bone_lt() || board_is_bbg1();
 +}
 +
  static inline int board_is_evm_sk(void)
