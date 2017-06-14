@@ -1,26 +1,29 @@
-From 52895af8de1e70733fbaa772371e849eb8fc2d2d Mon Sep 17 00:00:00 2001
+From c069b4083c6e49a60e6d5f639d6f5aba197138ad Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 19 May 2017 16:16:14 -0500
-Subject: [PATCH] mx6qsabre_common: uEnv.txt, bootz, n fixes
+Date: Wed, 14 Jun 2017 14:01:57 -0500
+Subject: [PATCH] mx6sabresd_spl fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/mx6qsabresd_defconfig     |   6 +-
+ configs/mx6sabresd_spl_defconfig  |   6 +-
  include/configs/mx6sabre_common.h | 221 ++++++++++++++++++++++++++------------
  2 files changed, 155 insertions(+), 72 deletions(-)
 
-diff --git a/configs/mx6qsabresd_defconfig b/configs/mx6qsabresd_defconfig
-index cef7f1a5b3..97e3ccd44f 100644
---- a/configs/mx6qsabresd_defconfig
-+++ b/configs/mx6qsabresd_defconfig
-@@ -3,15 +3,19 @@ CONFIG_ARCH_MX6=y
- CONFIG_TARGET_MX6SABRESD=y
+diff --git a/configs/mx6sabresd_spl_defconfig b/configs/mx6sabresd_spl_defconfig
+index 0e0edefab7..f6e37e9598 100644
+--- a/configs/mx6sabresd_spl_defconfig
++++ b/configs/mx6sabresd_spl_defconfig
+@@ -10,7 +10,6 @@ CONFIG_SPL_LIBDISK_SUPPORT=y
+ CONFIG_SPL_WATCHDOG_SUPPORT=y
  CONFIG_VIDEO=y
- CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=board/freescale/mx6sabresd/mx6q_4x_mt41j128.cfg,MX6Q"
+ CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=arch/arm/imx-common/spl_sd.cfg,SPL,MX6QDL"
 -CONFIG_BOOTDELAY=3
  # CONFIG_CONSOLE_MUX is not set
  CONFIG_SYS_CONSOLE_IS_IN_ENV=y
  CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
+@@ -19,10 +18,15 @@ CONFIG_SPL_EXT_SUPPORT=y
+ CONFIG_SPL_I2C_SUPPORT=y
+ CONFIG_SPL_OS_BOOT=y
  CONFIG_HUSH_PARSER=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
