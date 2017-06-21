@@ -1,30 +1,49 @@
-From 73be35d309a879137ef6f7b9e13d23dd0aba3bb2 Mon Sep 17 00:00:00 2001
+From 94d44fe6af9d0745af266b4a82ed184532e0ca75 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 5 Jun 2017 11:11:31 -0500
+Date: Wed, 21 Jun 2017 10:49:55 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/dts/Makefile                     |   1 +
+ Makefile                                  |   2 +-
+ arch/arm/dts/Makefile                     |   2 +
  arch/arm/dts/am571x-sndrblock-common.dtsi | 603 ++++++++++++++++++++++++++++++
  arch/arm/dts/am571x-sndrblock.dts         | 119 ++++++
- board/ti/am57xx/board.c                   |  52 ++-
+ arch/arm/dts/am57xx-beagle-x15-revc.dts   |  24 ++
+ board/ti/am57xx/board.c                   |  78 +++-
  configs/am57xx_evm_defconfig              |   8 +-
- include/configs/ti_armv7_common.h         | 315 ++++++++++++++++
- include/configs/ti_omap5_common.h         |  36 +-
+ include/configs/ti_armv7_common.h         | 347 +++++++++++++++++
+ include/configs/ti_omap5_common.h         |  40 +-
  include/environment/ti/mmc.h              |  45 ++-
- 8 files changed, 1144 insertions(+), 35 deletions(-)
+ scripts/Kbuild.include                    |   5 +
+ scripts/Makefile.extrawarn                |   6 +
+ 12 files changed, 1241 insertions(+), 38 deletions(-)
  create mode 100644 arch/arm/dts/am571x-sndrblock-common.dtsi
  create mode 100644 arch/arm/dts/am571x-sndrblock.dts
+ create mode 100644 arch/arm/dts/am57xx-beagle-x15-revc.dts
 
+diff --git a/Makefile b/Makefile
+index 9217a83fe5..49dc0a3665 100644
+--- a/Makefile
++++ b/Makefile
+@@ -371,7 +371,7 @@ export ARCH CPU BOARD VENDOR SOC CPUDIR BOARDDIR
+ export CONFIG_SHELL HOSTCC HOSTCFLAGS HOSTLDFLAGS CROSS_COMPILE AS LD CC
+ export CPP AR NM LDR STRIP OBJCOPY OBJDUMP
+ export MAKE AWK PERL PYTHON
+-export HOSTCXX HOSTCXXFLAGS DTC CHECK CHECKFLAGS
++export HOSTCXX HOSTCXXFLAGS CHECK CHECKFLAGS DTC DTC_FLAGS
+ 
+ export KBUILD_CPPFLAGS NOSTDINC_FLAGS UBOOTINCLUDE OBJCOPYFLAGS LDFLAGS
+ export KBUILD_CFLAGS KBUILD_AFLAGS
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index e8c97e5a90..f7e1435501 100644
+index e8c97e5a90..cb14851997 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -143,6 +143,7 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
+@@ -143,6 +143,8 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
  	dra72-evm-revc.dtb dra71-evm.dtb
  dtb-$(CONFIG_TARGET_AM57XX_EVM) += am57xx-beagle-x15.dtb \
  	am57xx-beagle-x15-revb1.dtb \
++	am57xx-beagle-x15-revc.dtb \
 +	am571x-sndrblock.dtb	\
  	am57xx-evm-reva3.dtb \
  	am572x-idk.dtb	\
@@ -763,11 +782,49 @@ index 0000000000..3097086b1d
 +	pinctrl-2 = <&mmc2_pins_ddr_3_3v &mmc2_iodelay_ddr_3_3v_conf>;
 +	/delete-property/ mmc-hs200-1_8v;
 +};
+diff --git a/arch/arm/dts/am57xx-beagle-x15-revc.dts b/arch/arm/dts/am57xx-beagle-x15-revc.dts
+new file mode 100644
+index 0000000000..6a3b34259a
+--- /dev/null
++++ b/arch/arm/dts/am57xx-beagle-x15-revc.dts
+@@ -0,0 +1,24 @@
++/*
++ * Copyright (C) 2014-2016 Texas Instruments Incorporated - http://www.ti.com/
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include "am57xx-beagle-x15-common.dtsi"
++
++/ {
++	model = "TI AM5728 BeagleBoard-X15 rev C";
++};
++
++&tpd12s015 {
++	gpios = <&gpio7 10 GPIO_ACTIVE_HIGH>,	/* gpio7_10, CT CP HPD */
++		<&gpio2 30 GPIO_ACTIVE_HIGH>,	/* gpio2_30, LS OE */
++		<&gpio7 12 GPIO_ACTIVE_HIGH>;	/* gpio7_12/sp1_cs2, HPD */
++};
++
++&mmc1 {
++	vmmc-supply = <&vdd_3v3>;
++	vmmc_aux-supply = <&ldo1_reg>;
++};
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index b8798d6f2a..e0f204da16 100644
+index b8798d6f2a..8ecba582d7 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
-@@ -43,6 +43,17 @@
+@@ -37,12 +37,30 @@
+ #define board_is_x15()		board_ti_is("BBRDX15_")
+ #define board_is_x15_revb1()	(board_ti_is("BBRDX15_") && \
+ 				 (strncmp("B.10", board_ti_get_rev(), 3) <= 0))
++#define board_is_x15_revc()	(board_ti_is("BBRDX15_") && \
++				 (strncmp("C.00", board_ti_get_rev(), 3) <= 0))
+ #define board_is_am572x_evm()	board_ti_is("AM572PM_")
+ #define board_is_am572x_evm_reva3()	\
+ 				(board_ti_is("AM572PM_") && \
  				 (strncmp("A.30", board_ti_get_rev(), 3) <= 0))
  #define board_is_am572x_idk()	board_ti_is("AM572IDK")
  #define board_is_am571x_idk()	board_ti_is("AM571IDK")
@@ -779,13 +836,18 @@ index b8798d6f2a..e0f204da16 100644
 +#define board_is_x15_revb1_blank()	board_ti_is("XM57BLNK")
 +
 +//Blank Flasher
++//#define board_is_x15_revc_blank()	1
++//Normal
++#define board_is_x15_revc_blank()	board_ti_is("XM57BLNK")
++
++//Blank Flasher
 +//#define board_is_am571x_blank()		1
 +//Normal
 +#define board_is_am571x_blank()		board_ti_is("XM57BLNK")
  
  #ifdef CONFIG_DRIVER_TI_CPSW
  #include <cpsw.h>
-@@ -88,7 +99,7 @@ static const struct dmm_lisa_map_regs am571x_idk_lisa_regs = {
+@@ -88,7 +106,7 @@ static const struct dmm_lisa_map_regs am571x_idk_lisa_regs = {
  
  void emif_get_dmm_regs(const struct dmm_lisa_map_regs **dmm_lisa_regs)
  {
@@ -794,7 +856,7 @@ index b8798d6f2a..e0f204da16 100644
  		*dmm_lisa_regs = &am571x_idk_lisa_regs;
  	else
  		*dmm_lisa_regs = &beagle_x15_lisa_regs;
-@@ -455,6 +466,12 @@ void do_board_detect(void)
+@@ -455,6 +473,14 @@ void do_board_detect(void)
  		bname = "AM572x IDK";
  	else if (board_is_am571x_idk())
  		bname = "AM571x IDK";
@@ -802,12 +864,14 @@ index b8798d6f2a..e0f204da16 100644
 +		bname = "AM571x sndrblock";
 +	else if (board_is_x15_revb1_blank())
 +		bname = "BeagleBoard X15 blank";
++	else if (board_is_x15_revc_blank())
++		bname = "BeagleBoard X15 blank";
 +	else if (board_is_am571x_blank())
 +		bname = "AM571x sndrblock blank";
  
  	if (bname)
  		snprintf(sysinfo.board_string, SYSINFO_BOARD_NAME_MAX_LEN,
-@@ -463,13 +480,13 @@ void do_board_detect(void)
+@@ -463,16 +489,18 @@ void do_board_detect(void)
  
  static void setup_board_eeprom_env(void)
  {
@@ -822,8 +886,14 @@ index b8798d6f2a..e0f204da16 100644
 +		printf("ti_i2c_eeprom_init failed %d\n", rc);
  
  	if (board_is_x15()) {
- 		if (board_is_x15_revb1())
-@@ -485,12 +502,17 @@ static void setup_board_eeprom_env(void)
+-		if (board_is_x15_revb1())
++		if (board_is_x15_revc())
++			name = "beagle_x15_revc";
++		else if (board_is_x15_revb1())
+ 			name = "beagle_x15_revb1";
+ 		else
+ 			name = "beagle_x15";
+@@ -485,12 +513,20 @@ static void setup_board_eeprom_env(void)
  		name = "am572x_idk";
  	} else if (board_is_am571x_idk()) {
  		name = "am571x_idk";
@@ -835,6 +905,9 @@ index b8798d6f2a..e0f204da16 100644
 +	} else if (board_is_x15_revb1_blank()) {
 +		name = "beagle_x15_revb1_blank";
 +		setenv("board_eeprom_header", "beagle_x15_revb1_blank");
++	} else if (board_is_x15_revc_blank()) {
++		name = "beagle_x15_revc_blank";
++		setenv("board_eeprom_header", "beagle_x15_revc_blank");
 +	} else if (board_is_am571x_blank()) {
 +		name = "am571x_sndrblock_blank";
 +		setenv("board_eeprom_header", "am571x_sndrblock_blank");
@@ -845,11 +918,14 @@ index b8798d6f2a..e0f204da16 100644
  	set_board_info_env(name);
  }
  
-@@ -546,6 +568,12 @@ void am57x_idk_lcd_detect(void)
+@@ -546,6 +582,15 @@ void am57x_idk_lcd_detect(void)
  	if (board_is_x15() || board_is_am572x_evm())
  		return;
  
 +	if (board_is_x15_revb1_blank())
++		return;
++
++	if (board_is_x15_revc_blank())
 +		return;
 +
 +	if (board_is_am571x_sndrblock() || board_is_am571x_blank())
@@ -858,18 +934,28 @@ index b8798d6f2a..e0f204da16 100644
  	/* Only AM571x IDK has gpio control detect.. so check that */
  	if (board_is_am571x_idk() && !am571x_idk_needs_lcd())
  		goto out;
-@@ -679,8 +707,8 @@ void recalibrate_iodelay(void)
+@@ -679,8 +724,8 @@ void recalibrate_iodelay(void)
  	do_set_mux32((*ctrl)->control_padconf_core_base, pconf, pconf_sz);
  
  	/* Now do the weird minor deltas that should be safe */
 -	if (board_is_x15() || board_is_am572x_evm()) {
 -		if (board_is_x15_revb1() || board_is_am572x_evm_reva3()) {
-+	if (board_is_x15() || board_is_am572x_evm() || board_is_x15_revb1_blank()) {
-+		if (board_is_x15_revb1() || board_is_am572x_evm_reva3() || board_is_x15_revb1_blank()) {
++	if (board_is_x15() || board_is_am572x_evm() || board_is_x15_revb1_blank() || board_is_x15_revc_blank()) {
++		if (board_is_x15_revb1() || board_is_am572x_evm_reva3() || board_is_x15_revb1_blank() || board_is_x15_revc_blank()) {
  			pconf = core_padconf_array_delta_x15_sr2_0;
  			pconf_sz = ARRAY_SIZE(core_padconf_array_delta_x15_sr2_0);
  		} else {
-@@ -1034,6 +1062,8 @@ int board_fit_config_name_match(const char *name)
+@@ -1028,12 +1073,17 @@ int ft_board_setup(void *blob, bd_t *bd)
+ int board_fit_config_name_match(const char *name)
+ {
+ 	if (board_is_x15()) {
+-		if (board_is_x15_revb1()) {
++		if (board_is_x15_revc()) {
++			if (!strcmp(name, "am57xx-beagle-x15-revc"))
++				return 0;
++		} else if (board_is_x15_revb1()) {
+ 			if (!strcmp(name, "am57xx-beagle-x15-revb1"))
+ 				return 0;
  		} else if (!strcmp(name, "am57xx-beagle-x15")) {
  			return 0;
  		}
@@ -878,11 +964,13 @@ index b8798d6f2a..e0f204da16 100644
  	} else if (board_is_am572x_evm()) {
  		if (board_is_am572x_evm_reva3()) {
  			if (!strcmp(name, "am57xx-evm-reva3"))
-@@ -1045,6 +1075,10 @@ int board_fit_config_name_match(const char *name)
+@@ -1045,6 +1095,12 @@ int board_fit_config_name_match(const char *name)
  		return 0;
  	} else if (board_is_am571x_idk() && !strcmp(name, "am571x-idk")) {
  		return 0;
 +	} else if (board_is_x15_revb1_blank() && !strcmp(name, "am57xx-beagle-x15-revb1")) {
++		return 0;
++	} else if (board_is_x15_revc_blank() && !strcmp(name, "am57xx-beagle-x15-revc")) {
 +		return 0;
 +	} else if (board_is_am571x_blank() && !strcmp(name, "am571x-sndrblock")) {
 +		return 0;
@@ -890,7 +978,7 @@ index b8798d6f2a..e0f204da16 100644
  
  	return -1;
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index e32989d079..4bdf17e96f 100644
+index e32989d079..7e8a504b67 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
 @@ -22,6 +22,10 @@ CONFIG_SPL_STACK_R=y
@@ -909,7 +997,7 @@ index e32989d079..4bdf17e96f 100644
  CONFIG_SPL_OF_TRANSLATE=y
  CONFIG_SPL_DM_SEQ_ALIAS=y
 -CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-evm-reva3 am572x-idk am571x-idk"
-+CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am571x-sndrblock am57xx-evm-reva3 am572x-idk am571x-idk"
++CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-beagle-x15-revc am571x-sndrblock am57xx-evm-reva3 am572x-idk am571x-idk"
  CONFIG_DM=y
  CONFIG_SPL_DM=y
  CONFIG_REGMAP=y
@@ -923,10 +1011,10 @@ index e32989d079..4bdf17e96f 100644
  CONFIG_USB_XHCI_HCD=y
  CONFIG_USB_XHCI_DWC3=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6c692e13d1..2008e1d2b0 100644
+index 5c0e3cb487..dcaa86bca7 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -112,6 +112,321 @@
+@@ -112,6 +112,353 @@
  
  /* GPIO block */
  
@@ -935,7 +1023,6 @@ index 6c692e13d1..2008e1d2b0 100644
 +		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +	"eeprom_blank=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 20; " \
 +		"i2c mw 0x50 0x00.2 ff; " \
 +		"i2c mw 0x50 0x01.2 ff; " \
 +		"i2c mw 0x50 0x02.2 ff; " \
@@ -971,7 +1058,6 @@ index 6c692e13d1..2008e1d2b0 100644
 +		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
 +	"eeprom_x15_b1=i2c dev 0; " \
-+		"i2c md 0x50 0x00.2 20; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -1006,8 +1092,42 @@ index 6c692e13d1..2008e1d2b0 100644
 +		"i2c mw 0x50 0x1f.2 ff; " \
 +		"i2c md 0x50 0x00.2 20; " \
 +		"\0" \
-+	"eeprom_sndrblock=i2c dev 0; " \
++	"eeprom_x15_c=i2c dev 0; " \
++		"i2c mw 0x50 0x00.2 aa; " \
++		"i2c mw 0x50 0x01.2 55; " \
++		"i2c mw 0x50 0x02.2 33; " \
++		"i2c mw 0x50 0x03.2 ee; " \
++		"i2c mw 0x50 0x04.2 42; " \
++		"i2c mw 0x50 0x05.2 42; " \
++		"i2c mw 0x50 0x06.2 52; " \
++		"i2c mw 0x50 0x07.2 44; " \
++		"i2c mw 0x50 0x08.2 58; " \
++		"i2c mw 0x50 0x09.2 31; " \
++		"i2c mw 0x50 0x0a.2 35; " \
++		"i2c mw 0x50 0x0b.2 5f; " \
++		"i2c mw 0x50 0x0c.2 43; " \
++		"i2c mw 0x50 0x0d.2 2e; " \
++		"i2c mw 0x50 0x0e.2 30; " \
++		"i2c mw 0x50 0x0f.2 30; " \
++		"i2c mw 0x50 0x10.2 57; " \
++		"i2c mw 0x50 0x11.2 57; " \
++		"i2c mw 0x50 0x12.2 59; " \
++		"i2c mw 0x50 0x13.2 59; " \
++		"i2c mw 0x50 0x14.2 34; " \
++		"i2c mw 0x50 0x15.2 50; " \
++		"i2c mw 0x50 0x16.2 35; " \
++		"i2c mw 0x50 0x17.2 35; " \
++		"i2c mw 0x50 0x18.2 30; " \
++		"i2c mw 0x50 0x19.2 30; " \
++		"i2c mw 0x50 0x1a.2 30; " \
++		"i2c mw 0x50 0x1b.2 30; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
 +		"i2c md 0x50 0x00.2 20; " \
++		"\0" \
++	"eeprom_sndrblock=i2c dev 0; " \
 +		"i2c mw 0x50 0x00.2 aa; " \
 +		"i2c mw 0x50 0x01.2 55; " \
 +		"i2c mw 0x50 0x02.2 33; " \
@@ -1249,10 +1369,10 @@ index 6c692e13d1..2008e1d2b0 100644
   * The following are general good-enough settings for U-Boot.  We set a
   * large malloc pool as we generally have a lot of DDR, and we opt for
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index 62f1518f6b..77998fc66c 100644
+index 62f1518f6b..19c6e2083f 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -73,11 +73,17 @@
+@@ -73,11 +73,19 @@
  	"bootpart=0:2\0" \
  	"bootdir=/boot\0" \
  	"bootfile=zImage\0" \
@@ -1264,13 +1384,24 @@ index 62f1518f6b..77998fc66c 100644
  	"dofastboot=0\0" \
 +	"read_board_eeprom="\
 +		"if test $board_eeprom_header = beagle_x15_revb1_blank; then " \
-+			"run eeprom_x15_b1; reset; fi; " \
++			"run eeprom_dump; run eeprom_x15_b1; reset; fi; " \
++		"if test $board_eeprom_header = beagle_x15_revc_blank; then " \
++			"run eeprom_dump; run eeprom_x15_c; reset; fi; " \
 +		"if test $board_eeprom_header = am571x_sndrblock_blank; then " \
-+			"run eeprom_sndrblock; reset; fi;  \0" \
++			"run eeprom_dump; run eeprom_sndrblock; reset; fi;  \0" \
  	"findfdt="\
  		"if test $board_name = omap5_uevm; then " \
  			"setenv fdtfile omap5-uevm.dtb; fi; " \
-@@ -109,28 +115,30 @@
+@@ -93,6 +101,8 @@
+ 			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
+ 		"if test $board_name = beagle_x15_revb1; then " \
+ 			"setenv fdtfile am57xx-beagle-x15-revb1.dtb; fi;" \
++		"if test $board_name = beagle_x15_revc; then " \
++			"setenv fdtfile am57xx-beagle-x15-revc.dtb; fi;" \
+ 		"if test $board_name = am572x_idk && test $idk_lcd = no; then " \
+ 			"setenv fdtfile am572x-idk.dtb; fi;" \
+ 		"if test $board_name = am572x_idk && test $idk_lcd = osd101t2045; then " \
+@@ -109,28 +119,30 @@
  			"setenv fdtfile am571x-idk-lcd-osd101t2045.dtb; fi;" \
  		"if test $board_name = am571x_idk && test $idk_lcd = osd101t2587; then " \
  			"setenv fdtfile am571x-idk-lcd-osd101t2587.dtb; fi;" \
@@ -1376,6 +1507,37 @@ index b987f71516..86f94d81f6 100644
  			"echo SD/MMC found on device ${mmcdev};" \
  			"if run loadbootscript; then " \
  				"run bootscript;" \
+diff --git a/scripts/Kbuild.include b/scripts/Kbuild.include
+index 30e6e316ac..1b62aedb00 100644
+--- a/scripts/Kbuild.include
++++ b/scripts/Kbuild.include
+@@ -172,6 +172,11 @@ ld-version = $(shell $(LD) --version | $(srctree)/scripts/ld-version.sh)
+ # Usage:  $(call ld-ifversion, -ge, 22252, y)
+ ld-ifversion = $(shell [ $(ld-version) $(1) $(2) ] && echo $(3) || echo $(4))
+ 
++# dtc-option
++# Usage:  DTC_FLAGS += $(call dtc-option,-Wno-unit_address_vs_reg)
++dtc-option = $(call try-run,\
++	echo '/dts-v1/; / {};' | $(DTC) $(1),$(1),$(2))
++
+ ######
+ 
+ ###
+diff --git a/scripts/Makefile.extrawarn b/scripts/Makefile.extrawarn
+index 6547e57357..7b2cffce52 100644
+--- a/scripts/Makefile.extrawarn
++++ b/scripts/Makefile.extrawarn
+@@ -57,4 +57,10 @@ ifeq ("$(strip $(warning))","")
+ endif
+ 
+ KBUILD_CFLAGS += $(warning)
++
++else
++
++# Disable noisy checks by default
++DTC_FLAGS += $(call dtc-option,-Wno-unit_address_vs_reg)
++
+ endif
 -- 
 2.11.0
 
