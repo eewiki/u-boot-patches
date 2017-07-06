@@ -1,6 +1,6 @@
-From 94d44fe6af9d0745af266b4a82ed184532e0ca75 Mon Sep 17 00:00:00 2001
+From 4ae8e87fa3f8c2cf5771bfde184f8f342b012fb3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 21 Jun 2017 10:49:55 -0500
+Date: Thu, 6 Jul 2017 16:35:34 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -1011,7 +1011,7 @@ index e32989d079..7e8a504b67 100644
  CONFIG_USB_XHCI_HCD=y
  CONFIG_USB_XHCI_DWC3=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 5c0e3cb487..dcaa86bca7 100644
+index 5c0e3cb487..7746f9be0e 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -112,6 +112,353 @@
@@ -1109,18 +1109,18 @@ index 5c0e3cb487..dcaa86bca7 100644
 +		"i2c mw 0x50 0x0d.2 2e; " \
 +		"i2c mw 0x50 0x0e.2 30; " \
 +		"i2c mw 0x50 0x0f.2 30; " \
-+		"i2c mw 0x50 0x10.2 57; " \
-+		"i2c mw 0x50 0x11.2 57; " \
-+		"i2c mw 0x50 0x12.2 59; " \
-+		"i2c mw 0x50 0x13.2 59; " \
-+		"i2c mw 0x50 0x14.2 34; " \
-+		"i2c mw 0x50 0x15.2 50; " \
-+		"i2c mw 0x50 0x16.2 35; " \
++		"i2c mw 0x50 0x10.2 79; " \
++		"i2c mw 0x50 0x11.2 79; " \
++		"i2c mw 0x50 0x12.2 77; " \
++		"i2c mw 0x50 0x13.2 77; " \
++		"i2c mw 0x50 0x14.2 50; " \
++		"i2c mw 0x50 0x15.2 58; " \
++		"i2c mw 0x50 0x16.2 31; " \
 +		"i2c mw 0x50 0x17.2 35; " \
-+		"i2c mw 0x50 0x18.2 30; " \
-+		"i2c mw 0x50 0x19.2 30; " \
-+		"i2c mw 0x50 0x1a.2 30; " \
-+		"i2c mw 0x50 0x1b.2 30; " \
++		"i2c mw 0x50 0x18.2 6e; " \
++		"i2c mw 0x50 0x19.2 6e; " \
++		"i2c mw 0x50 0x1a.2 6e; " \
++		"i2c mw 0x50 0x1b.2 6e; " \
 +		"i2c mw 0x50 0x1c.2 ff; " \
 +		"i2c mw 0x50 0x1d.2 ff; " \
 +		"i2c mw 0x50 0x1e.2 ff; " \
@@ -1539,5 +1539,5 @@ index 6547e57357..7b2cffce52 100644
 +
  endif
 -- 
-2.11.0
+2.13.2
 
