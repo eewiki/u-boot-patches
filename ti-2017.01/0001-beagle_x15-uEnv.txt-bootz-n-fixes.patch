@@ -1,6 +1,6 @@
-From 4ae8e87fa3f8c2cf5771bfde184f8f342b012fb3 Mon Sep 17 00:00:00 2001
+From 5b39408cb183cb4e8628822dac8bd78675e12f2d Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 6 Jul 2017 16:35:34 -0500
+Date: Fri, 11 Aug 2017 15:42:15 -0500
 Subject: [PATCH] beagle_x15: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,14 +10,14 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/dts/am571x-sndrblock-common.dtsi | 603 ++++++++++++++++++++++++++++++
  arch/arm/dts/am571x-sndrblock.dts         | 119 ++++++
  arch/arm/dts/am57xx-beagle-x15-revc.dts   |  24 ++
- board/ti/am57xx/board.c                   |  78 +++-
+ board/ti/am57xx/board.c                   |  82 +++-
  configs/am57xx_evm_defconfig              |   8 +-
  include/configs/ti_armv7_common.h         | 347 +++++++++++++++++
  include/configs/ti_omap5_common.h         |  40 +-
  include/environment/ti/mmc.h              |  45 ++-
  scripts/Kbuild.include                    |   5 +
  scripts/Makefile.extrawarn                |   6 +
- 12 files changed, 1241 insertions(+), 38 deletions(-)
+ 12 files changed, 1244 insertions(+), 39 deletions(-)
  create mode 100644 arch/arm/dts/am571x-sndrblock-common.dtsi
  create mode 100644 arch/arm/dts/am571x-sndrblock.dts
  create mode 100644 arch/arm/dts/am57xx-beagle-x15-revc.dts
@@ -813,7 +813,7 @@ index 0000000000..6a3b34259a
 +	vmmc_aux-supply = <&ldo1_reg>;
 +};
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index b8798d6f2a..8ecba582d7 100644
+index 938725cf62..3a467fdb27 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
 @@ -37,12 +37,30 @@
@@ -856,7 +856,7 @@ index b8798d6f2a..8ecba582d7 100644
  		*dmm_lisa_regs = &am571x_idk_lisa_regs;
  	else
  		*dmm_lisa_regs = &beagle_x15_lisa_regs;
-@@ -455,6 +473,14 @@ void do_board_detect(void)
+@@ -483,6 +501,14 @@ void do_board_detect(void)
  		bname = "AM572x IDK";
  	else if (board_is_am571x_idk())
  		bname = "AM571x IDK";
@@ -871,7 +871,7 @@ index b8798d6f2a..8ecba582d7 100644
  
  	if (bname)
  		snprintf(sysinfo.board_string, SYSINFO_BOARD_NAME_MAX_LEN,
-@@ -463,16 +489,18 @@ void do_board_detect(void)
+@@ -491,16 +517,18 @@ void do_board_detect(void)
  
  static void setup_board_eeprom_env(void)
  {
@@ -893,7 +893,7 @@ index b8798d6f2a..8ecba582d7 100644
  			name = "beagle_x15_revb1";
  		else
  			name = "beagle_x15";
-@@ -485,12 +513,20 @@ static void setup_board_eeprom_env(void)
+@@ -513,12 +541,20 @@ static void setup_board_eeprom_env(void)
  		name = "am572x_idk";
  	} else if (board_is_am571x_idk()) {
  		name = "am571x_idk";
@@ -918,7 +918,7 @@ index b8798d6f2a..8ecba582d7 100644
  	set_board_info_env(name);
  }
  
-@@ -546,6 +582,15 @@ void am57x_idk_lcd_detect(void)
+@@ -577,6 +613,15 @@ void am57x_idk_lcd_detect(void)
  	if (board_is_x15() || board_is_am572x_evm())
  		return;
  
@@ -934,7 +934,7 @@ index b8798d6f2a..8ecba582d7 100644
  	/* Only AM571x IDK has gpio control detect.. so check that */
  	if (board_is_am571x_idk() && !am571x_idk_needs_lcd())
  		goto out;
-@@ -679,8 +724,8 @@ void recalibrate_iodelay(void)
+@@ -710,8 +755,8 @@ void recalibrate_iodelay(void)
  	do_set_mux32((*ctrl)->control_padconf_core_base, pconf, pconf_sz);
  
  	/* Now do the weird minor deltas that should be safe */
@@ -945,7 +945,7 @@ index b8798d6f2a..8ecba582d7 100644
  			pconf = core_padconf_array_delta_x15_sr2_0;
  			pconf_sz = ARRAY_SIZE(core_padconf_array_delta_x15_sr2_0);
  		} else {
-@@ -1028,12 +1073,17 @@ int ft_board_setup(void *blob, bd_t *bd)
+@@ -1120,12 +1165,17 @@ int ft_board_setup(void *blob, bd_t *bd)
  int board_fit_config_name_match(const char *name)
  {
  	if (board_is_x15()) {
@@ -964,7 +964,7 @@ index b8798d6f2a..8ecba582d7 100644
  	} else if (board_is_am572x_evm()) {
  		if (board_is_am572x_evm_reva3()) {
  			if (!strcmp(name, "am57xx-evm-reva3"))
-@@ -1045,6 +1095,12 @@ int board_fit_config_name_match(const char *name)
+@@ -1137,9 +1187,17 @@ int board_fit_config_name_match(const char *name)
  		return 0;
  	} else if (board_is_am571x_idk() && !strcmp(name, "am571x-idk")) {
  		return 0;
@@ -976,7 +976,13 @@ index b8798d6f2a..8ecba582d7 100644
 +		return 0;
  	}
  
- 	return -1;
+-	return -1;
++//	return -1;
++//FIXME: for some reason, the board_is_am572x_evm_reva3 path is not returning..
++	return 0;
+ }
+ #endif
+ 
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
 index e32989d079..7e8a504b67 100644
 --- a/configs/am57xx_evm_defconfig
