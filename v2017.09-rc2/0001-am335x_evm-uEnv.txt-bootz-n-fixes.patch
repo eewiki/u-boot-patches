@@ -1,19 +1,19 @@
-From 7a4d6e28d541e5454becefba2be0d1421127153d Mon Sep 17 00:00:00 2001
+From 23532ff4abb9291fd37c351663d81e90236319f6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Aug 2017 13:01:26 -0500
+Date: Tue, 15 Aug 2017 16:20:29 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c            |  31 +++++-
- board/ti/am335x/board.h            |  20 ++++
+ board/ti/am335x/board.c            |  31 +++-
+ board/ti/am335x/board.h            |  20 +++
  board/ti/am335x/mux.c              |   9 +-
  configs/am335x_boneblack_defconfig |   3 +-
- configs/am335x_evm_defconfig       |  32 ++----
- include/configs/am335x_evm.h       |  60 +++++++---
- include/configs/ti_armv7_common.h  | 220 +++++++++++++++++++++++++++++++++++++
- include/environment/ti/mmc.h       |  56 ++++++++--
- 8 files changed, 385 insertions(+), 46 deletions(-)
+ configs/am335x_evm_defconfig       |  32 ++---
+ include/configs/am335x_evm.h       |  69 +++++++--
+ include/configs/ti_armv7_common.h  | 286 +++++++++++++++++++++++++++++++++++++
+ include/environment/ti/mmc.h       |  56 ++++++--
+ 8 files changed, 460 insertions(+), 46 deletions(-)
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
 index 0a16529b5f..e8a376e977 100644
@@ -178,7 +178,7 @@ index ecf55d6da6..36cf4c6619 100644
  CONFIG_OF_LIBFDT_OVERLAY=y
 +CONFIG_PHY_MSCC=y
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 9f88a42cdc..59fd77d329 100644
+index 9f88a42cdc..361f460d9b 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
 @@ -2,60 +2,50 @@ CONFIG_ARM=y
@@ -254,7 +254,7 @@ index 9f88a42cdc..59fd77d329 100644
  CONFIG_OF_LIBFDT_OVERLAY=y
 +CONFIG_PHY_MSCC=y
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index c9420b2d73..53d3761f4c 100644
+index c9420b2d73..1179ddeae6 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -59,9 +59,14 @@
@@ -282,9 +282,25 @@ index c9420b2d73..53d3761f4c 100644
  	func(PXE, pxe, na) \
  	func(DHCP, dhcp, na)
  
-@@ -135,18 +139,43 @@
+@@ -104,6 +108,7 @@
+ 	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=zImage\0" \
++	"board_eeprom_header=undefined\0" \
+ 	"fdtfile=undefined\0" \
+ 	"console=ttyO0,115200n8\0" \
+ 	"partitions=" \
+@@ -134,19 +139,51 @@
+ 	"ramboot=echo Booting from ramdisk ...; " \
  		"run ramargs; " \
  		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
++	"eeprom_program="\
++		"if test $board_eeprom_header = bbb_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = bbbl_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbl_footer; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = bbbw_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbw_footer; run eeprom_dump; reset; fi;  \0" \
  	"findfdt="\
 +		"echo board_name=[$board_name] ...; " \
  		"if test $board_name = A335BONE; then " \
@@ -332,7 +348,7 @@ index c9420b2d73..53d3761f4c 100644
  		"if test $board_name = A33515BB; then " \
  			"setenv fdtfile am335x-evm.dtb; fi; " \
  		"if test $board_name = A335X_SK; then " \
-@@ -154,13 +183,20 @@
+@@ -154,13 +191,21 @@
  		"if test $board_name = A335_ICE; then " \
  			"setenv fdtfile am335x-icev2.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
@@ -351,10 +367,11 @@ index c9420b2d73..53d3761f4c 100644
 +	EEWIKI_NFS \
 +	EEWIKI_BOOT \
 +	EEWIKI_UNAME_BOOT \
++	EEPROM_PROGRAMMING \
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -271,9 +307,7 @@
+@@ -271,9 +316,7 @@
  #endif
  
  #ifdef CONFIG_USB_MUSB_GADGET
@@ -366,13 +383,79 @@ index c9420b2d73..53d3761f4c 100644
  
  /*
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index ac3eb5d729..97524a0115 100644
+index ac3eb5d729..e0874a64e3 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -132,6 +132,226 @@
+@@ -132,6 +132,292 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
++#define EEPROM_PROGRAMMING \
++	"eeprom_dump=i2c dev 0; " \
++		"i2c md 0x50 0x00.2 20; " \
++		"\0" \
++	"eeprom_blank=i2c dev 0; " \
++		"i2c mw 0x50 0x00.2 ff; " \
++		"i2c mw 0x50 0x01.2 ff; " \
++		"i2c mw 0x50 0x02.2 ff; " \
++		"i2c mw 0x50 0x03.2 ff; " \
++		"i2c mw 0x50 0x04.2 ff; " \
++		"i2c mw 0x50 0x05.2 ff; " \
++		"i2c mw 0x50 0x06.2 ff; " \
++		"i2c mw 0x50 0x07.2 ff; " \
++		"i2c mw 0x50 0x08.2 ff; " \
++		"i2c mw 0x50 0x09.2 ff; " \
++		"i2c mw 0x50 0x0a.2 ff; " \
++		"i2c mw 0x50 0x0b.2 ff; " \
++		"i2c mw 0x50 0x0c.2 ff; " \
++		"i2c mw 0x50 0x0d.2 ff; " \
++		"i2c mw 0x50 0x0e.2 ff; " \
++		"i2c mw 0x50 0x0f.2 ff; " \
++		"i2c mw 0x50 0x10.2 ff; " \
++		"i2c mw 0x50 0x11.2 ff; " \
++		"i2c mw 0x50 0x12.2 ff; " \
++		"i2c mw 0x50 0x13.2 ff; " \
++		"i2c mw 0x50 0x14.2 ff; " \
++		"i2c mw 0x50 0x15.2 ff; " \
++		"i2c mw 0x50 0x16.2 ff; " \
++		"i2c mw 0x50 0x17.2 ff; " \
++		"i2c mw 0x50 0x18.2 ff; " \
++		"i2c mw 0x50 0x19.2 ff; " \
++		"i2c mw 0x50 0x1a.2 ff; " \
++		"i2c mw 0x50 0x1b.2 ff; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
++		"\0" \
++	"eeprom_bbb_header=i2c dev 0; " \
++		"i2c mw 0x50 0x00.2 aa; " \
++		"i2c mw 0x50 0x01.2 55; " \
++		"i2c mw 0x50 0x02.2 33; " \
++		"i2c mw 0x50 0x03.2 ee; " \
++		"i2c mw 0x50 0x04.2 41; " \
++		"i2c mw 0x50 0x05.2 33; " \
++		"i2c mw 0x50 0x06.2 33; " \
++		"i2c mw 0x50 0x07.2 35; " \
++		"i2c mw 0x50 0x08.2 42; " \
++		"i2c mw 0x50 0x09.2 4e; " \
++		"i2c mw 0x50 0x0a.2 4c; " \
++		"i2c mw 0x50 0x0b.2 54; " \
++		"\0" \
++	"eeprom_bbbw_footer= " \
++		"i2c mw 0x50 0x0c.2 42; " \
++		"i2c mw 0x50 0x0d.2 57; " \
++		"i2c mw 0x50 0x0e.2 41; " \
++		"i2c mw 0x50 0x0f.2 35; " \
++		"\0" \
++	"eeprom_bbbl_footer= " \
++		"i2c mw 0x50 0x0c.2 42; " \
++		"i2c mw 0x50 0x0d.2 4c; " \
++		"i2c mw 0x50 0x0e.2 41; " \
++		"i2c mw 0x50 0x0f.2 32; " \
++		"\0" \
++
++
 +#define EEWIKI_NFS \
 +	"server_ip=192.168.1.100\0" \
 +	"gw_ip=192.168.1.1\0" \

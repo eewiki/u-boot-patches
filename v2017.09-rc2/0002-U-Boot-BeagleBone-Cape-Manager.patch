@@ -1,6 +1,6 @@
-From 6f7d4e4b9b4a45681869940cff75d4449f181b97 Mon Sep 17 00:00:00 2001
+From bdf6059b7840c7d95b90ccb062d82a2f097785a1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Aug 2017 13:03:22 -0500
+Date: Tue, 15 Aug 2017 16:21:56 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -572,10 +572,10 @@ index 6d65e99a1a..2ae077fb14 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 97524a0115..ab88befd48 100644
+index e0874a64e3..a6850f1cd2 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -272,6 +272,19 @@
+@@ -338,6 +338,19 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -595,7 +595,7 @@ index 97524a0115..ab88befd48 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -312,6 +325,178 @@
+@@ -378,6 +391,178 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
