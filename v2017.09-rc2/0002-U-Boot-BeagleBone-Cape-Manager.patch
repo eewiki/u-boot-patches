@@ -1,19 +1,19 @@
-From bdf6059b7840c7d95b90ccb062d82a2f097785a1 Mon Sep 17 00:00:00 2001
+From 1898ab28b5e7f9ceeb51895e07eda88de9f11f4e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 15 Aug 2017 16:21:56 -0500
+Date: Thu, 31 Aug 2017 09:13:29 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 369 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 387 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 +++++
  board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 185 +++++++++++++++
+ include/configs/ti_armv7_common.h         | 185 ++++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 664 insertions(+)
+ 8 files changed, 682 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e8a376e977..08be1cc36d 100644
+index e8a376e977..3040d2ba65 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index e8a376e977..08be1cc36d 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,371 @@ void do_board_detect(void)
+@@ -76,9 +77,389 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -77,9 +77,10 @@ index e8a376e977..08be1cc36d 100644
 +#define PINS_TAKEN	0x0
 +
 +#define UNK_BASE_DTB	0x0
-+#define BBB_BASE_DTB	0x1
-+#define BBBL_BASE_DTB	0x2
-+#define BBE_BASE_DTB	0x3
++#define BB_BASE_DTB	0x1
++#define BBB_BASE_DTB	0x2
++#define BBBL_BASE_DTB	0x3
++#define BBE_BASE_DTB	0x4
 +
 +#define BBB_EMMC	0x1
 +
@@ -113,7 +114,8 @@ index e8a376e977..08be1cc36d 100644
 +	const char s[2] = ".";
 +	char *token;
 +
-+	char base_dtb=BBB_BASE_DTB;
++	//Don't forget about the BeagleBone Classic (White)
++	char base_dtb=UNK_BASE_DTB;
 +	char virtual_emmc=NOT_POP;
 +	char virtual_video=NOT_POP;
 +	char virtual_wireless=NOT_POP;
@@ -125,6 +127,7 @@ index e8a376e977..08be1cc36d 100644
 +
 +	if (board_is_bone_lt()) {
 +		puts("BeagleBone Black:\n");
++		base_dtb=BBB_BASE_DTB;
 +		virtual_emmc=BBB_EMMC;
 +		virtual_video=BBB_TDA998X_AUDIO;
 +		virtual_wireless=NOT_POP;
@@ -194,10 +197,21 @@ index e8a376e977..08be1cc36d 100644
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL;
 +		}
++	} else {
++		puts("Model: BeagleBone:\n");
++		base_dtb=BB_BASE_DTB;
++		virtual_emmc=NOT_POP;
++		virtual_video=NOT_POP;
++		virtual_wireless=NOT_POP;
++		virtual_adc=BBB_ADC;
++		silicon=BBB_GENERIC_SILICON;
++		cape_universal=CAPE_UNIVERSAL_BBB;
++		name = "A335BONE";
 +	}
 +
 +	if (board_is_bbg1()) {
 +		puts("Model: SeeedStudio BeagleBone Green:\n");
++		base_dtb=BBB_BASE_DTB;
 +		virtual_emmc=BBB_EMMC;
 +		virtual_video=NOT_POP;
 +		virtual_wireless=NOT_POP;
@@ -325,6 +339,10 @@ index e8a376e977..08be1cc36d 100644
 +	}
 +
 +	switch(base_dtb) {
++		case BB_BASE_DTB:
++			setenv("uboot_base_dtb", "am335x-bone.dtb");
++			setenv("uboot_try_cape_universal", "1");
++			break;
 +		case BBB_BASE_DTB:
 +			setenv("uboot_base_dtb", "am335x-boneblack-uboot.dtb");
 +			setenv("uboot_try_cape_universal", "1");
@@ -412,7 +430,7 @@ index e8a376e977..08be1cc36d 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -791,6 +1154,12 @@ int board_late_init(void)
+@@ -791,6 +1172,12 @@ int board_late_init(void)
  	}
  #endif
  
