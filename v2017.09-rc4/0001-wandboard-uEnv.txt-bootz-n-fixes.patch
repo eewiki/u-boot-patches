@@ -1,0 +1,670 @@
+From 758d523a5c4f1dbb8ffb8bc1c5a284afb0642016 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 12 Sep 2017 11:07:58 -0500
+Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/include/asm/arch-mx6/imx-regs.h |   2 +
+ board/wandboard/spl.c                    | 136 +++++++++++++++++++++++++-
+ board/wandboard/wandboard.c              | 158 ++++++++++++++++++++++++++++---
+ configs/wandboard_defconfig              |   5 +
+ include/configs/wandboard.h              | 141 ++++++++++++++++++++++++++-
+ scripts/config_whitelist.txt             |   1 +
+ 6 files changed, 425 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mx6/imx-regs.h b/arch/arm/include/asm/arch-mx6/imx-regs.h
+index 86e267087a..760beea6d6 100644
+--- a/arch/arm/include/asm/arch-mx6/imx-regs.h
++++ b/arch/arm/include/asm/arch-mx6/imx-regs.h
+@@ -351,6 +351,8 @@
+ #define MX6SX_LCDIF1_BASE_ADDR      (AIPS3_ARB_BASE_ADDR + 0x20000)
+ #define MX6SX_WDOG3_BASE_ADDR       (AIPS3_ARB_BASE_ADDR + 0x88000)
+ 
++#define NOC_DDR_BASE_ADDR           (GPV0_BASE_ADDR + 0xB0000)
++
+ #if !(defined(CONFIG_MX6SX) || defined(CONFIG_MX6UL) || \
+ 	defined(CONFIG_MX6SLL) || defined(CONFIG_MX6SL))
+ #define IRAM_SIZE                    0x00040000
+diff --git a/board/wandboard/spl.c b/board/wandboard/spl.c
+index 99a02865ec..a190d74e66 100644
+--- a/board/wandboard/spl.c
++++ b/board/wandboard/spl.c
+@@ -32,6 +32,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ #define IMX6DQ_DRIVE_STRENGTH		0x30
+ #define IMX6SDL_DRIVE_STRENGTH		0x28
++#define IMX6QP_DRIVE_STRENGTH		0x28
+ 
+ /* configure MX6Q/DUAL mmdc DDR io registers */
+ static struct mx6dq_iomux_ddr_regs mx6dq_ddr_ioregs = {
+@@ -266,9 +267,142 @@ static void ccgr_init(void)
+ 	writel(0x000003FF, &ccm->CCGR6);
+ }
+ 
++static void spl_dram_init_imx6qp_lpddr3(void)
++{
++	 /* i.MX6QP */
++	/* DDR IO TYPE */
++	writel(0x000C0000, IOMUXC_BASE_ADDR + 0x798);
++	writel(0x00000000, IOMUXC_BASE_ADDR + 0x758);
++	/* Clock */
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x588);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x594);
++	/* Address */
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x56c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x578);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x74c);
++	/* Control */
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x57c);//fix to apply for LPDDR2
++
++	writel(0x00000000, IOMUXC_BASE_ADDR + 0x58c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x59c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5a0);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x78c);
++	/* Data Strobe */
++	writel(0x00020000, IOMUXC_BASE_ADDR + 0x750);
++
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5a8);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5b0);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x524);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x51c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x518);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x50c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5b8);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5c0);
++	/* Data */
++	writel(0x00020000, IOMUXC_BASE_ADDR + 0x774);
++
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x784);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x788);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x794);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x79c);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x7a0);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x7a4);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x7a8);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x748);
++
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5ac);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5b4);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x528);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x520);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x514);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x510);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5bc);
++	writel(IMX6QP_DRIVE_STRENGTH, IOMUXC_BASE_ADDR + 0x5c4);
++
++	/* MMDC0_MDSCR
++	   set the Configuration request bit during MMDC set up */
++	writel(0x00008000, MMDC_P0_BASE_ADDR + 0x01c);
++
++	/* Calibrations */
++	/* ZQ */
++	writel(0xa1390003, MMDC_P0_BASE_ADDR + 0x800);
++	/* write leveling */
++	writel(0x00060004, MMDC_P0_BASE_ADDR + 0x80c);
++	writel(0x000B0004, MMDC_P0_BASE_ADDR + 0x810);
++	writel(0x00000004, MMDC_P1_BASE_ADDR + 0x80c);
++	writel(0x00000000, MMDC_P1_BASE_ADDR + 0x810);
++	/* DQS gating, read delay, write delay calibration values
++	 based on calibration compare of 0x00ffff00  */
++	writel(0x03040314, MMDC_P0_BASE_ADDR + 0x83c);
++	writel(0x03080300, MMDC_P0_BASE_ADDR + 0x840);
++	writel(0x03000310, MMDC_P1_BASE_ADDR + 0x83c);
++	writel(0x0268023C, MMDC_P1_BASE_ADDR + 0x840);
++
++	writel(0x4034363A, MMDC_P0_BASE_ADDR + 0x848);
++	writel(0x36302C3C, MMDC_P1_BASE_ADDR + 0x848);
++
++	writel(0x3E3E4046, MMDC_P0_BASE_ADDR + 0x850);
++	writel(0x483A4844, MMDC_P1_BASE_ADDR + 0x850);
++
++	writel(0x33333333, MMDC_P0_BASE_ADDR + 0x81c);
++	writel(0x33333333, MMDC_P0_BASE_ADDR + 0x820);
++	writel(0x33333333, MMDC_P0_BASE_ADDR + 0x824);
++	writel(0x33333333, MMDC_P0_BASE_ADDR + 0x828);
++	writel(0x33333333, MMDC_P1_BASE_ADDR + 0x81c);
++	writel(0x33333333, MMDC_P1_BASE_ADDR + 0x820);
++	writel(0x33333333, MMDC_P1_BASE_ADDR + 0x824);
++	writel(0x33333333, MMDC_P1_BASE_ADDR + 0x828);
++
++	writel(0x24912489, MMDC_P0_BASE_ADDR + 0x8c0);
++	writel(0x24914452, MMDC_P1_BASE_ADDR + 0x8c0);
++
++	writel(0x00000800, MMDC_P0_BASE_ADDR + 0x8b8);
++	writel(0x00000800, MMDC_P1_BASE_ADDR + 0x8b8);
++	/* MMDC init:
++	  in DDR3, 64-bit mode, only MMDC0 is initiated: */
++	writel(0x00020036, MMDC_P0_BASE_ADDR + 0x004);
++	writel(0x09444040, MMDC_P0_BASE_ADDR + 0x008);
++	writel(0x898E79A4, MMDC_P0_BASE_ADDR + 0x00c);
++	writel(0xDB538F64, MMDC_P0_BASE_ADDR + 0x010);
++	writel(0x01FF00DD, MMDC_P0_BASE_ADDR + 0x014);
++
++	writel(0x00011740, MMDC_P0_BASE_ADDR + 0x018);
++	writel(0x00008000, MMDC_P0_BASE_ADDR + 0x01c);
++	writel(0x000026D2, MMDC_P0_BASE_ADDR + 0x02c);
++	writel(0x008E1023, MMDC_P0_BASE_ADDR + 0x030);
++	writel(0x00000047, MMDC_P0_BASE_ADDR + 0x040);
++
++	writel(0x14420000, MMDC_P0_BASE_ADDR + 0x400);
++	writel(0x841A0000, MMDC_P0_BASE_ADDR + 0x000);
++	writel(0x00400c58, MMDC_P0_BASE_ADDR + 0x890);
++
++	/* add noc DDR configuration */
++	writel(0x00000000, NOC_DDR_BASE_ADDR + 0x008);
++	writel(0x2871C39B, NOC_DDR_BASE_ADDR + 0x00c);
++	writel(0x000005B4, NOC_DDR_BASE_ADDR + 0x038);
++	writel(0x00000040, NOC_DDR_BASE_ADDR + 0x014);
++	writel(0x00000020, NOC_DDR_BASE_ADDR + 0x028);
++	writel(0x00000020, NOC_DDR_BASE_ADDR + 0x02c);
++
++	writel(0x02088032, MMDC_P0_BASE_ADDR + 0x01c);
++	writel(0x00008033, MMDC_P0_BASE_ADDR + 0x01c);
++	writel(0x00048031, MMDC_P0_BASE_ADDR + 0x01c);
++	writel(0x19308030, MMDC_P0_BASE_ADDR + 0x01c);
++	writel(0x04008040, MMDC_P0_BASE_ADDR + 0x01c);
++
++	writel(0x00007800, MMDC_P0_BASE_ADDR + 0x020);
++	writel(0x00022227, MMDC_P0_BASE_ADDR + 0x818);
++	writel(0x00022227, MMDC_P1_BASE_ADDR + 0x818);
++	writel(0x00025576, MMDC_P0_BASE_ADDR + 0x004);
++	writel(0x00011006, MMDC_P0_BASE_ADDR + 0x404);
++	writel(0x00000000, MMDC_P0_BASE_ADDR + 0x01c);
++}
++
+ static void spl_dram_init(void)
+ {
+-	if (is_cpu_type(MXC_CPU_MX6SOLO)) {
++	if (is_mx6dqp()) {
++		spl_dram_init_imx6qp_lpddr3();
++	} else if (is_cpu_type(MXC_CPU_MX6SOLO)) {
+ 		mx6sdl_dram_iocfg(32, &mx6sdl_ddr_ioregs, &mx6sdl_grp_ioregs);
+ 		mx6_dram_cfg(&mem_s, &mx6s_512m_mmdc_calib, &h5tq2g63dfr);
+ 	} else if (is_cpu_type(MXC_CPU_MX6DL)) {
+diff --git a/board/wandboard/wandboard.c b/board/wandboard/wandboard.c
+index adfcf48562..3f3c19bf11 100644
+--- a/board/wandboard/wandboard.c
++++ b/board/wandboard/wandboard.c
+@@ -30,6 +30,8 @@
+ #include <phy.h>
+ #include <input.h>
+ #include <i2c.h>
++#include <power/pmic.h>
++#include <power/pfuze100_pmic.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -51,8 +53,11 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define USDHC1_CD_GPIO		IMX_GPIO_NR(1, 2)
+ #define USDHC3_CD_GPIO		IMX_GPIO_NR(3, 9)
+ #define ETH_PHY_RESET		IMX_GPIO_NR(3, 29)
++#define ETH_PHY_AR8035_POWER	IMX_GPIO_NR(7, 13)
+ #define REV_DETECTION		IMX_GPIO_NR(2, 28)
+ 
++static bool with_pmic = false;
++
+ int dram_init(void)
+ {
+ 	gd->ram_size = imx_ddr_size();
+@@ -103,8 +108,15 @@ static iomux_v3_cfg_t const enet_pads[] = {
+ 	IOMUX_PADS(PAD_RGMII_RD2__RGMII_RD2  | MUX_PAD_CTRL(ENET_PAD_CTRL)),
+ 	IOMUX_PADS(PAD_RGMII_RD3__RGMII_RD3  | MUX_PAD_CTRL(ENET_PAD_CTRL)),
+ 	IOMUX_PADS(PAD_RGMII_RX_CTL__RGMII_RX_CTL | MUX_PAD_CTRL(ENET_PAD_CTRL)),
+-	/* AR8031 PHY Reset */
++	/* AR8031/AR8035 PHY Reset */
+ 	IOMUX_PADS(PAD_EIM_D29__GPIO3_IO29    | MUX_PAD_CTRL(NO_PAD_CTRL)),
++	IOMUX_PADS(PAD_GPIO_6__GPIO1_IO06     | MUX_PAD_CTRL(NO_PAD_CTRL)),
++	IOMUX_PADS(PAD_KEY_COL4__GPIO4_IO14   | MUX_PAD_CTRL(NO_PAD_CTRL)),
++};
++
++static iomux_v3_cfg_t const enet_ar8035_power_pads[] = {
++	/* AR8035 POWER */
++	IOMUX_PADS(PAD_GPIO_18__GPIO7_IO13    | MUX_PAD_CTRL(NO_PAD_CTRL)),
+ };
+ 
+ static iomux_v3_cfg_t const rev_detection_pad[] = {
+@@ -120,7 +132,14 @@ static void setup_iomux_enet(void)
+ {
+ 	SETUP_IOMUX_PADS(enet_pads);
+ 
+-	/* Reset AR8031 PHY */
++	if (with_pmic) {
++		SETUP_IOMUX_PADS(enet_ar8035_power_pads);
++		/* enable AR8035 POWER */
++		gpio_direction_output(ETH_PHY_AR8035_POWER, 0);
++	}
++	/* wait until 3.3V of PHY and clock become stable */
++	mdelay(10);
++	/* Reset AR8031/AR8035 PHY */
+ 	gpio_direction_output(ETH_PHY_RESET, 0);
+ 	mdelay(10);
+ 	gpio_set_value(ETH_PHY_RESET, 1);
+@@ -193,14 +212,21 @@ static int ar8031_phy_fixup(struct phy_device *phydev)
+ {
+ 	unsigned short val;
+ 
+-	/* To enable AR8031 ouput a 125MHz clk from CLK_25M */
++	/* To enable AR8031/AR8035 ouput a 125MHz clk from CLK_25M */
+ 	phy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x7);
+ 	phy_write(phydev, MDIO_DEVAD_NONE, 0xe, 0x8016);
+ 	phy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x4007);
+ 
+ 	val = phy_read(phydev, MDIO_DEVAD_NONE, 0xe);
+-	val &= 0xffe3;
+-	val |= 0x18;
++	if (with_pmic) {
++		/* AR8035 */
++		val &= 0xffe7;
++		val |= 0x18;
++	} else {
++		/* AR8031 */
++		val &= 0xffe3;
++		val |= 0x18;
++	}
+ 	phy_write(phydev, MDIO_DEVAD_NONE, 0xe, val);
+ 
+ 	/* introduce tx clock delay */
+@@ -222,6 +248,74 @@ int board_phy_config(struct phy_device *phydev)
+ 	return 0;
+ }
+ 
++struct i2c_pads_info mx6q_i2c1_pad_info = {
++	.scl = {
++		.i2c_mode = MX6Q_PAD_EIM_D21__I2C1_SCL
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6Q_PAD_EIM_D21__GPIO3_IO21
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(3, 21)
++	},
++	.sda = {
++		.i2c_mode = MX6Q_PAD_EIM_D28__I2C1_SDA
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6Q_PAD_EIM_D28__GPIO3_IO28
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(3, 28)
++	}
++};
++
++struct i2c_pads_info mx6dl_i2c1_pad_info = {
++	.scl = {
++		.i2c_mode = MX6DL_PAD_EIM_D21__I2C1_SCL
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6DL_PAD_EIM_D21__GPIO3_IO21
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(3, 21)
++	},
++	.sda = {
++		.i2c_mode = MX6DL_PAD_EIM_D28__I2C1_SDA
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6DL_PAD_EIM_D28__GPIO3_IO28
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(3, 28)
++	}
++};
++
++struct i2c_pads_info mx6q_i2c3_pad_info = {
++	.scl = {
++		.i2c_mode = MX6Q_PAD_GPIO_5__I2C3_SCL
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6Q_PAD_GPIO_5__GPIO1_IO05
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(1, 5)
++	},
++	.sda = {
++		.i2c_mode = MX6Q_PAD_GPIO_16__I2C3_SDA
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6Q_PAD_GPIO_16__GPIO7_IO11
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(7, 11)
++	}
++};
++
++struct i2c_pads_info mx6dl_i2c3_pad_info = {
++	.scl = {
++		.i2c_mode = MX6DL_PAD_GPIO_5__I2C3_SCL
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6DL_PAD_GPIO_5__GPIO1_IO05
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(1, 5)
++	},
++	.sda = {
++		.i2c_mode = MX6DL_PAD_GPIO_16__I2C3_SDA
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gpio_mode = MX6DL_PAD_GPIO_16__GPIO7_IO11
++			| MUX_PAD_CTRL(I2C_PAD_CTRL),
++		.gp = IMX_GPIO_NR(7, 11)
++	}
++};
++
+ #if defined(CONFIG_VIDEO_IPUV3)
+ struct i2c_pads_info mx6q_i2c2_pad_info = {
+ 	.scl = {
+@@ -285,6 +379,30 @@ static iomux_v3_cfg_t const fwadapt_7wvga_pads[] = {
+ 	IOMUX_PADS(PAD_SD4_DAT3__GPIO2_IO11 | MUX_PAD_CTRL(NO_PAD_CTRL)), /* DISP0_VDDEN */
+ };
+ 
++/* setup board specific PMIC */
++int power_init_board(void)
++{
++	struct pmic *p;
++	u32 reg;
++
++	/* configure PFUZE100 PMIC */
++	power_pfuze100_init(CONFIG_I2C_PMIC);
++	p = pmic_get("PFUZE100");
++	if (p && !pmic_probe(p)) {
++		pmic_reg_read(p, PFUZE100_DEVICEID, &reg);
++		printf("PMIC:  PFUZE100 ID=0x%02x\n", reg);
++		with_pmic = true;
++
++		/* Set VGEN2 to 1.5V and enable */
++		pmic_reg_read(p, PFUZE100_VGEN2VOL, &reg);
++		reg &= ~(LDO_VOL_MASK);
++		reg |= (LDOA_1_50V | (1 << (LDO_EN)));
++		pmic_reg_write(p, PFUZE100_VGEN2VOL, reg);
++	}
++
++	return 0;
++}
++
+ static void do_enable_hdmi(struct display_info_t const *dev)
+ {
+ 	imx_enable_hdmi_phy();
+@@ -417,6 +535,14 @@ static bool is_revc1(void)
+ 		return false;
+ }
+ 
++static bool is_revd1(void)
++{
++	if (with_pmic)
++		return true;
++	else
++		return false;
++}
++
+ int board_late_init(void)
+ {
+ #ifdef CONFIG_CMD_BMODE
+@@ -424,12 +550,16 @@ int board_late_init(void)
+ #endif
+ 
+ #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+-	if (is_mx6dq())
++	if (is_mx6dqp())
++		env_set("board_rev", "MX6QP");
++	else if (is_mx6dq())
+ 		env_set("board_rev", "MX6Q");
+ 	else
+ 		env_set("board_rev", "MX6DL");
+ 
+-	if (is_revc1())
++	if (is_revd1())
++		env_set("board_name", "D1");
++	else if (is_revc1())
+ 		env_set("board_name", "C1");
+ 	else
+ 		env_set("board_name", "B1");
+@@ -442,20 +572,22 @@ int board_init(void)
+ 	/* address of boot parameters */
+ 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+ 
+-#if defined(CONFIG_VIDEO_IPUV3)
+-	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6dl_i2c2_pad_info);
+-	if (is_mx6dq())
++	if (is_mx6dq() || is_mx6dqp()) {
+ 		setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6q_i2c2_pad_info);
+-	else
++		setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6q_i2c3_pad_info);
++	} else {
+ 		setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6dl_i2c2_pad_info);
+-#endif
++		setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6dl_i2c3_pad_info);
++	}
+ 
+ 	return 0;
+ }
+ 
+ int checkboard(void)
+ {
+-	if (is_revc1())
++	if (is_revd1())
++		puts("Board: Wandboard rev D1\n");
++	else if (is_revc1())
+ 		puts("Board: Wandboard rev C1\n");
+ 	else
+ 		puts("Board: Wandboard rev B1\n");
+diff --git a/configs/wandboard_defconfig b/configs/wandboard_defconfig
+index 9765f13a69..c214d7c1b1 100644
+--- a/configs/wandboard_defconfig
++++ b/configs/wandboard_defconfig
+@@ -19,11 +19,16 @@ CONFIG_BOARD_EARLY_INIT_F=y
+ CONFIG_SPL=y
+ CONFIG_SPL_EXT_SUPPORT=y
+ CONFIG_SPL_I2C_SUPPORT=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ # CONFIG_CMD_IMLS is not set
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_GPIO=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SATA=y
+ CONFIG_CMD_USB=y
+ CONFIG_CMD_CACHE=y
+diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
+index d9237d7b81..1d5ddbe8f1 100644
+--- a/include/configs/wandboard.h
++++ b/include/configs/wandboard.h
+@@ -14,6 +14,7 @@
+ 
+ #include "imx6_spl.h"
+ 
++#define CONFIG_DISPLAY_BOARDINFO_LATE  /* display board info (after reloc) */
+ #define CONFIG_MACH_TYPE		MACH_TYPE_WANDBOARD_IMX6
+ 
+ /* Size of malloc() pool */
+@@ -43,6 +44,13 @@
+ #define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+ #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
+ #define CONFIG_SYS_I2C_SPEED		100000
++#define CONFIG_I2C_PMIC			2
++
++/* PMIC */
++#define CONFIG_POWER
++#define CONFIG_POWER_I2C
++#define CONFIG_POWER_PFUZE100
++#define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
+ 
+ /* MMC Configuration */
+ #define CONFIG_SYS_FSL_USDHC_NUM	2
+@@ -83,11 +91,16 @@
+ 	"fdtfile=undefined\0" \
+ 	"fdt_high=0xffffffff\0" \
+ 	"initrd_high=0xffffffff\0" \
++	"rdaddr=0x12A00000\0" \
+ 	"fdt_addr_r=0x18000000\0" \
+ 	"fdt_addr=0x18000000\0" \
+ 	"ip_dyn=yes\0" \
+-	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
+-	"finduuid=part uuid mmc 0:1 uuid\0" \
++	"optargs=\0" \
++	"cmdline=\0" \
++	"mmcdev=0\0" \
++	"mmcpart=1\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait\0" \
+ 	"update_sd_firmware_filename=u-boot.imx\0" \
+ 	"update_sd_firmware=" \
+ 		"if test ${ip_dyn} = yes; then " \
+@@ -102,7 +115,18 @@
+ 				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
+ 			"fi; "	\
+ 		"fi\0" \
++	"mmcargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
+ 	"findfdt="\
++		"if test $board_name = D1 && test $board_rev = MX6QP ; then " \
++			"setenv fdtfile imx6qp-wandboard-revd1.dtb; fi; " \
++		"if test $board_name = D1 && test $board_rev = MX6Q ; then " \
++			"setenv fdtfile imx6q-wandboard-revd1.dtb; fi; " \
++		"if test $board_name = D1 && test $board_rev = MX6DL ; then " \
++			"setenv fdtfile imx6dl-wandboard-revd1.dtb; fi; " \
+ 		"if test $board_name = C1 && test $board_rev = MX6Q ; then " \
+ 			"setenv fdtfile imx6q-wandboard.dtb; fi; " \
+ 		"if test $board_name = C1 && test $board_rev = MX6DL ; then " \
+@@ -113,6 +137,111 @@
+ 			"setenv fdtfile imx6dl-wandboard-revb1.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine dtb to use; fi; \0" \
++	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${devtype} ${bootpart} ${fdt_addr} ${fdtdir}/${fdtfile}\0" \
++	"mmcboot=${devtype} dev ${mmcdev}; " \
++		"if ${devtype} rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e ${devtype} ${bootpart} /uEnv.txt; then " \
++				"load ${devtype} ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e ${devtype} ${bootpart} /boot/uEnv.txt; then " \
++					"load ${devtype} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"echo Running uname_boot ...;" \
++						"part uuid ${devtype} ${bootpart} partuuid ;" \
++						"setenv mmcroot PARTUUID=${partuuid} ro;" \
++						"echo Using: mmcroot=${mmcroot} ...;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e ${devtype} ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"echo; echo unable to find ${fdtfile} ...; echo booting legacy ...;"\
++										"run mmcargs;" \
++										"echo debug: [${bootargs}] ... ;" \
++										"echo debug: [bootz ${loadaddr}] ... ;" \
++										"bootz ${loadaddr}; " \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${uuid}; then " \
++					"setenv mmcroot UUID=${uuid} ro;" \
++				"fi;" \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdt_addr}; " \
++			"else " \
++				"run mmcargs;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
++				"bootz ${loadaddr} - ${fdt_addr}; " \
++			"fi;" \
++		"fi;\0" \
+ 	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
+ 	"pxefile_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
+ 	"ramdisk_addr_r=0x13000000\0" \
+@@ -130,7 +259,11 @@
+ 
+ #define CONFIG_BOOTCOMMAND \
+ 	   "run findfdt; " \
+-	   "run finduuid; " \
++	   "setenv devtype mmc;" \
++	   "setenv mmcdev 0;" \
++	   "run mmcboot;" \
++	   "setenv mmcdev 1;" \
++	   "run mmcboot;" \
+ 	   "run distro_bootcmd"
+ 
+ #include <config_distro_bootcmd.h>
+@@ -149,7 +282,7 @@
+ 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
+ 
+ /* Environment organization */
+-#define CONFIG_ENV_SIZE			(8 * 1024)
++#define CONFIG_ENV_SIZE			(10 * 1024)
+ 
+ #define CONFIG_ENV_OFFSET		(768 * 1024)
+ #define CONFIG_SYS_MMC_ENV_DEV		0
+diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
+index fb2224e38d..0b7d1c7127 100644
+--- a/scripts/config_whitelist.txt
++++ b/scripts/config_whitelist.txt
+@@ -1073,6 +1073,7 @@ CONFIG_I2C_MVTWSI_BASE3
+ CONFIG_I2C_MVTWSI_BASE4
+ CONFIG_I2C_MVTWSI_BASE5
+ CONFIG_I2C_MXC
++CONFIG_I2C_PMIC
+ CONFIG_I2C_REPEATED_START
+ CONFIG_I2C_RTC_ADDR
+ CONFIG_I2C_TIMEOUT
+-- 
+2.14.1
+
