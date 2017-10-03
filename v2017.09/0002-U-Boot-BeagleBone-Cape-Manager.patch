@@ -1,6 +1,6 @@
-From b2792949105b4419512d376f87b5d4f6a9bdfeb4 Mon Sep 17 00:00:00 2001
+From dc42d68d6518b9d8ab05ace801abd62151c8fa76 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 21 Sep 2017 11:22:08 -0500
+Date: Tue, 3 Oct 2017 09:43:31 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index fb0ec6bebc..9a6bcadcf0 100644
+index 1f4afed9d5..d9cbc3504b 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -456,13 +456,13 @@ index fb0ec6bebc..9a6bcadcf0 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -797,6 +1204,14 @@ int board_late_init(void)
+@@ -807,6 +1214,14 @@ int board_late_init(void)
  	}
  #endif
  
 +#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 +#ifdef CONFIG_TI_I2C_BOARD_DETECT
-+	if (!board_is_pb()) {
++	if (!board_is_pb() && !board_is_beaglelogic()) {
 +		do_cape_detect();
 +	}
 +#endif
@@ -472,7 +472,7 @@ index fb0ec6bebc..9a6bcadcf0 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 77ed0740c8..d4dcdf3c6a 100644
+index 15cd0f7e2a..f4b00ad727 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -11,6 +11,22 @@
@@ -498,7 +498,7 @@ index 77ed0740c8..d4dcdf3c6a 100644
  /**
   * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
   * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
-@@ -108,5 +124,6 @@ void enable_uart3_pin_mux(void);
+@@ -113,5 +129,6 @@ void enable_uart3_pin_mux(void);
  void enable_uart4_pin_mux(void);
  void enable_uart5_pin_mux(void);
  void enable_i2c0_pin_mux(void);
@@ -571,7 +571,7 @@ index 0000000000..b267a87788
 +  return hval;
 +}
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 3c7fa772d5..5c69643455 100644
+index 2b10b64d3a..3733246852 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
 @@ -120,6 +120,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
@@ -601,7 +601,7 @@ index 3c7fa772d5..5c69643455 100644
  /*
   * The AM335x GP EVM, if daughter card(s) are connected, can have 8
   * different profiles.  These profiles determine what peripherals are
-@@ -355,6 +368,7 @@ void enable_board_pin_mux(void)
+@@ -359,6 +372,7 @@ void enable_board_pin_mux(void)
  #else
  		configure_module_pin_mux(mmc1_pin_mux);
  #endif
@@ -609,7 +609,7 @@ index 3c7fa772d5..5c69643455 100644
  	} else if (board_is_gp_evm()) {
  		/* General Purpose EVM */
  		unsigned short profile = detect_daughter_board_profile();
-@@ -400,6 +414,7 @@ void enable_board_pin_mux(void)
+@@ -404,6 +418,7 @@ void enable_board_pin_mux(void)
  #else
  		configure_module_pin_mux(mmc1_pin_mux);
  #endif
@@ -618,10 +618,10 @@ index 3c7fa772d5..5c69643455 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index b9ce4c94e0..d8699a211f 100644
+index ee1130f112..3f30e33b9f 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -335,6 +335,19 @@
+@@ -353,6 +353,19 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -641,7 +641,7 @@ index b9ce4c94e0..d8699a211f 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -375,6 +388,174 @@
+@@ -393,6 +406,174 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -857,5 +857,5 @@ index 1853a30b8a..c72e691779 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.14.1
+2.14.2
 
