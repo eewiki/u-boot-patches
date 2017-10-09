@@ -1,11 +1,11 @@
-From 9d8e21cb34ace47f7ee6aacbd4ebd69c2f8d9337 Mon Sep 17 00:00:00 2001
+From 5c8c3c3ac3335d79725782b9a3c904417a09a56f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 9 Oct 2017 14:37:38 -0500
+Date: Mon, 9 Oct 2017 13:09:42 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c               |  111 +++-
+ board/ti/am335x/board.c               |   71 ++-
  board/ti/am335x/board.h               |   32 +-
  board/ti/am335x/mux.c                 |   18 +-
  configs/am335x_boneblack_defconfig    |    6 +-
@@ -15,11 +15,11 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  304 ++++++++++
  include/environment/ti/mmc.h          |   62 +-
- 10 files changed, 1652 insertions(+), 80 deletions(-)
+ 10 files changed, 1631 insertions(+), 61 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 1a52bffc00..2c113ed8c1 100644
+index 1a52bffc00..1f4afed9d5 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -84,6 +84,8 @@ struct serial_device *default_serial_console(void)
@@ -169,62 +169,31 @@ index 1a52bffc00..2c113ed8c1 100644
  	set_board_info_env(name);
  
  	/*
-@@ -859,28 +899,33 @@ int board_eth_init(bd_t *bis)
+@@ -859,18 +899,21 @@ int board_eth_init(bd_t *bis)
  	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
  
  #ifdef CONFIG_DRIVER_TI_CPSW
 -	if (board_is_bone() || board_is_bone_lt() ||
 -	    board_is_idk()) {
--		writel(MII_MODE_ENABLE, &cdev->miisel);
--		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
--				PHY_INTERFACE_MODE_MII;
--	} else if (board_is_icev2()) {
--		writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
--		cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
--		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
--		cpsw_slaves[0].phy_addr = 1;
--		cpsw_slaves[1].phy_addr = 3;
--	} else {
--		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
--		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
--				PHY_INTERFACE_MODE_RGMII;
--	}
-+	if (!board_is_pb()) {
-+		if (board_is_bone() || (board_is_bone_lt() && !board_is_bone_lt_enhanced() && !board_is_m10a()) ||
-+		    board_is_idk() || board_is_beaglelogic()) {
-+			puts("eth0: MII MODE\n");
-+			writel(MII_MODE_ENABLE, &cdev->miisel);
-+			cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
-+					PHY_INTERFACE_MODE_MII;
-+		} else if (board_is_icev2()) {
-+			puts("eth0: icev2: RGMII MODE\n");
-+			writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
-+			cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
-+			cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
-+			cpsw_slaves[0].phy_addr = 1;
-+			cpsw_slaves[1].phy_addr = 3;
-+		} else {
-+			puts("eth0: RGMII MODE\n");
-+			writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
-+			cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
-+					PHY_INTERFACE_MODE_RGMII;
-+		}
- 
--	rv = cpsw_register(&cpsw_data);
--	if (rv < 0)
--		printf("Error %d registering CPSW switch\n", rv);
--	else
--		n += rv;
-+		rv = cpsw_register(&cpsw_data);
-+		if (rv < 0)
-+			printf("Error %d registering CPSW switch\n", rv);
-+		else
-+			n += rv;
-+	}
- #endif
- 
- 	/*
-@@ -895,7 +940,7 @@ int board_eth_init(bd_t *bis)
++	if ((board_is_bone() && !board_is_pb()) || (board_is_bone_lt() && !board_is_bone_lt_enhanced() && !board_is_m10a()) ||
++	    board_is_idk() || board_is_beaglelogic()) {
++		puts("eth0: MII MODE\n");
+ 		writel(MII_MODE_ENABLE, &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+ 				PHY_INTERFACE_MODE_MII;
+ 	} else if (board_is_icev2()) {
++		puts("eth0: icev2: RGMII MODE\n");
+ 		writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
+ 		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
+ 		cpsw_slaves[0].phy_addr = 1;
+ 		cpsw_slaves[1].phy_addr = 3;
+ 	} else {
++		puts("eth0: RGMII MODE\n");
+ 		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
+ 		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+ 				PHY_INTERFACE_MODE_RGMII;
+@@ -895,7 +938,7 @@ int board_eth_init(bd_t *bis)
  #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
  #define AR8051_RGMII_TX_CLK_DLY		0x100
  
@@ -233,7 +202,7 @@ index 1a52bffc00..2c113ed8c1 100644
  		const char *devname;
  		devname = miiphy_get_current_dev();
  
-@@ -927,6 +972,10 @@ int board_fit_config_name_match(const char *name)
+@@ -927,6 +970,10 @@ int board_fit_config_name_match(const char *name)
  {
  	if (board_is_gp_evm() && !strcmp(name, "am335x-evm"))
  		return 0;
@@ -338,12 +307,12 @@ index ad85b3a19a..2b10b64d3a 100644
  #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
  		configure_module_pin_mux(nand_pin_mux);
 diff --git a/configs/am335x_boneblack_defconfig b/configs/am335x_boneblack_defconfig
-index b8526fc15e..96b0da61e4 100644
+index 2fc25fbaab..3fd6f1d9cc 100644
 --- a/configs/am335x_boneblack_defconfig
 +++ b/configs/am335x_boneblack_defconfig
-@@ -5,7 +5,8 @@ CONFIG_AM33XX=y
+@@ -4,7 +4,8 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
+ CONFIG_AM33XX=y
  # CONFIG_SPL_NAND_SUPPORT is not set
- CONFIG_SPL_STACK_R_ADDR=0x82000000
  CONFIG_DISTRO_DEFAULTS=y
 -CONFIG_SYS_EXTRA_OPTIONS="EMMC_BOOT"
 +# CONFIG_ENV_IS_IN_FAT is not set
@@ -351,7 +320,7 @@ index b8526fc15e..96b0da61e4 100644
  CONFIG_SYS_CONSOLE_INFO_QUIET=y
  CONFIG_VERSION_VARIABLE=y
  CONFIG_ARCH_MISC_INIT=y
-@@ -22,8 +23,8 @@ CONFIG_USB_FUNCTION_FASTBOOT=y
+@@ -20,8 +21,8 @@ CONFIG_USB_FUNCTION_FASTBOOT=y
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_SPL=y
  # CONFIG_CMD_FLASH is not set
@@ -361,22 +330,21 @@ index b8526fc15e..96b0da61e4 100644
  CONFIG_DFU_TFTP=y
  CONFIG_DFU_MMC=y
  CONFIG_DFU_RAM=y
-@@ -45,3 +46,4 @@ CONFIG_G_DNL_PRODUCT_NUM=0xd022
+@@ -43,3 +44,4 @@ CONFIG_G_DNL_PRODUCT_NUM=0xd022
  CONFIG_LZO=y
  CONFIG_OF_LIBFDT=y
  CONFIG_OF_LIBFDT_OVERLAY=y
 +CONFIG_PHY_MSCC=y
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 00c1af4344..96b0da61e4 100644
+index b6a7cf0e5c..3fd6f1d9cc 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -2,58 +2,48 @@ CONFIG_ARM=y
+@@ -2,56 +2,46 @@ CONFIG_ARM=y
  CONFIG_ARCH_OMAP2PLUS=y
  CONFIG_TI_COMMON_CMD_OPTIONS=y
  CONFIG_AM33XX=y
-+# CONFIG_SPL_NAND_SUPPORT is not set
- CONFIG_SPL_STACK_R_ADDR=0x82000000
 -CONFIG_DEFAULT_DEVICE_TREE="am335x-evm"
++# CONFIG_SPL_NAND_SUPPORT is not set
  CONFIG_DISTRO_DEFAULTS=y
 -CONFIG_SPL_LOAD_FIT=y
 +# CONFIG_ENV_IS_IN_FAT is not set
@@ -385,7 +353,6 @@ index 00c1af4344..96b0da61e4 100644
  CONFIG_VERSION_VARIABLE=y
  CONFIG_ARCH_MISC_INIT=y
  CONFIG_SPL=y
- CONFIG_SPL_STACK_R=y
 -CONFIG_SPL_MTD_SUPPORT=y
  CONFIG_SPL_MUSB_NEW_SUPPORT=y
  CONFIG_SPL_OS_BOOT=y
