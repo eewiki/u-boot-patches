@@ -1,6 +1,6 @@
-From b5652a525f8c436ca43ddab9addd121299b63bcc Mon Sep 17 00:00:00 2001
+From 471460388374e6ec73fc39572f8a122e6b20d2c0 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 26 Oct 2017 16:25:20 -0500
+Date: Wed, 1 Nov 2017 20:48:41 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -9,13 +9,13 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.h               |   37 +-
  board/ti/am335x/mux.c                 |   18 +-
  configs/am335x_boneblack_defconfig    |    6 +-
- configs/am335x_evm_defconfig          |   33 +-
+ configs/am335x_evm_defconfig          |   34 +-
  configs/am335x_pocketbeagle_defconfig | 1055 +++++++++++++++++++++++++++++++++
  include/configs/am335x_evm.h          |  112 +++-
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  310 ++++++++++
  include/environment/ti/mmc.h          |   62 +-
- 10 files changed, 1678 insertions(+), 77 deletions(-)
+ 10 files changed, 1678 insertions(+), 78 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
@@ -382,10 +382,10 @@ index 55e0ebd69c..3de349a3f7 100644
 +CONFIG_PHY_MSCC=y
 +# CONFIG_EFI_LOADER is not set
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 3e68dbdc45..3de349a3f7 100644
+index f1bfe1a2b2..3de349a3f7 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -2,54 +2,45 @@ CONFIG_ARM=y
+@@ -2,55 +2,45 @@ CONFIG_ARM=y
  CONFIG_ARCH_OMAP2PLUS=y
  CONFIG_TI_COMMON_CMD_OPTIONS=y
  CONFIG_AM33XX=y
@@ -425,6 +425,7 @@ index 3e68dbdc45..3de349a3f7 100644
 -CONFIG_DM_MMC=y
  CONFIG_MMC_OMAP_HS=y
 -CONFIG_NAND=y
+-CONFIG_NAND_OMAP_GPMC_PREFETCH=y
  CONFIG_SPI_FLASH=y
  CONFIG_SPI_FLASH_WINBOND=y
  CONFIG_PHYLIB=y
@@ -1514,7 +1515,7 @@ index 0000000000..d817fac61e
 +# CONFIG_EFI_LOADER is not set
 +# CONFIG_UNIT_TEST is not set
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 96294679bf..c6145c7580 100644
+index 0e08264858..9c1e1357db 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -59,9 +59,14 @@
@@ -1660,7 +1661,7 @@ index 96294679bf..c6145c7580 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -259,9 +333,14 @@
+@@ -253,9 +327,14 @@
  #define CONFIG_USB_MUSB_PIO_ONLY
  #define CONFIG_USB_MUSB_DISABLE_BULK_COMBINE_SPLIT
  #define CONFIG_AM335X_USB0
@@ -1676,7 +1677,7 @@ index 96294679bf..c6145c7580 100644
  
  /*
   * Disable MMC DM for SPL build and can be re-enabled after adding
-@@ -319,6 +398,17 @@
+@@ -313,6 +392,17 @@
  #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
  #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
  #define CONFIG_SYS_MMC_MAX_DEVICE	2
@@ -1695,7 +1696,7 @@ index 96294679bf..c6145c7580 100644
  #define CONFIG_ENV_SECT_SIZE		(128 << 10)	/* 128 KiB */
  #define CONFIG_ENV_OFFSET		(512 << 10)	/* 512 KiB */
 diff --git a/include/configs/ti_am335x_common.h b/include/configs/ti_am335x_common.h
-index bf44121a0f..f92bd67d0b 100644
+index 66cacdf347..1f4da159d9 100644
 --- a/include/configs/ti_am335x_common.h
 +++ b/include/configs/ti_am335x_common.h
 @@ -39,7 +39,9 @@

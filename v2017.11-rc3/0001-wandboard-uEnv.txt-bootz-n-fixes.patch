@@ -1,6 +1,6 @@
-From be3c8cd635d9c2b46652610bdab651be4623a968 Mon Sep 17 00:00:00 2001
+From f1ea22ce75c8b2f657a24e79dd08301a0122aef9 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 26 Oct 2017 16:38:43 -0500
+Date: Wed, 1 Nov 2017 21:00:16 -0500
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -207,10 +207,10 @@ index 6d2609ce11..051560fb01 100644
  		setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6q_i2c3_pad_info);
  	} else {
 diff --git a/configs/wandboard_defconfig b/configs/wandboard_defconfig
-index e12f870333..d037aca3d4 100644
+index 23a6403d52..fafe79719d 100644
 --- a/configs/wandboard_defconfig
 +++ b/configs/wandboard_defconfig
-@@ -20,10 +20,15 @@ CONFIG_BOARD_EARLY_INIT_F=y
+@@ -19,10 +19,15 @@ CONFIG_BOARD_EARLY_INIT_F=y
  CONFIG_SPL=y
  CONFIG_SPL_EXT_SUPPORT=y
  CONFIG_SPL_I2C_SUPPORT=y
@@ -227,7 +227,7 @@ index e12f870333..d037aca3d4 100644
  CONFIG_CMD_USB=y
  CONFIG_CMD_CACHE=y
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index ba88d02b88..1e246acbef 100644
+index ba88d02b88..db8f62300e 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
 @@ -15,6 +15,7 @@
@@ -421,13 +421,13 @@ index ba88d02b88..1e246acbef 100644
  #define CONFIG_ENV_OFFSET		(768 * 1024)
  #define CONFIG_SYS_MMC_ENV_DEV		0
 diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
-index 3037d6125b..b683716c5f 100644
+index 402f5c04f7..4fbce7c904 100644
 --- a/scripts/config_whitelist.txt
 +++ b/scripts/config_whitelist.txt
-@@ -1057,6 +1057,7 @@ CONFIG_I2C_MVTWSI_BASE3
+@@ -1039,6 +1039,7 @@ CONFIG_I2C_MVTWSI_BASE2
+ CONFIG_I2C_MVTWSI_BASE3
  CONFIG_I2C_MVTWSI_BASE4
  CONFIG_I2C_MVTWSI_BASE5
- CONFIG_I2C_MXC
 +CONFIG_I2C_PMIC
  CONFIG_I2C_REPEATED_START
  CONFIG_I2C_RTC_ADDR
