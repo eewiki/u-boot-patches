@@ -1,6 +1,6 @@
-From f854b9d9d3525e33983b36e91200a8f5b0e05805 Mon Sep 17 00:00:00 2001
+From baa21704ff2382bd4e5a3e0908bf68a1f6b84c51 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 7 Nov 2017 09:52:49 -0600
+Date: Tue, 7 Nov 2017 16:31:48 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -14,8 +14,8 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  include/configs/am335x_evm.h          |  112 +++-
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  310 ++++++++++
- include/environment/ti/mmc.h          |   62 +-
- 10 files changed, 1678 insertions(+), 80 deletions(-)
+ include/environment/ti/mmc.h          |   67 ++-
+ 10 files changed, 1683 insertions(+), 80 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
@@ -2033,10 +2033,10 @@ index 91e139853c..1de766ea47 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 4305ebdaaf..1853a30b8a 100644
+index 4305ebdaaf..0364f62c3d 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -12,20 +12,60 @@
+@@ -12,20 +12,65 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -2048,6 +2048,7 @@ index 4305ebdaaf..1853a30b8a 100644
 +		"${cape_uboot} " \
 +		"root=PARTUUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
 +		"${cmdline}\0" \
 +	"args_mmc_old=setenv bootargs console=${console} " \
  		"${optargs} " \
@@ -2060,6 +2061,7 @@ index 4305ebdaaf..1853a30b8a 100644
 +		"${cape_uboot} " \
 +		"root=${oldroot} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
 +		"${cmdline}\0" \
 +	"args_mmc_uuid=setenv bootargs console=${console} " \
 +		"${optargs} " \
@@ -2068,6 +2070,7 @@ index 4305ebdaaf..1853a30b8a 100644
 +		"${cape_uboot} " \
 +		"root=UUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
 +		"${cmdline}\0" \
 +	"args_uenv_root=setenv bootargs console=${console} " \
 +		"${optargs} " \
@@ -2076,6 +2079,7 @@ index 4305ebdaaf..1853a30b8a 100644
 +		"${cape_uboot} " \
 +		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
 +		"${cmdline}\0" \
 +	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
 +		"${optargs} " \
@@ -2083,6 +2087,7 @@ index 4305ebdaaf..1853a30b8a 100644
 +		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=/dev/ram rw " \
++		"${uboot_detected_capes} " \
 +		"${cmdline}\0" \
 +	"script=boot.scr\0" \
 +	"scriptfile=${script}\0" \
@@ -2105,7 +2110,7 @@ index 4305ebdaaf..1853a30b8a 100644
  	"envboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
-@@ -45,7 +85,11 @@
+@@ -45,7 +90,11 @@
  	"mmcloados=run args_mmc; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \

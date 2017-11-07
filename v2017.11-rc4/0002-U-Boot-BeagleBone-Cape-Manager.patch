@@ -1,19 +1,19 @@
-From 5161d7c314abd20c85d8c15f7df22c1004fee1c5 Mon Sep 17 00:00:00 2001
+From 1a2b1eb9f9a7b8b3adc1e58feb775e1b65bfafb3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 26 Oct 2017 16:26:43 -0500
+Date: Tue, 7 Nov 2017 16:34:58 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 427 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 447 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
- board/ti/am335x/hash-string.h             |  59 +++++
- board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 185 +++++++++++++
+ board/ti/am335x/hash-string.h             |  59 ++++
+ board/ti/am335x/mux.c                     |  15 +
+ include/configs/ti_armv7_common.h         | 189 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 722 insertions(+)
+ include/environment/ti/mmc.h              |  15 +
+ 8 files changed, 746 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8a41a03e7a..52ebe061a3 100644
+index 8a41a03e7a..30099953c6 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8a41a03e7a..52ebe061a3 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,427 @@ void do_board_detect(void)
+@@ -76,9 +77,447 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -105,12 +105,16 @@ index 8a41a03e7a..52ebe061a3 100644
 +#define CAPE_UNIVERSAL_BBG	0x02
 +#define CAPE_UNIVERSAL_BBGW	0x03
 +
++#define M_BBG1	0x01
++#define M_OS00	0x02
++
 +static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
 +{
 +	unsigned char addr;
 +	/* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
 +	/* 14 + 16 + 1 + 4 + 5 = 40 */
 +	char cape_overlay[40];
++	char cape_overlay_pass_to_kernel[18];
 +	const char s[2] = ".";
 +	char *token;
 +
@@ -123,6 +127,7 @@ index 8a41a03e7a..52ebe061a3 100644
 +	char silicon=BBB_GENERIC_SILICON;
 +	char cape_universal=CAPE_UNIVERSAL;
 +	char virtual_adc=NOT_POP;
++	char model=NOT_POP;
 +
 +	char *name = NULL;
 +
@@ -165,6 +170,7 @@ index 8a41a03e7a..52ebe061a3 100644
 +			silicon=BBB_GENERIC_SILICON;
 +			cape_universal=CAPE_UNIVERSAL_BBG;
 +			name = "BBG1";
++			model=M_BBG1;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
 +			puts("Model: SeeedStudio BeagleBone Green Wireless:\n");
@@ -209,6 +215,7 @@ index 8a41a03e7a..52ebe061a3 100644
 +			silicon=BBB_OSD3358_SILICON;
 +			name = "SBBE";
 +			cape_universal=NOT_POP;
++			model=M_OS00;
 +		}
 +	} else {
 +		puts("Model: BeagleBone:\n");
@@ -234,11 +241,13 @@ index 8a41a03e7a..52ebe061a3 100644
 +		silicon=BBB_GENERIC_SILICON;
 +		cape_universal=CAPE_UNIVERSAL_BBG;
 +		name = "BBG1";
++		model=M_BBG1;
 +	}
 +
 +	set_board_info_env(name);
 +
 +	i2c_set_bus_num(2);
++	strlcpy(cape_overlay_pass_to_kernel, "", 1);
 +
 +	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
 +		if (i2c_probe(addr)) {
@@ -258,6 +267,9 @@ index 8a41a03e7a..52ebe061a3 100644
 +				/* cape_header->part_number stop at [.] */
 +				token = strtok(cape_header->part_number, s);
 +				strncat(cape_overlay, token, 16);
++
++				strncat(cape_overlay_pass_to_kernel, token, 16);
++				strncat(cape_overlay_pass_to_kernel, ",", 1);
 +
 +				strncat(cape_overlay, "-", 1);
 +				strncat(cape_overlay, cape_header->version, 4);
@@ -343,22 +355,27 @@ index 8a41a03e7a..52ebe061a3 100644
 +				switch(addr) {
 +					case CAPE_EEPROM_ADDR0:
 +						env_set("uboot_overlay_addr0", cape_overlay);
++						env_set("uboot_detected_capes_addr0", cape_overlay_pass_to_kernel);
 +						break;
 +					case CAPE_EEPROM_ADDR1:
 +						env_set("uboot_overlay_addr1", cape_overlay);
++						env_set("uboot_detected_capes_addr1", cape_overlay_pass_to_kernel);
 +						break;
 +					case CAPE_EEPROM_ADDR2:
 +						env_set("uboot_overlay_addr2", cape_overlay);
++						env_set("uboot_detected_capes_addr2", cape_overlay_pass_to_kernel);
 +						break;
 +					case CAPE_EEPROM_ADDR3:
 +						env_set("uboot_overlay_addr3", cape_overlay);
++						env_set("uboot_detected_capes_addr3", cape_overlay_pass_to_kernel);
 +						break;
 +				}
++				env_set("uboot_detected_capes", "1");
 +			} else {
 +				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
 +			}
 +		}
-+	}
++	}//for
 +
 +	switch(base_dtb) {
 +		case BB_BASE_DTB:
@@ -435,11 +452,14 @@ index 8a41a03e7a..52ebe061a3 100644
 +			break;
 +	}
 +
-+//	switch(model) {
-+//		case BBB_ADC:
-+//			env_set("uboot_model", "/lib/firmware/BB-ADC-00A0.dtbo");
-+//			break;
-+//	}
++	switch(model) {
++		case M_BBG1:
++			env_set("uboot_model", "/lib/firmware/M-BB-BBG-00A0.dtbo");
++			break;
++		case M_OS00:
++			env_set("uboot_model", "/lib/firmware/M-BB-OSD3358-SM-RED-00A0.dtbo");
++			break;
++	}
 +
 +	switch(cape_universal) {
 +		case CAPE_UNIVERSAL_BBB:
@@ -468,7 +488,7 @@ index 8a41a03e7a..52ebe061a3 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -813,6 +1232,14 @@ int board_late_init(void)
+@@ -813,6 +1252,14 @@ int board_late_init(void)
  	}
  #endif
  
@@ -630,7 +650,7 @@ index 2b10b64d3a..3733246852 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 1de766ea47..57a2a0de50 100644
+index 1de766ea47..380a856592 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -359,6 +359,19 @@
@@ -653,7 +673,7 @@ index 1de766ea47..57a2a0de50 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -399,6 +412,178 @@
+@@ -399,6 +412,182 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -768,6 +788,10 @@ index 1de766ea47..57a2a0de50 100644
 +					"echo uboot_overlays: [dtb_overlay=${uboot_overlay}] ... ;" \
 +					"run capeloadoverlay;" \
 +				"fi;" \
++				"if test -n ${uboot_detected_capes}; then " \
++					"echo uboot_overlays: [uboot_detected_capes=${uboot_detected_capes_addr0}${uboot_detected_capes_addr1}${uboot_detected_capes_addr2}${uboot_detected_capes_addr3}] ... ;" \
++					"setenv uboot_detected_capes uboot_detected_capes=${uboot_detected_capes_addr0}${uboot_detected_capes_addr1}${uboot_detected_capes_addr2}${uboot_detected_capes_addr3}; " \
++				"fi;" \
 +				"if test -n ${uboot_try_cape_universal}; then " \
 +					"if test -n ${enable_uboot_cape_universal}; then " \
 +						"if test -n ${cape_uboot}; then " \
@@ -833,7 +857,7 @@ index 1de766ea47..57a2a0de50 100644
  			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
  				"echo loading ${bootdir}/${rdfile} ...; "\
 diff --git a/include/configs/ti_armv7_omap.h b/include/configs/ti_armv7_omap.h
-index 306f503d9e..a5ca1fee88 100644
+index da5fc8108f..c513fff82a 100644
 --- a/include/configs/ti_armv7_omap.h
 +++ b/include/configs/ti_armv7_omap.h
 @@ -16,6 +16,9 @@
@@ -847,10 +871,10 @@ index 306f503d9e..a5ca1fee88 100644
   * GPMC NAND block.  We support 1 device and the physical address to
   * access CS0 at is 0x8000000.
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 1853a30b8a..c72e691779 100644
+index 0364f62c3d..d48d6c2d91 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -64,6 +64,21 @@
+@@ -69,6 +69,21 @@
  	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
  	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
  	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
