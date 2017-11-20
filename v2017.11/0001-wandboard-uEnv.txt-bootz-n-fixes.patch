@@ -1,14 +1,28 @@
-From 25cb670d832774e13ed1c8c9dcd25961f47e0c16 Mon Sep 17 00:00:00 2001
+From c39cdee7edc802895a9ee1272ae6904afc4e8fc4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 7 Nov 2017 11:20:09 -0600
+Date: Mon, 20 Nov 2017 13:55:17 -0600
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
+ board/wandboard/spl.c       |   2 +
  configs/wandboard_defconfig |   5 ++
  include/configs/wandboard.h | 127 ++++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 128 insertions(+), 4 deletions(-)
+ 3 files changed, 130 insertions(+), 4 deletions(-)
 
+diff --git a/board/wandboard/spl.c b/board/wandboard/spl.c
+index d6f568bb92..5b9622e75e 100644
+--- a/board/wandboard/spl.c
++++ b/board/wandboard/spl.c
+@@ -399,6 +399,8 @@ static void spl_dram_init(void)
+ 		mx6dq_dram_iocfg(64, &mx6dq_ddr_ioregs, &mx6dq_grp_ioregs);
+ 		mx6_dram_cfg(&mem_q, &mx6q_2g_mmdc_calib, &h5t04g63afr);
+ 	}
++
++	udelay(100);
+ }
+ 
+ void board_init_f(ulong dummy)
 diff --git a/configs/wandboard_defconfig b/configs/wandboard_defconfig
 index 23a6403d52..fafe79719d 100644
 --- a/configs/wandboard_defconfig
@@ -199,5 +213,5 @@ index 8fdfc0277d..c313c97b7d 100644
  #define CONFIG_ENV_OFFSET		(768 * 1024)
  #define CONFIG_SYS_MMC_ENV_DEV		0
 -- 
-2.14.2
+2.15.0
 
