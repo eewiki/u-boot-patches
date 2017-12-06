@@ -1,19 +1,19 @@
-From 1467dd1daa2930996055b9923e6a48197dfea944 Mon Sep 17 00:00:00 2001
+From 3a30823fe27bd6739c92ddbd970a8f8b1e9068db Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 6 Dec 2017 13:08:43 -0600
+Date: Wed, 6 Dec 2017 14:55:08 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 447 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 449 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++
  board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 189 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 746 insertions(+)
+ 8 files changed, 748 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8a41a03e7a..57ec064174 100644
+index 8a41a03e7a..96a24ce19a 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8a41a03e7a..57ec064174 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,447 @@ void do_board_detect(void)
+@@ -76,9 +77,449 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -217,7 +217,9 @@ index 8a41a03e7a..57ec064174 100644
 +			cape_universal=NOT_POP;
 +			model=M_OS00;
 +		}
-+	} else {
++	}
++
++	if (board_is_bone()) {
 +		puts("Model: BeagleBone:\n");
 +		base_dtb=BB_BASE_DTB;
 +		virtual_emmc=NOT_POP;
@@ -488,7 +490,7 @@ index 8a41a03e7a..57ec064174 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -813,6 +1252,14 @@ int board_late_init(void)
+@@ -813,6 +1254,14 @@ int board_late_init(void)
  	}
  #endif
  
