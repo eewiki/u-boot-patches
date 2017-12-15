@@ -1,6 +1,6 @@
-From 9ed256913b75a63542fb523e9ada6cda0f6f9f72 Mon Sep 17 00:00:00 2001
+From 3f23ca49e4a0513bb6e68f4061b4f4e5ce352a82 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 13 Dec 2017 14:39:54 -0600
+Date: Fri, 15 Dec 2017 09:39:10 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -8,14 +8,14 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.c               |  120 +++-
  board/ti/am335x/board.h               |   43 +-
  board/ti/am335x/mux.c                 |   18 +-
- configs/am335x_boneblack_defconfig    |    8 +-
- configs/am335x_evm_defconfig          |   37 +-
+ configs/am335x_boneblack_defconfig    |    9 +-
+ configs/am335x_evm_defconfig          |   38 +-
  configs/am335x_pocketbeagle_defconfig | 1055 +++++++++++++++++++++++++++++++++
  include/configs/am335x_evm.h          |  112 +++-
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  310 ++++++++++
  include/environment/ti/mmc.h          |   67 ++-
- 10 files changed, 1692 insertions(+), 80 deletions(-)
+ 10 files changed, 1694 insertions(+), 80 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
@@ -360,7 +360,7 @@ index ad85b3a19a..2b10b64d3a 100644
  #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
  		configure_module_pin_mux(nand_pin_mux);
 diff --git a/configs/am335x_boneblack_defconfig b/configs/am335x_boneblack_defconfig
-index 55e0ebd69c..ae6f5604ac 100644
+index 55e0ebd69c..7bffb33067 100644
 --- a/configs/am335x_boneblack_defconfig
 +++ b/configs/am335x_boneblack_defconfig
 @@ -4,7 +4,9 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
@@ -382,21 +382,22 @@ index 55e0ebd69c..ae6f5604ac 100644
  CONFIG_DFU_TFTP=y
  CONFIG_DFU_MMC=y
  CONFIG_DFU_RAM=y
-@@ -39,6 +40,9 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
+@@ -39,6 +40,10 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
  CONFIG_USB_GADGET_PRODUCT_NUM=0xd022
  CONFIG_USB_ETHER=y
  CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
 +CONFIG_FS_BTRFS=y
++CONFIG_CMD_BTRFS=y
  CONFIG_LZO=y
  CONFIG_OF_LIBFDT=y
  CONFIG_OF_LIBFDT_OVERLAY=y
 +CONFIG_PHY_MSCC=y
 +# CONFIG_EFI_LOADER is not set
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index c98a010069..ae6f5604ac 100644
+index c98a010069..7bffb33067 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -2,58 +2,47 @@ CONFIG_ARM=y
+@@ -2,58 +2,48 @@ CONFIG_ARM=y
  CONFIG_ARCH_OMAP2PLUS=y
  CONFIG_TI_COMMON_CMD_OPTIONS=y
  CONFIG_AM33XX=y
@@ -463,6 +464,7 @@ index c98a010069..ae6f5604ac 100644
 -CONFIG_RSA=y
 +CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
 +CONFIG_FS_BTRFS=y
++CONFIG_CMD_BTRFS=y
  CONFIG_LZO=y
 +CONFIG_OF_LIBFDT=y
  CONFIG_OF_LIBFDT_OVERLAY=y
