@@ -1,32 +1,27 @@
-From c39cdee7edc802895a9ee1272ae6904afc4e8fc4 Mon Sep 17 00:00:00 2001
+From fbeef2c9afd6d45a4a808bc353ed153f66a65c0f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 20 Nov 2017 13:55:17 -0600
+Date: Thu, 28 Dec 2017 11:02:29 -0600
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/wandboard/spl.c       |   2 +
- configs/wandboard_defconfig |   5 ++
- include/configs/wandboard.h | 127 ++++++++++++++++++++++++++++++++++++++++++--
- 3 files changed, 130 insertions(+), 4 deletions(-)
+ configs/wandboard_defconfig |   9 +++-
+ include/configs/wandboard.h | 121 ++++++++++++++++++++++++++++++++++++++++++--
+ 2 files changed, 126 insertions(+), 4 deletions(-)
 
-diff --git a/board/wandboard/spl.c b/board/wandboard/spl.c
-index d6f568bb92..5b9622e75e 100644
---- a/board/wandboard/spl.c
-+++ b/board/wandboard/spl.c
-@@ -399,6 +399,8 @@ static void spl_dram_init(void)
- 		mx6dq_dram_iocfg(64, &mx6dq_ddr_ioregs, &mx6dq_grp_ioregs);
- 		mx6_dram_cfg(&mem_q, &mx6q_2g_mmdc_calib, &h5t04g63afr);
- 	}
-+
-+	udelay(100);
- }
- 
- void board_init_f(ulong dummy)
 diff --git a/configs/wandboard_defconfig b/configs/wandboard_defconfig
-index 23a6403d52..fafe79719d 100644
+index 3c277772c0..940a6e6f99 100644
 --- a/configs/wandboard_defconfig
 +++ b/configs/wandboard_defconfig
+@@ -10,7 +10,7 @@ CONFIG_SPL_LIBDISK_SUPPORT=y
+ CONFIG_SPL_WATCHDOG_SUPPORT=y
+ CONFIG_CMD_HDMIDETECT=y
+ CONFIG_DISTRO_DEFAULTS=y
+-CONFIG_BOOTCOMMAND="run findfdt; run finduuid; run distro_bootcmd"
++CONFIG_BOOTCOMMAND="run findfdt; setenv devtype mmc; setenv mmcdev 0; run mmcboot; setenv mmcdev 1; run mmcboot; run distro_bootcmd"
+ # CONFIG_CONSOLE_MUX is not set
+ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
 @@ -19,10 +19,15 @@ CONFIG_BOARD_EARLY_INIT_F=y
  CONFIG_SPL=y
  CONFIG_SPL_EXT_SUPPORT=y
@@ -43,11 +38,20 @@ index 23a6403d52..fafe79719d 100644
  CONFIG_CMD_SATA=y
  CONFIG_CMD_USB=y
  CONFIG_CMD_CACHE=y
+@@ -32,6 +37,8 @@ CONFIG_DM=y
+ CONFIG_DWC_AHSATA=y
+ CONFIG_PHYLIB=y
+ CONFIG_DM_THERMAL=y
++CONFIG_FS_BTRFS=y
++CONFIG_CMD_BTRFS=y
+ CONFIG_USB=y
+ CONFIG_USB_STORAGE=y
+ CONFIG_VIDEO=y
 diff --git a/include/configs/wandboard.h b/include/configs/wandboard.h
-index 8fdfc0277d..c313c97b7d 100644
+index e42bfc51f8..d9e5cef6d4 100644
 --- a/include/configs/wandboard.h
 +++ b/include/configs/wandboard.h
-@@ -89,11 +89,16 @@
+@@ -87,11 +87,16 @@
  	"fdtfile=undefined\0" \
  	"fdt_high=0xffffffff\0" \
  	"initrd_high=0xffffffff\0" \
@@ -66,7 +70,7 @@ index 8fdfc0277d..c313c97b7d 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -108,6 +113,11 @@
+@@ -106,6 +111,11 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -78,7 +82,7 @@ index 8fdfc0277d..c313c97b7d 100644
  	"findfdt="\
  		"if test $board_name = D1 && test $board_rev = MX6QP ; then " \
  			"setenv fdtfile imx6qp-wandboard-revd1.dtb; fi; " \
-@@ -125,6 +135,111 @@
+@@ -123,6 +133,111 @@
  			"setenv fdtfile imx6dl-wandboard-revb1.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine dtb to use; fi; \0" \
@@ -190,20 +194,7 @@ index 8fdfc0277d..c313c97b7d 100644
  	"kernel_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
  	"pxefile_addr_r=" __stringify(CONFIG_LOADADDR) "\0" \
  	"ramdisk_addr_r=0x13000000\0" \
-@@ -142,7 +257,11 @@
- 
- #define CONFIG_BOOTCOMMAND \
- 	   "run findfdt; " \
--	   "run finduuid; " \
-+	   "setenv devtype mmc;" \
-+	   "setenv mmcdev 0;" \
-+	   "run mmcboot;" \
-+	   "setenv mmcdev 1;" \
-+	   "run mmcboot;" \
- 	   "run distro_bootcmd"
- 
- #include <config_distro_bootcmd.h>
-@@ -161,7 +280,7 @@
+@@ -154,7 +269,7 @@
  	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
  
  /* Environment organization */
@@ -213,5 +204,5 @@ index 8fdfc0277d..c313c97b7d 100644
  #define CONFIG_ENV_OFFSET		(768 * 1024)
  #define CONFIG_SYS_MMC_ENV_DEV		0
 -- 
-2.15.0
+2.15.1
 
