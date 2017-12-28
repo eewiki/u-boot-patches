@@ -1,28 +1,29 @@
-From fbeef2c9afd6d45a4a808bc353ed153f66a65c0f Mon Sep 17 00:00:00 2001
+From 57118585a49989facc6ceec7d0926ad3b5fd852f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 28 Dec 2017 11:02:29 -0600
+Date: Thu, 28 Dec 2017 14:38:53 -0600
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/wandboard_defconfig |   9 +++-
+ configs/wandboard_defconfig |  10 +++-
  include/configs/wandboard.h | 121 ++++++++++++++++++++++++++++++++++++++++++--
- 2 files changed, 126 insertions(+), 4 deletions(-)
+ 2 files changed, 127 insertions(+), 4 deletions(-)
 
 diff --git a/configs/wandboard_defconfig b/configs/wandboard_defconfig
-index 3c277772c0..940a6e6f99 100644
+index 3c277772c0..6c2e20eba2 100644
 --- a/configs/wandboard_defconfig
 +++ b/configs/wandboard_defconfig
-@@ -10,7 +10,7 @@ CONFIG_SPL_LIBDISK_SUPPORT=y
+@@ -10,7 +10,8 @@ CONFIG_SPL_LIBDISK_SUPPORT=y
  CONFIG_SPL_WATCHDOG_SUPPORT=y
  CONFIG_CMD_HDMIDETECT=y
  CONFIG_DISTRO_DEFAULTS=y
 -CONFIG_BOOTCOMMAND="run findfdt; run finduuid; run distro_bootcmd"
 +CONFIG_BOOTCOMMAND="run findfdt; setenv devtype mmc; setenv mmcdev 0; run mmcboot; setenv mmcdev 1; run mmcboot; run distro_bootcmd"
++CONFIG_SYS_EXTRA_OPTIONS="IMX_CONFIG=arch/arm/mach-imx/spl_sd.cfg"
  # CONFIG_CONSOLE_MUX is not set
  CONFIG_SYS_CONSOLE_IS_IN_ENV=y
  CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
-@@ -19,10 +19,15 @@ CONFIG_BOARD_EARLY_INIT_F=y
+@@ -19,10 +20,15 @@ CONFIG_BOARD_EARLY_INIT_F=y
  CONFIG_SPL=y
  CONFIG_SPL_EXT_SUPPORT=y
  CONFIG_SPL_I2C_SUPPORT=y
@@ -38,7 +39,7 @@ index 3c277772c0..940a6e6f99 100644
  CONFIG_CMD_SATA=y
  CONFIG_CMD_USB=y
  CONFIG_CMD_CACHE=y
-@@ -32,6 +37,8 @@ CONFIG_DM=y
+@@ -32,6 +38,8 @@ CONFIG_DM=y
  CONFIG_DWC_AHSATA=y
  CONFIG_PHYLIB=y
  CONFIG_DM_THERMAL=y
