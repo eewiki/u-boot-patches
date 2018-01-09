@@ -1,0 +1,2136 @@
+From 369405675b4ba45a43b01995381078d0d29cb9f5 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 9 Jan 2018 14:33:02 -0600
+Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/ti/am335x/board.c               |  120 +++-
+ board/ti/am335x/board.h               |   43 +-
+ board/ti/am335x/mux.c                 |   18 +-
+ configs/am335x_boneblack_defconfig    |    7 +-
+ configs/am335x_evm_defconfig          |   36 +-
+ configs/am335x_pocketbeagle_defconfig | 1055 +++++++++++++++++++++++++++++++++
+ fs/ext4/ext4_common.c                 |    2 +-
+ include/configs/am335x_evm.h          |  101 +++-
+ include/configs/ti_am335x_common.h    |    2 +
+ include/configs/ti_armv7_common.h     |  299 ++++++++++
+ include/environment/ti/mmc.h          |   67 ++-
+ 11 files changed, 1675 insertions(+), 75 deletions(-)
+ create mode 100644 configs/am335x_pocketbeagle_defconfig
+
+diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
+index 1a52bffc00..8a41a03e7a 100644
+--- a/board/ti/am335x/board.c
++++ b/board/ti/am335x/board.c
+@@ -84,6 +84,8 @@ struct serial_device *default_serial_console(void)
+ {
+ 	if (board_is_icev2())
+ 		return &eserial4_device;
++	else if (board_is_beaglelogic())
++		return &eserial5_device;
+ 	else
+ 		return &eserial1_device;
+ }
+@@ -264,7 +266,7 @@ const struct dpll_params *get_dpll_ddr_params(void)
+ 
+ 	if (board_is_evm_sk())
+ 		return &dpll_ddr3_303MHz[ind];
+-	else if (board_is_bone_lt() || board_is_icev2())
++	else if (board_is_pb() || board_is_bone_lt() || board_is_icev2() || board_is_beaglelogic())
+ 		return &dpll_ddr3_400MHz[ind];
+ 	else if (board_is_evm_15_or_later())
+ 		return &dpll_ddr3_303MHz[ind];
+@@ -274,7 +276,7 @@ const struct dpll_params *get_dpll_ddr_params(void)
+ 
+ static u8 bone_not_connected_to_ac_power(void)
+ {
+-	if (board_is_bone()) {
++	if (board_is_bone() && !board_is_pb()) {
+ 		uchar pmic_status_reg;
+ 		if (tps65217_reg_read(TPS65217_STATUS,
+ 				      &pmic_status_reg))
+@@ -295,7 +297,7 @@ const struct dpll_params *get_dpll_mpu_params(void)
+ 	if (bone_not_connected_to_ac_power())
+ 		freq = MPUPLL_M_600;
+ 
+-	if (board_is_bone_lt())
++	if (board_is_pb() || board_is_bone_lt() || board_is_beaglelogic())
+ 		freq = MPUPLL_M_1000;
+ 
+ 	switch (freq) {
+@@ -324,7 +326,7 @@ static void scale_vcores_bone(int freq)
+ 	 * Only perform PMIC configurations if board rev > A1
+ 	 * on Beaglebone White
+ 	 */
+-	if (board_is_bone() && !strncmp(board_ti_get_rev(), "00A1", 4))
++	if (!board_is_pb() && board_is_bone() && !strncmp(board_ti_get_rev(), "00A1", 4))
+ 		return;
+ 
+ 	if (i2c_probe(TPS65217_CHIP_PM))
+@@ -341,7 +343,7 @@ static void scale_vcores_bone(int freq)
+ 	 * Override what we have detected since we know if we have
+ 	 * a Beaglebone Black it supports 1GHz.
+ 	 */
+-	if (board_is_bone_lt())
++	if (board_is_pb() || board_is_bone_lt() || board_is_beaglelogic())
+ 		freq = MPUPLL_M_1000;
+ 
+ 	switch (freq) {
+@@ -387,9 +389,10 @@ static void scale_vcores_bone(int freq)
+ 
+ 	/*
+ 	 * Set LDO3, LDO4 output voltage to 3.3V for Beaglebone.
+-	 * Set LDO3 to 1.8V and LDO4 to 3.3V for Beaglebone Black.
++	 * Set LDO3 to 1.8V and LDO4 to 3.3V for Beaglebone Black
++         * and PocketBeagle.
+ 	 */
+-	if (board_is_bone()) {
++	if (board_is_bone() && !board_is_pb()) {
+ 		if (tps65217_reg_write(TPS65217_PROT_LEVEL_2,
+ 				       TPS65217_DEFLS1,
+ 				       TPS65217_LDO_VOLTAGE_OUT_3_3,
+@@ -472,7 +475,11 @@ void scale_vcores(void)
+ void set_uart_mux_conf(void)
+ {
+ #if CONFIG_CONS_INDEX == 1
+-	enable_uart0_pin_mux();
++	if (board_is_beaglelogic())
++		enable_uart4_pin_mux();
++	else
++		enable_uart0_pin_mux();
++
+ #elif CONFIG_CONS_INDEX == 2
+ 	enable_uart1_pin_mux();
+ #elif CONFIG_CONS_INDEX == 3
+@@ -542,7 +549,7 @@ void sdram_init(void)
+ 	if (board_is_evm_sk())
+ 		config_ddr(303, &ioregs_evmsk, &ddr3_data,
+ 			   &ddr3_cmd_ctrl_data, &ddr3_emif_reg_data, 0);
+-	else if (board_is_bone_lt())
++	else if (board_is_pb() || board_is_bone_lt() || board_is_beaglelogic())
+ 		config_ddr(400, &ioregs_bonelt,
+ 			   &ddr3_beagleblack_data,
+ 			   &ddr3_beagleblack_cmd_ctrl_data,
+@@ -612,6 +619,24 @@ static struct clk_synth cdce913_data = {
+  */
+ int board_init(void)
+ {
++	u32 sys_reboot;
++
++	sys_reboot = readl(PRM_RSTST);
++	if (sys_reboot & (1 << 9))
++		puts("Reset Source: IcePick reset has occurred.\n");
++
++	if (sys_reboot & (1 << 5))
++		puts("Reset Source: Global external warm reset has occurred.\n");
++
++	if (sys_reboot & (1 << 4))
++		puts("Reset Source: watchdog reset has occurred.\n");
++
++	if (sys_reboot & (1 << 1))
++		puts("Reset Source: Global warm SW reset has occurred.\n");
++
++	if (sys_reboot & (1 << 0))
++		puts("Reset Source: Power-on reset has occurred.\n");
++
+ #if defined(CONFIG_HW_WATCHDOG)
+ 	hw_watchdog_init();
+ #endif
+@@ -708,6 +733,8 @@ int board_late_init(void)
+ 	char *name = NULL;
+ 
+ 	if (board_is_bone_lt()) {
++		puts("Board: BeagleBone Black\n");
++		name = "A335BNLT";
+ 		/* BeagleBoard.org BeagleBone Black Wireless: */
+ 		if (!strncmp(board_ti_get_rev(), "BWA", 3)) {
+ 			name = "BBBW";
+@@ -720,10 +747,29 @@ int board_late_init(void)
+ 		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
+ 			name = "BBBL";
+ 		}
++		/* SanCloud BeagleBone Enhanced */
++		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
++			puts("Model: SanCloud BeagleBone Enhanced\n");
++			name = "SBBE";
++		}
++		/* Octavo Systems OSD3358-SM-RED */
++		if (!strncmp(board_ti_get_rev(), "OS00", 4)) {
++			puts("Model: Octavo Systems OSD3358-SM-RED\n");
++			name = "OS00";
++		}
+ 	}
+ 
+ 	if (board_is_bbg1())
+ 		name = "BBG1";
++
++	if (board_is_pb()) {
++		puts("Model: BeagleBoard.org PocketBeagle\n");
++	}
++
++	if (board_is_beaglelogic()) {
++		puts("Model: BeagleLogic\n");
++	}
++
+ 	set_board_info_env(name);
+ 
+ 	/*
+@@ -859,28 +905,33 @@ int board_eth_init(bd_t *bis)
+ 	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
+ 
+ #ifdef CONFIG_DRIVER_TI_CPSW
+-	if (board_is_bone() || board_is_bone_lt() ||
+-	    board_is_idk()) {
+-		writel(MII_MODE_ENABLE, &cdev->miisel);
+-		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+-				PHY_INTERFACE_MODE_MII;
+-	} else if (board_is_icev2()) {
+-		writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
+-		cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
+-		cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
+-		cpsw_slaves[0].phy_addr = 1;
+-		cpsw_slaves[1].phy_addr = 3;
+-	} else {
+-		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
+-		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
+-				PHY_INTERFACE_MODE_RGMII;
+-	}
++	if (!board_is_pb()) {
++		if (board_is_bone() || (board_is_bone_lt() && !board_is_bone_lt_enhanced() && !board_is_m10a()) ||
++		    board_is_idk() || board_is_beaglelogic()) {
++			puts("eth0: MII MODE\n");
++			writel(MII_MODE_ENABLE, &cdev->miisel);
++			cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
++					PHY_INTERFACE_MODE_MII;
++		} else if (board_is_icev2()) {
++			puts("eth0: icev2: RGMII MODE\n");
++			writel(RMII_MODE_ENABLE | RMII_CHIPCKL_ENABLE, &cdev->miisel);
++			cpsw_slaves[0].phy_if = PHY_INTERFACE_MODE_RMII;
++			cpsw_slaves[1].phy_if = PHY_INTERFACE_MODE_RMII;
++			cpsw_slaves[0].phy_addr = 1;
++			cpsw_slaves[1].phy_addr = 3;
++		} else {
++			puts("eth0: RGMII MODE\n");
++			writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
++			cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
++					PHY_INTERFACE_MODE_RGMII;
++		}
+ 
+-	rv = cpsw_register(&cpsw_data);
+-	if (rv < 0)
+-		printf("Error %d registering CPSW switch\n", rv);
+-	else
+-		n += rv;
++		rv = cpsw_register(&cpsw_data);
++		if (rv < 0)
++			printf("Error %d registering CPSW switch\n", rv);
++		else
++			n += rv;
++	}
+ #endif
+ 
+ 	/*
+@@ -895,7 +946,7 @@ int board_eth_init(bd_t *bis)
+ #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
+ #define AR8051_RGMII_TX_CLK_DLY		0x100
+ 
+-	if (board_is_evm_sk() || board_is_gp_evm()) {
++	if (board_is_evm_sk() || board_is_gp_evm() || board_is_bone_lt_enhanced() || board_is_m10a()) {
+ 		const char *devname;
+ 		devname = miiphy_get_current_dev();
+ 
+@@ -925,8 +976,15 @@ int board_eth_init(bd_t *bis)
+ #ifdef CONFIG_SPL_LOAD_FIT
+ int board_fit_config_name_match(const char *name)
+ {
++	//FIME: we currently dont use this, yet...
+ 	if (board_is_gp_evm() && !strcmp(name, "am335x-evm"))
+ 		return 0;
++	else if (board_is_pb() && !strcmp(name, "am335x-pocketbeagle"))
++		return 0;
++	else if (board_is_beaglelogic() && !strcmp(name, "am335x-beaglelogic"))
++		return 0;
++	else if (board_is_os00() && !strcmp(name, "am335x-boneblack"))
++		return 0;
+ 	else if (board_is_bone() && !strcmp(name, "am335x-bone"))
+ 		return 0;
+ 	else if (board_is_bone_lt() && !strcmp(name, "am335x-boneblack"))
+diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
+index e13fcff02a..8305939f7e 100644
+--- a/board/ti/am335x/board.h
++++ b/board/ti/am335x/board.h
+@@ -24,6 +24,16 @@
+ #define EMIF_OCP_CONFIG_BEAGLEBONE_BLACK       0x00141414
+ #define EMIF_OCP_CONFIG_AM335X_EVM             0x003d3d3d
+ 
++static inline int board_is_pb(void)
++{
++	return board_ti_is("A335PBGL");
++}
++
++static inline int board_is_beaglelogic(void)
++{
++	return board_ti_is("A335BLGC");
++}
++
+ static inline int board_is_bone(void)
+ {
+ 	return board_ti_is("A335BONE");
+@@ -34,14 +44,45 @@ static inline int board_is_bone_lt(void)
+ 	return board_ti_is("A335BNLT");
+ }
+ 
++static inline int board_is_bbbw(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BW", 2);
++}
++
++static inline int board_is_blue(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BLA", 3);
++}
++
+ static inline int board_is_bbg1(void)
+ {
+ 	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BBG1", 4);
+ }
+ 
++static inline int board_is_bone_lt_enhanced(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "SE", 2);
++}
++
++static inline int board_is_m10a(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "M10A", 4);
++}
++
++//Element14 BeagleBone Black Industrial:
++static inline int board_is_e14bbbi(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "EIA0", 4);
++}
++
++static inline int board_is_os00(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "OS00", 4);
++}
++
+ static inline int board_is_beaglebonex(void)
+ {
+-	return board_is_bone() || board_is_bone_lt() || board_is_bbg1();
++	return board_is_pb() || board_is_bone() || board_is_bone_lt() || board_is_e14bbbi() || board_is_bbg1() || board_is_beaglelogic() || board_is_os00();
+ }
+ 
+ static inline int board_is_evm_sk(void)
+diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
+index ad85b3a19a..2b10b64d3a 100644
+--- a/board/ti/am335x/mux.c
++++ b/board/ti/am335x/mux.c
+@@ -341,7 +341,14 @@ static unsigned short detect_daughter_board_profile(void)
+ void enable_board_pin_mux(void)
+ {
+ 	/* Do board-specific muxes. */
+-	if (board_is_bone()) {
++	if (board_is_pb()) {
++		configure_module_pin_mux(mii1_pin_mux);
++		configure_module_pin_mux(mmc0_pin_mux);
++	} else if (board_is_beaglelogic()) {
++		/* BeagleLogic pinmux */
++		configure_module_pin_mux(mii1_pin_mux);
++		configure_module_pin_mux(mmc0_pin_mux);
++	} else if (board_is_bone()) {
+ 		/* Beaglebone pinmux */
+ 		configure_module_pin_mux(mii1_pin_mux);
+ 		configure_module_pin_mux(mmc0_pin_mux);
+@@ -381,7 +388,14 @@ void enable_board_pin_mux(void)
+ 		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
+ 	} else if (board_is_bone_lt()) {
+ 		/* Beaglebone LT pinmux */
+-		configure_module_pin_mux(mii1_pin_mux);
++		if(board_is_bone_lt_enhanced() || board_is_m10a()) {
++			/* SanCloud Beaglebone LT Enhanced pinmux */
++			configure_module_pin_mux(rgmii1_pin_mux);
++		}
++		else {
++			/* Beaglebone LT pinmux */
++			configure_module_pin_mux(mii1_pin_mux);
++		}
+ 		configure_module_pin_mux(mmc0_pin_mux);
+ #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
+ 		configure_module_pin_mux(nand_pin_mux);
+diff --git a/configs/am335x_boneblack_defconfig b/configs/am335x_boneblack_defconfig
+index 50093cd662..873090a7ad 100644
+--- a/configs/am335x_boneblack_defconfig
++++ b/configs/am335x_boneblack_defconfig
+@@ -4,8 +4,9 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
+ CONFIG_AM33XX=y
+ # CONFIG_SPL_NAND_SUPPORT is not set
+ CONFIG_DISTRO_DEFAULTS=y
+-CONFIG_SYS_EXTRA_OPTIONS="EMMC_BOOT"
+ CONFIG_BOOTCOMMAND="if test ${boot_fit} -eq 1; then run update_to_fit; fi; run findfdt; run init_console; run envboot; run distro_bootcmd"
++# CONFIG_ENV_IS_IN_FAT is not set
++CONFIG_ENV_IS_NOWHERE=y
+ CONFIG_SYS_CONSOLE_INFO_QUIET=y
+ CONFIG_VERSION_VARIABLE=y
+ CONFIG_ARCH_MISC_INIT=y
+@@ -20,7 +21,6 @@ CONFIG_FASTBOOT=y
+ CONFIG_CMD_SPL=y
+ # CONFIG_CMD_FLASH is not set
+ # CONFIG_CMD_SETEXPR is not set
+-CONFIG_ENV_IS_IN_MMC=y
+ CONFIG_DFU_TFTP=y
+ CONFIG_DFU_MMC=y
+ CONFIG_DFU_RAM=y
+@@ -40,6 +40,9 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
+ CONFIG_USB_GADGET_PRODUCT_NUM=0xd022
+ CONFIG_USB_ETHER=y
+ CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
++CONFIG_FS_BTRFS=y
++CONFIG_CMD_BTRFS=y
+ CONFIG_LZO=y
+ CONFIG_OF_LIBFDT=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_PHY_MSCC=y
+diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
+index 9c97009891..873090a7ad 100644
+--- a/configs/am335x_evm_defconfig
++++ b/configs/am335x_evm_defconfig
+@@ -2,57 +2,47 @@ CONFIG_ARM=y
+ CONFIG_ARCH_OMAP2PLUS=y
+ CONFIG_TI_COMMON_CMD_OPTIONS=y
+ CONFIG_AM33XX=y
+-CONFIG_DEFAULT_DEVICE_TREE="am335x-evm"
++# CONFIG_SPL_NAND_SUPPORT is not set
+ CONFIG_DISTRO_DEFAULTS=y
+-CONFIG_SPL_LOAD_FIT=y
+ CONFIG_BOOTCOMMAND="if test ${boot_fit} -eq 1; then run update_to_fit; fi; run findfdt; run init_console; run envboot; run distro_bootcmd"
++# CONFIG_ENV_IS_IN_FAT is not set
++CONFIG_ENV_IS_NOWHERE=y
+ CONFIG_SYS_CONSOLE_INFO_QUIET=y
+ CONFIG_VERSION_VARIABLE=y
+ CONFIG_ARCH_MISC_INIT=y
+ CONFIG_SPL=y
+-CONFIG_SPL_MTD_SUPPORT=y
+ CONFIG_SPL_MUSB_NEW_SUPPORT=y
+ CONFIG_SPL_OS_BOOT=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_FASTBOOT=y
+ CONFIG_CMD_SPL=y
+-CONFIG_CMD_SPL_NAND_OFS=0x00080000
+ # CONFIG_CMD_FLASH is not set
+-CONFIG_CMD_NAND=y
+ # CONFIG_CMD_SETEXPR is not set
+-CONFIG_CMD_MTDPARTS=y
+-CONFIG_MTDIDS_DEFAULT="nand0=nand.0"
+-CONFIG_MTDPARTS_DEFAULT="mtdparts=nand.0:128k(NAND.SPL),128k(NAND.SPL.backup1),128k(NAND.SPL.backup2),128k(NAND.SPL.backup3),256k(NAND.u-boot-spl-os),1m(NAND.u-boot),128k(NAND.u-boot-env),128k(NAND.u-boot-env.backup1),8m(NAND.kernel),-(NAND.file-system)"
+-CONFIG_OF_CONTROL=y
+-CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
+-# CONFIG_BLK is not set
++CONFIG_DFU_TFTP=y
+ CONFIG_DFU_MMC=y
+-CONFIG_DFU_NAND=y
+ CONFIG_DFU_RAM=y
+-CONFIG_DM_I2C=y
+-CONFIG_MISC=y
+-CONFIG_DM_MMC=y
+ CONFIG_MMC_OMAP_HS=y
+-CONFIG_NAND=y
+ CONFIG_SPI_FLASH=y
+ CONFIG_SPI_FLASH_WINBOND=y
+ CONFIG_PHYLIB=y
+-CONFIG_DM_ETH=y
+-CONFIG_PHY_GIGE=y
+ CONFIG_SYS_NS16550=y
+ CONFIG_OMAP3_SPI=y
+-CONFIG_TIMER=y
+-CONFIG_OMAP_TIMER=y
+ CONFIG_USB=y
+-CONFIG_DM_USB=y
+ CONFIG_USB_MUSB_HOST=y
+ CONFIG_USB_MUSB_GADGET=y
+-CONFIG_USB_MUSB_TI=y
+ CONFIG_USB_STORAGE=y
+ CONFIG_USB_GADGET=y
+ CONFIG_USB_GADGET_MANUFACTURER="Texas Instruments"
+ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
+ CONFIG_USB_GADGET_PRODUCT_NUM=0xd022
+ CONFIG_USB_ETHER=y
+-CONFIG_RSA=y
++CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
++CONFIG_FS_BTRFS=y
++CONFIG_CMD_BTRFS=y
+ CONFIG_LZO=y
++CONFIG_OF_LIBFDT=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_PHY_MSCC=y
+diff --git a/configs/am335x_pocketbeagle_defconfig b/configs/am335x_pocketbeagle_defconfig
+new file mode 100644
+index 0000000000..d817fac61e
+--- /dev/null
++++ b/configs/am335x_pocketbeagle_defconfig
+@@ -0,0 +1,1055 @@
++#
++# Automatically generated file; DO NOT EDIT.
++# U-Boot 2017.09 Configuration
++#
++CONFIG_CREATE_ARCH_SYMLINK=y
++# CONFIG_ARC is not set
++CONFIG_ARM=y
++# CONFIG_M68K is not set
++# CONFIG_MICROBLAZE is not set
++# CONFIG_MIPS is not set
++# CONFIG_NDS32 is not set
++# CONFIG_NIOS2 is not set
++# CONFIG_PPC is not set
++# CONFIG_SANDBOX is not set
++# CONFIG_SH is not set
++# CONFIG_X86 is not set
++# CONFIG_XTENSA is not set
++CONFIG_SYS_ARCH="arm"
++CONFIG_SYS_CPU="armv7"
++CONFIG_SYS_SOC="am33xx"
++CONFIG_SYS_VENDOR="ti"
++CONFIG_SYS_BOARD="am335x"
++CONFIG_SYS_CONFIG_NAME="am335x_evm"
++
++#
++# ARM architecture
++#
++CONFIG_HAS_VBAR=y
++CONFIG_HAS_THUMB2=y
++CONFIG_ARM_ASM_UNIFIED=y
++CONFIG_CPU_V7=y
++CONFIG_SYS_ARM_ARCH=7
++CONFIG_SYS_CACHE_SHIFT_6=y
++CONFIG_SYS_CACHELINE_SIZE=64
++# CONFIG_ARM_SMCCC is not set
++# CONFIG_SEMIHOSTING is not set
++CONFIG_SYS_THUMB_BUILD=y
++CONFIG_SPL_SYS_THUMB_BUILD=y
++# CONFIG_SYS_L2CACHE_OFF is not set
++# CONFIG_ENABLE_ARM_SOC_BOOT0_HOOK is not set
++# CONFIG_ARM_CORTEX_CPU_IS_UP is not set
++CONFIG_USE_ARCH_MEMCPY=y
++CONFIG_SPL_USE_ARCH_MEMCPY=y
++CONFIG_USE_ARCH_MEMSET=y
++CONFIG_SPL_USE_ARCH_MEMSET=y
++# CONFIG_ARM64_SUPPORT_AARCH32 is not set
++# CONFIG_ARCH_AT91 is not set
++# CONFIG_TARGET_EDB93XX is not set
++# CONFIG_TARGET_ASPENITE is not set
++# CONFIG_TARGET_GPLUGD is not set
++# CONFIG_ARCH_DAVINCI is not set
++# CONFIG_KIRKWOOD is not set
++# CONFIG_ARCH_MVEBU is not set
++# CONFIG_TARGET_DEVKIT3250 is not set
++# CONFIG_TARGET_WORK_92105 is not set
++# CONFIG_TARGET_MX25PDK is not set
++# CONFIG_TARGET_ZMX25 is not set
++# CONFIG_TARGET_APF27 is not set
++# CONFIG_TARGET_APX4DEVKIT is not set
++# CONFIG_TARGET_XFI3 is not set
++# CONFIG_TARGET_M28EVK is not set
++# CONFIG_TARGET_MX23EVK is not set
++# CONFIG_TARGET_MX28EVK is not set
++# CONFIG_TARGET_MX23_OLINUXINO is not set
++# CONFIG_TARGET_BG0900 is not set
++# CONFIG_TARGET_SANSA_FUZE_PLUS is not set
++# CONFIG_TARGET_SC_SPS_1 is not set
++# CONFIG_ORION5X is not set
++# CONFIG_TARGET_SPEAR300 is not set
++# CONFIG_TARGET_SPEAR310 is not set
++# CONFIG_TARGET_SPEAR320 is not set
++# CONFIG_TARGET_SPEAR600 is not set
++# CONFIG_TARGET_STV0991 is not set
++# CONFIG_TARGET_X600 is not set
++# CONFIG_TARGET_IMX31_PHYCORE is not set
++# CONFIG_TARGET_IMX31_PHYCORE_EET is not set
++# CONFIG_TARGET_MX31ADS is not set
++# CONFIG_TARGET_MX31PDK is not set
++# CONFIG_TARGET_WOODBURN is not set
++# CONFIG_TARGET_WOODBURN_SD is not set
++# CONFIG_TARGET_FLEA3 is not set
++# CONFIG_TARGET_MX35PDK is not set
++# CONFIG_ARCH_BCM283X is not set
++# CONFIG_TARGET_VEXPRESS_CA15_TC2 is not set
++# CONFIG_TARGET_VEXPRESS_CA5X2 is not set
++# CONFIG_TARGET_VEXPRESS_CA9X4 is not set
++# CONFIG_TARGET_BCM23550_W1D is not set
++# CONFIG_TARGET_BCM28155_AP is not set
++# CONFIG_TARGET_BCMCYGNUS is not set
++# CONFIG_TARGET_BCMNSP is not set
++# CONFIG_TARGET_BCMNS2 is not set
++# CONFIG_ARCH_EXYNOS is not set
++# CONFIG_ARCH_S5PC1XX is not set
++# CONFIG_ARCH_HIGHBANK is not set
++# CONFIG_ARCH_INTEGRATOR is not set
++# CONFIG_ARCH_KEYSTONE is not set
++CONFIG_ARCH_OMAP2PLUS=y
++# CONFIG_ARCH_MESON is not set
++# CONFIG_ARCH_MX7ULP is not set
++# CONFIG_ARCH_MX7 is not set
++# CONFIG_ARCH_MX6 is not set
++CONFIG_SPL_LDSCRIPT="arch/arm/mach-omap2/u-boot-spl.lds"
++# CONFIG_ARCH_MX5 is not set
++# CONFIG_ARCH_RMOBILE is not set
++# CONFIG_TARGET_S32V234EVB is not set
++# CONFIG_ARCH_SNAPDRAGON is not set
++# CONFIG_ARCH_SOCFPGA is not set
++# CONFIG_ARCH_SUNXI is not set
++# CONFIG_TARGET_TS4600 is not set
++# CONFIG_ARCH_VF610 is not set
++# CONFIG_ARCH_ZYNQ is not set
++# CONFIG_ARCH_ZYNQMP is not set
++# CONFIG_TEGRA is not set
++# CONFIG_TARGET_VEXPRESS64_AEMV8A is not set
++# CONFIG_TARGET_VEXPRESS64_BASE_FVP is not set
++# CONFIG_TARGET_VEXPRESS64_BASE_FVP_DRAM is not set
++# CONFIG_TARGET_VEXPRESS64_JUNO is not set
++# CONFIG_TARGET_LS2080A_EMU is not set
++# CONFIG_TARGET_LS2080A_SIMU is not set
++# CONFIG_TARGET_LS2080AQDS is not set
++# CONFIG_TARGET_LS2080ARDB is not set
++# CONFIG_TARGET_LS2081ARDB is not set
++# CONFIG_TARGET_HIKEY is not set
++# CONFIG_TARGET_POPLAR is not set
++# CONFIG_TARGET_LS1012AQDS is not set
++# CONFIG_TARGET_LS1012ARDB is not set
++# CONFIG_TARGET_LS1012AFRDM is not set
++# CONFIG_TARGET_LS1021AQDS is not set
++# CONFIG_TARGET_LS1021ATWR is not set
++# CONFIG_TARGET_LS1021AIOT is not set
++# CONFIG_TARGET_LS1043AQDS is not set
++# CONFIG_TARGET_LS1043ARDB is not set
++# CONFIG_TARGET_LS1046AQDS is not set
++# CONFIG_TARGET_LS1046ARDB is not set
++# CONFIG_TARGET_H2200 is not set
++# CONFIG_TARGET_ZIPITZ2 is not set
++# CONFIG_TARGET_COLIBRI_PXA270 is not set
++# CONFIG_ARCH_UNIPHIER is not set
++# CONFIG_STM32 is not set
++# CONFIG_ARCH_STI is not set
++# CONFIG_ARCH_ROCKCHIP is not set
++# CONFIG_TARGET_THUNDERX_88XX is not set
++# CONFIG_ARCH_ASPEED is not set
++CONFIG_SYS_TEXT_BASE=0x80800000
++CONFIG_TI_I2C_BOARD_DETECT=y
++CONFIG_EEPROM_BUS_ADDRESS=0
++CONFIG_EEPROM_CHIP_ADDRESS=0x50
++CONFIG_TI_COMMON_CMD_OPTIONS=y
++CONFIG_SPL_GPIO_SUPPORT=y
++CONFIG_SPL_LIBCOMMON_SUPPORT=y
++CONFIG_SPL_LIBGENERIC_SUPPORT=y
++CONFIG_SYS_MALLOC_F_LEN=0x400
++# CONFIG_OMAP34XX is not set
++# CONFIG_OMAP44XX is not set
++# CONFIG_OMAP54XX is not set
++# CONFIG_TI814X is not set
++# CONFIG_TI816X is not set
++# CONFIG_AM43XX is not set
++CONFIG_AM33XX=y
++CONFIG_SYS_MPUCLK=500
++# CONFIG_TI_SECURE_DEVICE is not set
++CONFIG_CONS_INDEX=1
++CONFIG_TARGET_AM335X_EVM=y
++# CONFIG_TARGET_AM335X_BALTOS is not set
++# CONFIG_TARGET_AM335X_IGEP003X is not set
++# CONFIG_TARGET_AM335X_SHC is not set
++# CONFIG_TARGET_AM335X_SL50 is not set
++# CONFIG_TARGET_BAV335X is not set
++# CONFIG_TARGET_BRXRE1 is not set
++# CONFIG_TARGET_BRPPT1 is not set
++# CONFIG_TARGET_CHILIBOARD is not set
++# CONFIG_TARGET_CM_T335 is not set
++# CONFIG_TARGET_DRACO is not set
++# CONFIG_TARGET_ETAMIN is not set
++# CONFIG_TARGET_PCM051 is not set
++# CONFIG_TARGET_PENGWYN is not set
++# CONFIG_TARGET_PEPPER is not set
++# CONFIG_TARGET_PXM2 is not set
++# CONFIG_TARGET_RASTABAN is not set
++# CONFIG_TARGET_RUT is not set
++# CONFIG_TARGET_THUBAN is not set
++CONFIG_ISW_ENTRY_ADDR=0x402F0400
++CONFIG_PUB_ROM_DATA_SIZE=0x8400
++# CONFIG_NOR is not set
++CONFIG_SPL_MMC_SUPPORT=y
++CONFIG_SPL_SERIAL_SUPPORT=y
++# CONFIG_SPL_DRIVERS_MISC_SUPPORT is not set
++CONFIG_SPL_LIBDISK_SUPPORT=y
++# CONFIG_SPL_NAND_SUPPORT is not set
++# CONFIG_SPL_SPI_FLASH_SUPPORT is not set
++# CONFIG_SPL_SPI_SUPPORT is not set
++CONFIG_SPL_WATCHDOG_SUPPORT=y
++CONFIG_IDENT_STRING=""
++# CONFIG_VIDEO is not set
++CONFIG_SPL_STACK_R_ADDR=0x82000000
++CONFIG_SPL_FAT_SUPPORT=y
++# CONFIG_ARMV7_LPAE is not set
++# CONFIG_CMD_DEKBLOB is not set
++# CONFIG_CMD_HDMIDETECT is not set
++
++#
++# ARM debug
++#
++# CONFIG_DEBUG_LL is not set
++CONFIG_SMBIOS_PRODUCT_NAME="am335x"
++# CONFIG_DEBUG_UART is not set
++# CONFIG_AHCI is not set
++
++#
++# General setup
++#
++CONFIG_LOCALVERSION=""
++CONFIG_LOCALVERSION_AUTO=y
++CONFIG_CC_OPTIMIZE_FOR_SIZE=y
++CONFIG_DISTRO_DEFAULTS=y
++CONFIG_SYS_MALLOC_F=y
++CONFIG_SPL_SYS_MALLOC_F_LEN=0x400
++CONFIG_TPL_SYS_MALLOC_F_LEN=0x400
++CONFIG_EXPERT=y
++CONFIG_SYS_MALLOC_CLEAR_ON_INIT=y
++# CONFIG_TOOLS_DEBUG is not set
++# CONFIG_PHYS_64BIT is not set
++
++#
++# Boot images
++#
++# CONFIG_ANDROID_BOOT_IMAGE is not set
++CONFIG_FIT=y
++CONFIG_FIT_ENABLE_SHA256_SUPPORT=y
++# CONFIG_FIT_SIGNATURE is not set
++# CONFIG_FIT_VERBOSE is not set
++# CONFIG_FIT_BEST_MATCH is not set
++# CONFIG_SPL_FIT is not set
++# CONFIG_SPL_FIT_SIGNATURE is not set
++# CONFIG_SPL_LOAD_FIT is not set
++# CONFIG_OF_BOARD_SETUP is not set
++# CONFIG_OF_SYSTEM_SETUP is not set
++# CONFIG_OF_STDOUT_VIA_ALIAS is not set
++CONFIG_SYS_EXTRA_OPTIONS=""
++CONFIG_ARCH_FIXUP_FDT_MEMORY=y
++
++#
++# API
++#
++# CONFIG_API is not set
++
++#
++# Boot timing
++#
++# CONFIG_BOOTSTAGE is not set
++CONFIG_BOOTSTAGE_USER_COUNT=20
++CONFIG_BOOTSTAGE_RECORD_COUNT=30
++CONFIG_BOOTSTAGE_STASH_ADDR=0
++CONFIG_BOOTSTAGE_STASH_SIZE=0x1000
++
++#
++# Boot media
++#
++# CONFIG_NAND_BOOT is not set
++# CONFIG_ONENAND_BOOT is not set
++# CONFIG_QSPI_BOOT is not set
++# CONFIG_SATA_BOOT is not set
++# CONFIG_SD_BOOT is not set
++# CONFIG_SPI_BOOT is not set
++CONFIG_BOOTDELAY=2
++# CONFIG_USE_BOOTARGS is not set
++
++#
++# Console
++#
++CONFIG_MENU=y
++# CONFIG_CONSOLE_RECORD is not set
++# CONFIG_SILENT_CONSOLE is not set
++# CONFIG_PRE_CONSOLE_BUFFER is not set
++CONFIG_CONSOLE_MUX=y
++CONFIG_SYS_CONSOLE_IS_IN_ENV=y
++# CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE is not set
++CONFIG_SYS_CONSOLE_ENV_OVERWRITE=y
++CONFIG_SYS_CONSOLE_INFO_QUIET=y
++# CONFIG_SYS_STDIO_DEREGISTER is not set
++# CONFIG_FIT_EMBED is not set
++CONFIG_DEFAULT_FDT_FILE=""
++CONFIG_VERSION_VARIABLE=y
++CONFIG_BOARD_LATE_INIT=y
++CONFIG_DISPLAY_CPUINFO=y
++CONFIG_DISPLAY_BOARDINFO=y
++
++#
++# Start-up hooks
++#
++# CONFIG_ARCH_EARLY_INIT_R is not set
++CONFIG_ARCH_MISC_INIT=y
++# CONFIG_BOARD_EARLY_INIT_F is not set
++
++#
++# Security support
++#
++CONFIG_HASH=y
++
++#
++# SPL / TPL
++#
++CONFIG_SUPPORT_SPL=y
++CONFIG_SPL=y
++CONFIG_SPL_BOARD_INIT=y
++# CONFIG_SPL_BOOTROM_SUPPORT is not set
++CONFIG_SPL_RAW_IMAGE_SUPPORT=y
++CONFIG_SPL_LEGACY_IMAGE_SUPPORT=y
++CONFIG_SPL_SYS_MALLOC_SIMPLE=y
++# CONFIG_TPL_SYS_MALLOC_SIMPLE is not set
++CONFIG_SPL_STACK_R=y
++CONFIG_SPL_STACK_R_MALLOC_SIMPLE_LEN=0x100000
++CONFIG_SPL_SEPARATE_BSS=y
++# CONFIG_SPL_DISPLAY_PRINT is not set
++CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_SECTOR=y
++CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR=0x300
++# CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_USE_PARTITION is not set
++# CONFIG_SPL_CPU_SUPPORT is not set
++# CONFIG_SPL_CRYPTO_SUPPORT is not set
++# CONFIG_SPL_HASH_SUPPORT is not set
++# CONFIG_SPL_DMA_SUPPORT is not set
++CONFIG_SPL_ENV_SUPPORT=y
++# CONFIG_SPL_SAVEENV is not set
++# CONFIG_SPL_ETH_SUPPORT is not set
++CONFIG_SPL_EXT_SUPPORT=y
++# CONFIG_SPL_FPGA_SUPPORT is not set
++CONFIG_SPL_I2C_SUPPORT=y
++# CONFIG_SPL_MPC8XXX_INIT_DDR_SUPPORT is not set
++# CONFIG_SPL_MTD_SUPPORT is not set
++CONFIG_SPL_MUSB_NEW_SUPPORT=y
++# CONFIG_SPL_NET_SUPPORT is not set
++# CONFIG_SPL_NO_CPU_SUPPORT is not set
++# CONFIG_SPL_NOR_SUPPORT is not set
++# CONFIG_SPL_XIP_SUPPORT is not set
++# CONFIG_SPL_ONENAND_SUPPORT is not set
++CONFIG_SPL_OS_BOOT=y
++# CONFIG_SPL_PCI_SUPPORT is not set
++# CONFIG_SPL_PCH_SUPPORT is not set
++# CONFIG_SPL_POST_MEM_SUPPORT is not set
++CONFIG_SPL_POWER_SUPPORT=y
++# CONFIG_SPL_RAM_SUPPORT is not set
++# CONFIG_SPL_RTC_SUPPORT is not set
++# CONFIG_SPL_SATA_SUPPORT is not set
++# CONFIG_SPL_USB_HOST_SUPPORT is not set
++# CONFIG_SPL_USB_GADGET_SUPPORT is not set
++CONFIG_SPL_YMODEM_SUPPORT=y
++
++#
++# Command line interface
++#
++CONFIG_CMDLINE=y
++CONFIG_HUSH_PARSER=y
++CONFIG_SYS_PROMPT="=> "
++
++#
++# Autoboot options
++#
++CONFIG_AUTOBOOT=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++# CONFIG_AUTOBOOT_ENCRYPTION is not set
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
++# CONFIG_AUTOBOOT_KEYED_CTRLC is not set
++
++#
++# FASTBOOT
++#
++CONFIG_FASTBOOT=y
++CONFIG_USB_FUNCTION_FASTBOOT=y
++CONFIG_CMD_FASTBOOT=y
++CONFIG_FASTBOOT_BUF_ADDR=0x81000000
++CONFIG_FASTBOOT_BUF_SIZE=0x07000000
++CONFIG_FASTBOOT_USB_DEV=0
++# CONFIG_FASTBOOT_FLASH is not set
++
++#
++# Commands
++#
++
++#
++# Info commands
++#
++CONFIG_CMD_BDI=y
++# CONFIG_CMD_CONFIG is not set
++CONFIG_CMD_CONSOLE=y
++# CONFIG_CMD_CPU is not set
++# CONFIG_CMD_LICENSE is not set
++
++#
++# Boot commands
++#
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_BOOTM=y
++CONFIG_CMD_BOOTZ=y
++CONFIG_CMD_BOOTEFI=y
++CONFIG_CMD_BOOTEFI_HELLO_COMPILE=y
++# CONFIG_CMD_BOOTEFI_HELLO is not set
++# CONFIG_CMD_BOOTMENU is not set
++CONFIG_CMD_ELF=y
++CONFIG_CMD_FDT=y
++CONFIG_CMD_GO=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_IMI=y
++# CONFIG_CMD_IMLS is not set
++CONFIG_CMD_XIMG=y
++# CONFIG_CMD_POWEROFF is not set
++# CONFIG_CMD_SPL is not set
++# CONFIG_CMD_THOR_DOWNLOAD is not set
++# CONFIG_CMD_ZBOOT is not set
++
++#
++# Environment commands
++#
++CONFIG_CMD_ASKENV=y
++CONFIG_CMD_EXPORTENV=y
++CONFIG_CMD_IMPORTENV=y
++CONFIG_CMD_EDITENV=y
++# CONFIG_CMD_GREPENV is not set
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_ENV_EXISTS=y
++# CONFIG_CMD_ENV_CALLBACK is not set
++# CONFIG_CMD_ENV_FLAGS is not set
++
++#
++# Memory commands
++#
++CONFIG_CMD_CRC32=y
++# CONFIG_CRC32_VERIFY is not set
++CONFIG_CMD_EEPROM=y
++# CONFIG_CMD_EEPROM_LAYOUT is not set
++# CONFIG_LOOPW is not set
++# CONFIG_CMD_MD5SUM is not set
++# CONFIG_CMD_MEMINFO is not set
++CONFIG_CMD_MEMORY=y
++# CONFIG_CMD_MEMTEST is not set
++# CONFIG_CMD_MX_CYCLIC is not set
++# CONFIG_CMD_SHA1SUM is not set
++# CONFIG_CMD_STRINGS is not set
++
++#
++# Compression commands
++#
++# CONFIG_CMD_LZMADEC is not set
++# CONFIG_CMD_UNZIP is not set
++# CONFIG_CMD_ZIP is not set
++
++#
++# Device access commands
++#
++# CONFIG_CMD_ARMFLASH is not set
++# CONFIG_CMD_CLK is not set
++# CONFIG_CMD_DEMO is not set
++CONFIG_CMD_DFU=y
++CONFIG_CMD_DM=y
++# CONFIG_CMD_FDC is not set
++# CONFIG_CMD_FLASH is not set
++# CONFIG_CMD_FPGA is not set
++# CONFIG_CMD_FPGAD is not set
++# CONFIG_CMD_FUSE is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_GPT=y
++# CONFIG_CMD_GPT_RENAME is not set
++# CONFIG_CMD_IDE is not set
++# CONFIG_CMD_IO is not set
++# CONFIG_CMD_IOTRACE is not set
++CONFIG_CMD_I2C=y
++CONFIG_CMD_LOADB=y
++CONFIG_CMD_LOADS=y
++CONFIG_CMD_MMC=y
++# CONFIG_CMD_NAND is not set
++# CONFIG_CMD_MMC_SPI is not set
++# CONFIG_CMD_ONENAND is not set
++CONFIG_CMD_PART=y
++# CONFIG_CMD_PCI is not set
++# CONFIG_CMD_PCMCIA is not set
++# CONFIG_CMD_READ is not set
++# CONFIG_CMD_SATA is not set
++# CONFIG_CMD_SAVES is not set
++# CONFIG_CMD_SDRAM is not set
++CONFIG_CMD_SF=y
++# CONFIG_CMD_SF_TEST is not set
++CONFIG_CMD_SPI=y
++# CONFIG_CMD_TSI148 is not set
++# CONFIG_CMD_UNIVERSE is not set
++CONFIG_CMD_USB=y
++# CONFIG_CMD_USB_SDP is not set
++CONFIG_CMD_USB_MASS_STORAGE=y
++
++#
++# Shell scripting commands
++#
++CONFIG_CMD_ECHO=y
++CONFIG_CMD_ITEST=y
++CONFIG_CMD_SOURCE=y
++# CONFIG_CMD_SETEXPR is not set
++
++#
++# Network commands
++#
++CONFIG_CMD_NET=y
++# CONFIG_CMD_TFTPPUT is not set
++# CONFIG_CMD_TFTPSRV is not set
++# CONFIG_CMD_RARP is not set
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_PXE=y
++CONFIG_CMD_NFS=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++# CONFIG_CMD_CDP is not set
++# CONFIG_CMD_SNTP is not set
++# CONFIG_CMD_DNS is not set
++# CONFIG_CMD_LINK_LOCAL is not set
++# CONFIG_CMD_ETHSW is not set
++
++#
++# Misc commands
++#
++# CONFIG_CMD_BSP is not set
++# CONFIG_CMD_BKOPS_ENABLE is not set
++# CONFIG_CMD_CACHE is not set
++# CONFIG_CMD_DISPLAY is not set
++# CONFIG_CMD_LED is not set
++# CONFIG_CMD_DATE is not set
++CONFIG_CMD_TIME=y
++# CONFIG_CMD_GETTIME is not set
++CONFIG_CMD_MISC=y
++# CONFIG_CMD_TIMER is not set
++# CONFIG_CMD_QFW is not set
++# CONFIG_CMD_TERMINAL is not set
++# CONFIG_CMD_UUID is not set
++
++#
++# Power commands
++#
++
++#
++# Security commands
++#
++# CONFIG_CMD_AES is not set
++# CONFIG_CMD_BLOB is not set
++# CONFIG_CMD_HASH is not set
++
++#
++# Firmware commands
++#
++
++#
++# Filesystem commands
++#
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
++# CONFIG_CMD_FS_UUID is not set
++# CONFIG_CMD_JFFS2 is not set
++# CONFIG_CMD_MTDPARTS is not set
++# CONFIG_CMD_REISER is not set
++# CONFIG_CMD_SCSI is not set
++# CONFIG_CMD_ZFS is not set
++
++#
++# Debug commands
++#
++# CONFIG_CMD_BEDBUG is not set
++# CONFIG_CMD_DIAG is not set
++# CONFIG_CMD_KGDB is not set
++# CONFIG_CMD_TRACE is not set
++# CONFIG_CMD_UBI is not set
++
++#
++# Partition Types
++#
++CONFIG_PARTITIONS=y
++# CONFIG_MAC_PARTITION is not set
++# CONFIG_SPL_MAC_PARTITION is not set
++CONFIG_DOS_PARTITION=y
++CONFIG_SPL_DOS_PARTITION=y
++CONFIG_ISO_PARTITION=y
++CONFIG_SPL_ISO_PARTITION=y
++# CONFIG_AMIGA_PARTITION is not set
++# CONFIG_SPL_AMIGA_PARTITION is not set
++CONFIG_EFI_PARTITION=y
++CONFIG_EFI_PARTITION_ENTRIES_OFF=0
++CONFIG_SPL_EFI_PARTITION=y
++CONFIG_PARTITION_UUIDS=y
++CONFIG_SPL_PARTITION_UUIDS=y
++# CONFIG_PARTITION_TYPE_GUID is not set
++CONFIG_SUPPORT_OF_CONTROL=y
++
++#
++# Device Tree Control
++#
++# CONFIG_OF_CONTROL is not set
++# CONFIG_OF_BOARD_FIXUP is not set
++
++#
++# Environment
++#
++# CONFIG_ENV_IS_NOWHERE is not set
++# CONFIG_ENV_IS_IN_DATAFLASH is not set
++# CONFIG_ENV_IS_IN_EEPROM is not set
++CONFIG_ENV_IS_IN_FAT=y
++# CONFIG_ENV_IS_IN_FLASH is not set
++# CONFIG_ENV_IS_IN_MMC is not set
++# CONFIG_ENV_IS_IN_NAND is not set
++# CONFIG_ENV_IS_IN_NVRAM is not set
++# CONFIG_ENV_IS_IN_ONENAND is not set
++# CONFIG_ENV_IS_IN_REMOTE is not set
++# CONFIG_ENV_IS_IN_SPI_FLASH is not set
++# CONFIG_ENV_IS_IN_UBI is not set
++# CONFIG_ENV_AES is not set
++CONFIG_ENV_FAT_INTERFACE="mmc"
++CONFIG_ENV_FAT_DEVICE_AND_PART="0:1"
++CONFIG_ENV_FAT_FILE="uboot.env"
++CONFIG_NET=y
++# CONFIG_NET_RANDOM_ETHADDR is not set
++CONFIG_NETCONSOLE=y
++CONFIG_NET_TFTP_VARS=y
++CONFIG_BOOTP_PXE_CLIENTARCH=0x15
++CONFIG_BOOTP_VCI_STRING="U-Boot.armv7"
++
++#
++# Device Drivers
++#
++
++#
++# Generic Driver Options
++#
++CONFIG_DM=y
++CONFIG_SPL_DM=y
++CONFIG_DM_WARN=y
++CONFIG_DM_DEVICE_REMOVE=y
++CONFIG_DM_STDIO=y
++CONFIG_DM_SEQ_ALIAS=y
++CONFIG_SPL_DM_SEQ_ALIAS=y
++# CONFIG_REGMAP is not set
++# CONFIG_SPL_REGMAP is not set
++# CONFIG_DEVRES is not set
++CONFIG_DM_DEV_READ_INLINE=y
++# CONFIG_ADC is not set
++# CONFIG_ADC_EXYNOS is not set
++# CONFIG_ADC_SANDBOX is not set
++# CONFIG_SATA is not set
++
++#
++# SATA/SCSI device support
++#
++# CONFIG_BLK is not set
++# CONFIG_BLOCK_CACHE is not set
++# CONFIG_IDE is not set
++
++#
++# Clock
++#
++# CONFIG_CLK is not set
++# CONFIG_CPU is not set
++
++#
++# Hardware crypto devices
++#
++# CONFIG_FSL_CAAM is not set
++# CONFIG_SYS_FSL_SEC_BE is not set
++# CONFIG_SYS_FSL_SEC_LE is not set
++
++#
++# Demo for driver model
++#
++# CONFIG_DM_DEMO is not set
++
++#
++# DFU support
++#
++CONFIG_USB_FUNCTION_DFU=y
++CONFIG_DFU_TFTP=y
++CONFIG_DFU_MMC=y
++# CONFIG_DFU_NAND is not set
++CONFIG_DFU_RAM=y
++# CONFIG_DFU_SF is not set
++
++#
++# DMA Support
++#
++# CONFIG_DMA is not set
++# CONFIG_TI_EDMA3 is not set
++
++#
++# FPGA support
++#
++# CONFIG_FPGA_ALTERA is not set
++# CONFIG_FPGA_SOCFPGA is not set
++# CONFIG_FPGA_XILINX is not set
++
++#
++# GPIO Support
++#
++CONFIG_DM_GPIO=y
++# CONFIG_ALTERA_PIO is not set
++# CONFIG_DWAPB_GPIO is not set
++# CONFIG_AT91_GPIO is not set
++# CONFIG_ATMEL_PIO4 is not set
++# CONFIG_INTEL_BROADWELL_GPIO is not set
++# CONFIG_INTEL_ICH6_GPIO is not set
++# CONFIG_IMX_RGPIO2P is not set
++# CONFIG_LPC32XX_GPIO is not set
++# CONFIG_MSM_GPIO is not set
++CONFIG_OMAP_GPIO=y
++# CONFIG_CMD_PCA953X is not set
++# CONFIG_ROCKCHIP_GPIO is not set
++# CONFIG_CMD_TCA642X is not set
++# CONFIG_TEGRA_GPIO is not set
++# CONFIG_TEGRA186_GPIO is not set
++# CONFIG_VYBRID_GPIO is not set
++# CONFIG_DM_74X164 is not set
++# CONFIG_DM_PCA953X is not set
++# CONFIG_MPC85XX_GPIO is not set
++
++#
++# I2C support
++#
++# CONFIG_DM_I2C is not set
++# CONFIG_DM_I2C_COMPAT is not set
++# CONFIG_SYS_I2C_DW is not set
++# CONFIG_SYS_I2C_IMX_LPI2C is not set
++CONFIG_SYS_I2C_OMAP24XX=y
++CONFIG_SYS_I2C_BUS_MAX=3
++CONFIG_DM_KEYBOARD=y
++# CONFIG_CROS_EC_KEYB is not set
++# CONFIG_I8042_KEYB is not set
++
++#
++# LED Support
++#
++# CONFIG_LED is not set
++# CONFIG_SPL_LED is not set
++# CONFIG_LED_STATUS is not set
++
++#
++# Mailbox Controller Support
++#
++
++#
++# Memory Controller drivers
++#
++
++#
++# Multifunction device drivers
++#
++# CONFIG_MISC is not set
++# CONFIG_CROS_EC is not set
++# CONFIG_DS4510 is not set
++# CONFIG_FSL_SEC_MON is not set
++# CONFIG_MXC_OCOTP is not set
++# CONFIG_NUVOTON_NCT6102D is not set
++# CONFIG_PWRSEQ is not set
++# CONFIG_PCA9551_LED is not set
++# CONFIG_WINBOND_W83627 is not set
++
++#
++# MMC Host controller Support
++#
++CONFIG_MMC=y
++# CONFIG_DM_MMC is not set
++# CONFIG_SPL_MMC_TINY is not set
++# CONFIG_MMC_DW is not set
++# CONFIG_MMC_MXC is not set
++# CONFIG_MMC_MXS is not set
++# CONFIG_MMC_PCI is not set
++CONFIG_MMC_OMAP_HS=y
++# CONFIG_MMC_SDHCI is not set
++
++#
++# MTD Support
++#
++# CONFIG_MTD is not set
++# CONFIG_MTD_NOR_FLASH is not set
++# CONFIG_NAND is not set
++
++#
++# SPI Flash Support
++#
++CONFIG_SPI_FLASH=y
++# CONFIG_SPI_FLASH_BAR is not set
++# CONFIG_SF_DUAL_FLASH is not set
++# CONFIG_SPI_FLASH_ATMEL is not set
++# CONFIG_SPI_FLASH_EON is not set
++# CONFIG_SPI_FLASH_GIGADEVICE is not set
++# CONFIG_SPI_FLASH_MACRONIX is not set
++# CONFIG_SPI_FLASH_SPANSION is not set
++# CONFIG_SPI_FLASH_STMICRO is not set
++# CONFIG_SPI_FLASH_SST is not set
++CONFIG_SPI_FLASH_WINBOND=y
++CONFIG_SPI_FLASH_USE_4K_SECTORS=y
++# CONFIG_SPI_FLASH_MTD is not set
++
++#
++# UBI support
++#
++# CONFIG_MTD_UBI is not set
++# CONFIG_BITBANGMII is not set
++# CONFIG_MV88E6352_SWITCH is not set
++CONFIG_PHYLIB=y
++# CONFIG_MV88E61XX_SWITCH is not set
++# CONFIG_PHYLIB_10G is not set
++# CONFIG_PHY_AQUANTIA is not set
++# CONFIG_PHY_ATHEROS is not set
++# CONFIG_PHY_BROADCOM is not set
++# CONFIG_PHY_CORTINA is not set
++# CONFIG_PHY_DAVICOM is not set
++# CONFIG_PHY_ET1011C is not set
++# CONFIG_PHY_LXT is not set
++# CONFIG_PHY_MARVELL is not set
++# CONFIG_PHY_MICREL is not set
++# CONFIG_PHY_MSCC is not set
++# CONFIG_PHY_NATSEMI is not set
++# CONFIG_PHY_REALTEK is not set
++# CONFIG_PHY_SMSC is not set
++# CONFIG_PHY_TERANETICS is not set
++# CONFIG_PHY_TI is not set
++# CONFIG_PHY_VITESSE is not set
++# CONFIG_PHY_XILINX is not set
++# CONFIG_DM_ETH is not set
++# CONFIG_NETDEVICES is not set
++# CONFIG_PCI is not set
++
++#
++# PHY Subsystem
++#
++# CONFIG_PHY is not set
++# CONFIG_SPL_PHY is not set
++# CONFIG_MVEBU_COMPHY_SUPPORT is not set
++
++#
++# Pin controllers
++#
++# CONFIG_PINCTRL is not set
++# CONFIG_SPL_PINCTRL is not set
++
++#
++# Power
++#
++
++#
++# Power Domain Support
++#
++# CONFIG_DM_PMIC is not set
++# CONFIG_PMIC_AS3722 is not set
++# CONFIG_POWER_MC34VR500 is not set
++# CONFIG_DM_REGULATOR is not set
++# CONFIG_DM_PWM is not set
++# CONFIG_PWM_SANDBOX is not set
++# CONFIG_RAM is not set
++
++#
++# Remote Processor drivers
++#
++
++#
++# Reset Controller Support
++#
++
++#
++# Real Time Clock
++#
++# CONFIG_DM_RTC is not set
++# CONFIG_SCSI is not set
++
++#
++# Serial drivers
++#
++CONFIG_BAUDRATE=115200
++CONFIG_REQUIRE_SERIAL_CONSOLE=y
++CONFIG_SERIAL_PRESENT=y
++CONFIG_SPL_SERIAL_PRESENT=y
++CONFIG_DM_SERIAL=y
++# CONFIG_SERIAL_RX_BUFFER is not set
++CONFIG_SPL_DM_SERIAL=y
++# CONFIG_TPL_DM_SERIAL is not set
++# CONFIG_DEBUG_UART_SKIP_INIT is not set
++# CONFIG_ALTERA_JTAG_UART is not set
++# CONFIG_ALTERA_UART is not set
++# CONFIG_ATMEL_USART is not set
++# CONFIG_FSL_LPUART is not set
++# CONFIG_MVEBU_A3700_UART is not set
++CONFIG_SYS_NS16550=y
++# CONFIG_MSM_SERIAL is not set
++# CONFIG_PXA_SERIAL is not set
++
++#
++# Sound support
++#
++# CONFIG_SOUND is not set
++
++#
++# SPI Support
++#
++# CONFIG_DM_SPI is not set
++# CONFIG_SOFT_SPI is not set
++# CONFIG_FSL_ESPI is not set
++# CONFIG_FSL_QSPI is not set
++# CONFIG_TI_QSPI is not set
++# CONFIG_OMAP3_SPI is not set
++
++#
++# SPMI support
++#
++# CONFIG_SPMI is not set
++
++#
++# System reset device drivers
++#
++# CONFIG_SYSRESET is not set
++# CONFIG_SYSRESET_SYSCON is not set
++# CONFIG_SYSRESET_WATCHDOG is not set
++# CONFIG_DM_THERMAL is not set
++
++#
++# Timer Support
++#
++# CONFIG_TIMER is not set
++
++#
++# TPM support
++#
++CONFIG_USB=y
++# CONFIG_DM_USB is not set
++
++#
++# USB Host Controller Drivers
++#
++# CONFIG_USB_XHCI_HCD is not set
++# CONFIG_USB_EHCI_HCD is not set
++# CONFIG_USB_OHCI_HCD is not set
++# CONFIG_USB_UHCI_HCD is not set
++# CONFIG_USB_DWC2 is not set
++# CONFIG_USB_DWC3 is not set
++
++#
++# MUSB Controller Driver
++#
++CONFIG_USB_MUSB_HOST=y
++CONFIG_USB_MUSB_GADGET=y
++
++#
++# ULPI drivers
++#
++
++#
++# USB peripherals
++#
++CONFIG_USB_STORAGE=y
++# CONFIG_USB_KEYBOARD is not set
++CONFIG_USB_GADGET=y
++# CONFIG_USB_GADGET_ATMEL_USBA is not set
++# CONFIG_USB_GADGET_BCM_UDC_OTG_PHY is not set
++# CONFIG_USB_GADGET_DWC2_OTG is not set
++# CONFIG_CI_UDC is not set
++CONFIG_USB_GADGET_VBUS_DRAW=2
++CONFIG_USB_GADGET_DUALSPEED=y
++CONFIG_USB_GADGET_DOWNLOAD=y
++# CONFIG_USB_FUNCTION_SDP is not set
++CONFIG_G_DNL_MANUFACTURER="Texas Instruments"
++CONFIG_G_DNL_VENDOR_NUM=0x0451
++CONFIG_G_DNL_PRODUCT_NUM=0xd022
++CONFIG_USBNET_DEVADDR="de:ad:be:ef:00:01"
++# CONFIG_USB_HOST_ETHER is not set
++
++#
++# Graphics support
++#
++# CONFIG_DM_VIDEO is not set
++# CONFIG_SYS_WHITE_ON_BLACK is not set
++
++#
++# TrueType Fonts
++#
++# CONFIG_VIDEO_VESA is not set
++# CONFIG_VIDEO_LCD_ANX9804 is not set
++# CONFIG_VIDEO_LCD_SSD2828 is not set
++# CONFIG_VIDEO_MVEBU is not set
++# CONFIG_DISPLAY is not set
++# CONFIG_VIDEO_BRIDGE is not set
++# CONFIG_LCD is not set
++
++#
++# Watchdog Timer Support
++#
++CONFIG_HW_WATCHDOG=y
++# CONFIG_BCM2835_WDT is not set
++CONFIG_OMAP_WATCHDOG=y
++# CONFIG_ULP_WATCHDOG is not set
++# CONFIG_WDT is not set
++# CONFIG_PHYS_TO_BUS is not set
++
++#
++# File systems
++#
++# CONFIG_FS_CBFS is not set
++CONFIG_FS_FAT=y
++CONFIG_FAT_WRITE=y
++CONFIG_FS_FAT_MAX_CLUSTSIZE=65536
++# CONFIG_FS_JFFS2 is not set
++# CONFIG_FS_CRAMFS is not set
++# CONFIG_YAFFS2 is not set
++
++#
++# Library routines
++#
++# CONFIG_BCH is not set
++# CONFIG_CC_OPTIMIZE_LIBS_FOR_SPEED is not set
++CONFIG_HAVE_PRIVATE_LIBGCC=y
++CONFIG_USE_PRIVATE_LIBGCC=y
++CONFIG_SYS_HZ=1000
++CONFIG_USE_TINY_PRINTF=y
++CONFIG_REGEX=y
++# CONFIG_LIB_RAND is not set
++# CONFIG_SPL_TINY_MEMSET is not set
++# CONFIG_TPL_TINY_MEMSET is not set
++# CONFIG_CMD_DHRYSTONE is not set
++
++#
++# Security support
++#
++# CONFIG_AES is not set
++# CONFIG_RSA is not set
++# CONFIG_TPM is not set
++
++#
++# Hashing Support
++#
++CONFIG_SHA1=y
++CONFIG_SHA256=y
++# CONFIG_SHA_HW_ACCEL is not set
++CONFIG_MD5=y
++
++#
++# Compression Support
++#
++# CONFIG_LZ4 is not set
++# CONFIG_LZMA is not set
++CONFIG_LZO=y
++# CONFIG_ERRNO_STR is not set
++CONFIG_OF_LIBFDT=y
++CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_SPL_OF_LIBFDT=y
++# CONFIG_FDT_FIXUP_PARTITIONS is not set
++
++#
++# System tables
++#
++CONFIG_GENERATE_SMBIOS_TABLE=y
++CONFIG_SMBIOS_MANUFACTURER="ti"
++# CONFIG_EFI_LOADER is not set
++# CONFIG_UNIT_TEST is not set
+diff --git a/fs/ext4/ext4_common.c b/fs/ext4/ext4_common.c
+index dac9545365..a8e6fdef51 100644
+--- a/fs/ext4/ext4_common.c
++++ b/fs/ext4/ext4_common.c
+@@ -2378,7 +2378,7 @@ int ext4fs_mount(unsigned part_length)
+ 
+ 	return 1;
+ fail:
+-	printf("Failed to mount ext2 filesystem...\n");
++	//printf("Failed to mount ext2 filesystem...\n");
+ 	free(data);
+ 	ext4fs_root = NULL;
+ 
+diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
+index 856c546fc1..078a706676 100644
+--- a/include/configs/am335x_evm.h
++++ b/include/configs/am335x_evm.h
+@@ -59,9 +59,14 @@
+ 
+ #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	"bootcmd_" #devtypel #instance "=" \
++	"gpio clear 56; " \
++	"gpio clear 55; " \
++	"gpio clear 54; " \
++	"gpio set 53; " \
++	"setenv devtype mmc; " \
+ 	"setenv mmcdev " #instance"; "\
+-	"setenv bootpart " #instance":2 ; "\
+-	"run mmcboot\0"
++	"setenv bootpart " #instance":1 ; "\
++	"run boot\0"
+ 
+ #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	#devtypel #instance " "
+@@ -78,7 +83,6 @@
+ 	func(LEGACY_MMC, legacy_mmc, 0) \
+ 	func(MMC, mmc, 1) \
+ 	func(LEGACY_MMC, legacy_mmc, 1) \
+-	func(NAND, nand, 0) \
+ 	func(PXE, pxe, na) \
+ 	func(DHCP, dhcp, na)
+ 
+@@ -95,6 +99,7 @@
+ 	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
+ 	"bootfile=zImage\0" \
++	"board_eeprom_header=undefined\0" \
+ 	"fdtfile=undefined\0" \
+ 	"console=ttyO0,115200n8\0" \
+ 	"partitions=" \
+@@ -125,11 +130,66 @@
+ 	"ramboot=echo Booting from ramdisk ...; " \
+ 		"run ramargs; " \
+ 		"bootz ${loadaddr} ${rdaddr} ${fdtaddr}\0" \
++	"pb_eeprom_hdr=" \
++		"mw 82001000 ee3355aa; " \
++		"mw 82001004 35333341; " \
++		"mw 82001008 4c474250\0" \
++	"serverip=192.168.1.1\0" \
++	"ipaddr=192.168.1.2\0" \
++	"if_netconsole=ping $serverip\0" \
++	"start_netconsole=" \
++		"setenv ncip $serverip; " \
++		"setenv bootdelay 10; " \
++		"setenv stdin serial,nc; " \
++		"setenv stdout serial,nc; " \
++		"setenv stderr serial,nc; " \
++		"version\0" \
++	"preboot=run if_netconsole start_netconsole\0"\
++	"eeprom_program="\
++		"if test $board_eeprom_header = bbb_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = bbbl_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbl_footer; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = bbbw_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbw_footer; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = os00_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_os00_footer; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = beaglelogic_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_beaglelogic; run eeprom_dump; reset; fi;  \0" \
+ 	"findfdt="\
++		"echo board_name=[$board_name] ...; " \
++		"if test $board_name = A335PBGL; then " \
++			"setenv fdtfile am335x-pocketbeagle.dtb; fi; " \
++		"if test $board_name = A335BLGC; then " \
++			"setenv fdtfile am335x-beaglelogic.dtb; fi; " \
+ 		"if test $board_name = A335BONE; then " \
+ 			"setenv fdtfile am335x-bone.dtb; fi; " \
+ 		"if test $board_name = A335BNLT; then " \
+-			"setenv fdtfile am335x-boneblack.dtb; fi; " \
++			"echo board_rev=[$board_rev] ...; " \
++			"if test $board_rev = GH01; then " \
++				"setenv fdtfile am335x-boneblack.dtb; " \
++			"elif test $board_rev = BBG1; then " \
++				"setenv fdtfile am335x-bonegreen.dtb; " \
++			"elif test $board_rev = BP00; then " \
++				"setenv fdtfile am335x-pocketbone.dtb; " \
++			"elif test $board_rev = GW1A; then " \
++				"setenv fdtfile am335x-bonegreen-wireless.dtb; " \
++			"elif test $board_rev = AIA0; then " \
++				"setenv fdtfile am335x-abbbi.dtb; " \
++			"elif test $board_rev = EIA0; then " \
++				"setenv fdtfile am335x-boneblack.dtb; " \
++			"elif test $board_rev = SE0A; then " \
++				"setenv fdtfile am335x-sancloud-bbe.dtb; " \
++			"elif test $board_rev = ME06; then " \
++				"setenv fdtfile am335x-bonegreen.dtb; " \
++			"elif test $board_rev = M10A; then " \
++				"setenv fdtfile am335x-vsc8531bbb.dtb; " \
++			"elif test $board_rev = OS00; then " \
++				"setenv fdtfile am335x-osd3358-sm-red.dtb; " \
++			"else " \
++				"setenv fdtfile am335x-boneblack.dtb; " \
++			"fi; " \
++		"fi; " \
+ 		"if test $board_name = BBBW; then " \
+ 			"setenv fdtfile am335x-boneblack-wireless.dtb; fi; " \
+ 		"if test $board_name = BBG1; then " \
+@@ -138,6 +198,10 @@
+ 			"setenv fdtfile am335x-bonegreen-wireless.dtb; fi; " \
+ 		"if test $board_name = BBBL; then " \
+ 			"setenv fdtfile am335x-boneblue.dtb; fi; " \
++		"if test $board_name = SBBE; then " \
++			"setenv fdtfile am335x-sancloud-bbe.dtb; fi; " \
++		"if test $board_name = OS00; then " \
++			"setenv fdtfile am335x-osd3358-sm-red.dtb; fi; " \
+ 		"if test $board_name = A33515BB; then " \
+ 			"setenv fdtfile am335x-evm.dtb; fi; " \
+ 		"if test $board_name = A335X_SK; then " \
+@@ -145,13 +209,22 @@
+ 		"if test $board_name = A335_ICE; then " \
+ 			"setenv fdtfile am335x-icev2.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+-			"echo WARNING: Could not determine device tree to use; fi; \0" \
++			"setenv board_name A335BNLT; " \
++			"setenv board_rev EMMC; " \
++			"setenv fdtfile am335x-boneblack-emmc-overlay.dtb; " \
++		"fi; \0" \
+ 	"init_console=" \
+ 		"if test $board_name = A335_ICE; then "\
+ 			"setenv console ttyO3,115200n8;" \
++		"elif test $board_name = A335BLGC; then " \
++			"setenv console ttyO4,115200n8;" \
+ 		"else " \
+ 			"setenv console ttyO0,115200n8;" \
+ 		"fi;\0" \
++	EEWIKI_NFS \
++	EEWIKI_BOOT \
++	EEWIKI_UNAME_BOOT \
++	EEPROM_PROGRAMMING \
+ 	NANDARGS \
+ 	NETARGS \
+ 	DFUARGS \
+@@ -232,9 +305,14 @@
+ #define CONFIG_USB_MUSB_PIO_ONLY
+ #define CONFIG_USB_MUSB_DISABLE_BULK_COMBINE_SPLIT
+ #define CONFIG_AM335X_USB0
+-#define CONFIG_AM335X_USB0_MODE	MUSB_PERIPHERAL
+ #define CONFIG_AM335X_USB1
++#ifdef CONFIG_AM335X_USB_SWAP
++#define CONFIG_AM335X_USB0_MODE MUSB_HOST
++#define CONFIG_AM335X_USB1_MODE	MUSB_PERIPHERAL
++#else
++#define CONFIG_AM335X_USB0_MODE	MUSB_PERIPHERAL
+ #define CONFIG_AM335X_USB1_MODE MUSB_HOST
++#endif
+ 
+ /*
+  * Disable MMC DM for SPL build and can be re-enabled after adding
+@@ -287,6 +365,17 @@
+ #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
+ #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+ #define CONFIG_SYS_MMC_MAX_DEVICE	2
++#elif defined(CONFIG_SD_BOOT)
++#define CONFIG_ENV_IS_IN_FAT
++#define FAT_ENV_INTERFACE		"mmc"
++#define FAT_ENV_DEVICE_AND_PART		"0:1"
++#define FAT_ENV_FILE			"uboot.env"
++#ifndef CONFIG_FAT_WRITE
++#define CONFIG_FAT_WRITE
++#endif
++#define FAT_ENV_DEVICE 0
++#define FAT_ENV_PART 1
++#define CONFIG_BOOT_PARTITION_ACCESS
+ #elif defined(CONFIG_NOR_BOOT)
+ #define CONFIG_ENV_SECT_SIZE		(128 << 10)	/* 128 KiB */
+ #define CONFIG_ENV_OFFSET		(512 << 10)	/* 512 KiB */
+diff --git a/include/configs/ti_am335x_common.h b/include/configs/ti_am335x_common.h
+index 66cacdf347..1f4da159d9 100644
+--- a/include/configs/ti_am335x_common.h
++++ b/include/configs/ti_am335x_common.h
+@@ -39,7 +39,9 @@
+ #define CONFIG_MII			/* Required in net/eth.c */
+ #endif
+ 
++#ifndef CONFIG_DISABLE_CPSW
+ #define CONFIG_DRIVER_TI_CPSW		/* Driver for IP block */
++#endif
+ /*
+  * RTC related defines. To use bootcount you must set bootlimit in the
+  * environment to a non-zero value and enable CONFIG_BOOTCOUNT_LIMIT
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 91e139853c..b5d2f8b1df 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -129,6 +129,305 @@
+ /* Boot Argument Buffer Size */
+ #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
+ 
++#define EEPROM_PROGRAMMING \
++	"eeprom_dump=i2c dev 0; " \
++		"i2c md 0x50 0x00.2 20; " \
++		"\0" \
++	"eeprom_blank=i2c dev 0; " \
++		"i2c mw 0x50 0x00.2 ff; " \
++		"i2c mw 0x50 0x01.2 ff; " \
++		"i2c mw 0x50 0x02.2 ff; " \
++		"i2c mw 0x50 0x03.2 ff; " \
++		"i2c mw 0x50 0x04.2 ff; " \
++		"i2c mw 0x50 0x05.2 ff; " \
++		"i2c mw 0x50 0x06.2 ff; " \
++		"i2c mw 0x50 0x07.2 ff; " \
++		"i2c mw 0x50 0x08.2 ff; " \
++		"i2c mw 0x50 0x09.2 ff; " \
++		"i2c mw 0x50 0x0a.2 ff; " \
++		"i2c mw 0x50 0x0b.2 ff; " \
++		"i2c mw 0x50 0x0c.2 ff; " \
++		"i2c mw 0x50 0x0d.2 ff; " \
++		"i2c mw 0x50 0x0e.2 ff; " \
++		"i2c mw 0x50 0x0f.2 ff; " \
++		"i2c mw 0x50 0x10.2 ff; " \
++		"i2c mw 0x50 0x11.2 ff; " \
++		"i2c mw 0x50 0x12.2 ff; " \
++		"i2c mw 0x50 0x13.2 ff; " \
++		"i2c mw 0x50 0x14.2 ff; " \
++		"i2c mw 0x50 0x15.2 ff; " \
++		"i2c mw 0x50 0x16.2 ff; " \
++		"i2c mw 0x50 0x17.2 ff; " \
++		"i2c mw 0x50 0x18.2 ff; " \
++		"i2c mw 0x50 0x19.2 ff; " \
++		"i2c mw 0x50 0x1a.2 ff; " \
++		"i2c mw 0x50 0x1b.2 ff; " \
++		"i2c mw 0x50 0x1c.2 ff; " \
++		"i2c mw 0x50 0x1d.2 ff; " \
++		"i2c mw 0x50 0x1e.2 ff; " \
++		"i2c mw 0x50 0x1f.2 ff; " \
++		"\0" \
++	"eeprom_bbb_header=i2c dev 0; " \
++		"i2c mw 0x50 0x00.2 aa; " \
++		"i2c mw 0x50 0x01.2 55; " \
++		"i2c mw 0x50 0x02.2 33; " \
++		"i2c mw 0x50 0x03.2 ee; " \
++		"i2c mw 0x50 0x04.2 41; " \
++		"i2c mw 0x50 0x05.2 33; " \
++		"i2c mw 0x50 0x06.2 33; " \
++		"i2c mw 0x50 0x07.2 35; " \
++		"i2c mw 0x50 0x08.2 42; " \
++		"i2c mw 0x50 0x09.2 4e; " \
++		"i2c mw 0x50 0x0a.2 4c; " \
++		"i2c mw 0x50 0x0b.2 54; " \
++		"\0" \
++	"eeprom_bbbl_footer= " \
++		"i2c mw 0x50 0x0c.2 42; " \
++		"i2c mw 0x50 0x0d.2 4c; " \
++		"i2c mw 0x50 0x0e.2 41; " \
++		"i2c mw 0x50 0x0f.2 32; " \
++		"\0" \
++	"eeprom_bbbw_footer= " \
++		"i2c mw 0x50 0x0c.2 42; " \
++		"i2c mw 0x50 0x0d.2 57; " \
++		"i2c mw 0x50 0x0e.2 41; " \
++		"i2c mw 0x50 0x0f.2 35; " \
++		"\0" \
++	"eeprom_os00_footer= " \
++		"i2c mw 0x50 0x0c.2 4F; " \
++		"i2c mw 0x50 0x0d.2 53; " \
++		"i2c mw 0x50 0x0e.2 30; " \
++		"i2c mw 0x50 0x0f.2 30; " \
++		"\0" \
++	"eeprom_beaglelogic= " \
++		"i2c mw 0x50 0x00.2 aa; " \
++		"i2c mw 0x50 0x01.2 55; " \
++		"i2c mw 0x50 0x02.2 33; " \
++		"i2c mw 0x50 0x03.2 ee; " \
++		"i2c mw 0x50 0x04.2 41; " \
++		"i2c mw 0x50 0x05.2 33; " \
++		"i2c mw 0x50 0x06.2 33; " \
++		"i2c mw 0x50 0x07.2 35; " \
++		"i2c mw 0x50 0x08.2 42; " \
++		"i2c mw 0x50 0x09.2 4c; " \
++		"i2c mw 0x50 0x0a.2 47; " \
++		"i2c mw 0x50 0x0b.2 43; " \
++		"i2c mw 0x50 0x0c.2 30; " \
++		"i2c mw 0x50 0x0d.2 30; " \
++		"i2c mw 0x50 0x0e.2 30; " \
++		"i2c mw 0x50 0x0f.2 41; " \
++		"\0" \
++
++
++#define EEWIKI_NFS \
++	"server_ip=192.168.1.100\0" \
++	"gw_ip=192.168.1.1\0" \
++	"netmask=255.255.255.0\0" \
++	"hostname=\0" \
++	"device=eth0\0" \
++	"autoconf=off\0" \
++	"root_dir=/home/userid/targetNFS\0" \
++	"tftp_dir=\0" \
++	"nfs_options=,vers=3\0" \
++	"nfsrootfstype=ext4 rootwait fixrtc\0" \
++	"nfsargs=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=/dev/nfs rw " \
++		"rootfstype=${nfsrootfstype} " \
++		"nfsroot=${nfsroot} " \
++		"ip=${ip} " \
++		"${cmdline}\0" \
++	"nfsboot=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${tftp_dir}${bootfile}; " \
++		"tftp ${fdtaddr} ${tftp_dir}dtbs/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"nfsboot_uname_r=echo Booting from ${server_ip} ...; " \
++		"setenv nfsroot ${server_ip}:${root_dir}${nfs_options}; " \
++		"setenv ip ${client_ip}:${server_ip}:${gw_ip}:${netmask}:${hostname}:${device}:${autoconf}; " \
++		"setenv autoload no; " \
++		"setenv serverip ${server_ip}; " \
++		"setenv ipaddr ${client_ip}; " \
++		"tftp ${loadaddr} ${tftp_dir}vmlinuz-${uname_r}; " \
++		"tftp ${fdtaddr} ${tftp_dir}dtbs/${uname_r}/${fdtfile}; " \
++		"run nfsargs; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++
++#define EEWIKI_BOOT \
++	"boot=${devtype} dev ${mmcdev}; " \
++		"if ${devtype} rescan; then " \
++			"gpio set 54;" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"if test -e ${devtype} ${bootpart} /etc/fstab; then " \
++				"setenv mmcpart 1;" \
++			"fi; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e ${devtype} ${bootpart} /uEnv.txt; then " \
++				"if run loadbootenv; then " \
++					"gpio set 55;" \
++					"echo Loaded environment from /uEnv.txt;" \
++					"run importbootenv;" \
++				"fi;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"gpio set 56; " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++				"echo Checking if client_ip is set ...;" \
++				"if test -n ${client_ip}; then " \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo using ${fdtfile} ...;" \
++					"fi;" \
++					"gpio set 56; " \
++					"if test -n ${uname_r}; then " \
++						"echo Running nfsboot_uname_r ...;" \
++						"run nfsboot_uname_r;" \
++					"fi;" \
++					"echo Running nfsboot ...;" \
++					"run nfsboot;" \
++				"fi;" \
++			"fi; " \
++			"echo Checking for: /${script} ...;" \
++			"if test -e ${devtype} ${bootpart} /${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile ${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/${script} ...;" \
++			"if test -e ${devtype} ${bootpart} /boot/${script}; then " \
++				"gpio set 55;" \
++				"setenv scriptfile /boot/${script};" \
++				"run loadbootscript;" \
++				"echo Loaded script from ${scriptfile};" \
++				"gpio set 56; " \
++				"run bootscript;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e ${devtype} ${bootpart} /boot/uEnv.txt; then " \
++					"gpio set 55;" \
++					"load ${devtype} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"echo debug: [dtb=${dtb}] ... ;" \
++						"setenv fdtfile ${dtb};" \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"gpio set 56; " \
++						"setenv oldroot /dev/mmcblk${mmcdev}p${mmcpart};" \
++						"echo Running uname_boot ...;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++
++#define EEWIKI_UNAME_BOOT \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e ${devtype} ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"if test -e ${devtype} ${bootpart} ${fdtfile}; then " \
++											"run loadfdt;" \
++										"else " \
++											"echo; echo unable to find [dtb=${fdtfile}] did you name it correctly? ...; " \
++											"run failumsboot;" \
++										"fi;" \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uuid}; then " \
++					"run args_mmc_uuid;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++			"else " \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
++		"fi;\0" \
++
+ /*
+  * When we have SPI, NOR or NAND flash we expect to be making use of
+  * mtdparts, both for ease of use in U-Boot and for passing information
+diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
+index 4305ebdaaf..0364f62c3d 100644
+--- a/include/environment/ti/mmc.h
++++ b/include/environment/ti/mmc.h
+@@ -12,20 +12,65 @@
+ #define DEFAULT_MMC_TI_ARGS \
+ 	"mmcdev=0\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+-	"finduuid=part uuid mmc ${bootpart} uuid\0" \
++	"finduuid=part uuid ${devtype} ${bootpart} uuid\0" \
+ 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
++		"${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"root=PARTUUID=${uuid} rw " \
+-		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=${oldroot} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
++		"${cmdline}\0" \
++	"args_mmc_uuid=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${uboot_detected_capes} " \
++		"${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"${cape_uboot} " \
++		"root=/dev/ram rw " \
++		"${uboot_detected_capes} " \
++		"${cmdline}\0" \
++	"script=boot.scr\0" \
++	"scriptfile=${script}\0" \
++	"loadbootscript=load ${devtype} ${bootpart} ${loadaddr} ${scriptfile};\0" \
++	"bootscript=echo Running bootscript from mmc${bootpart} ...; " \
+ 		"source ${loadaddr}\0" \
+ 	"bootenvfile=uEnv.txt\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"bootenv=uEnv.txt\0" \
++	"importbootenv=echo Importing environment from ${devtype} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"loadbootenv=load ${devtype} ${bootpart} ${loadaddr} ${bootenvfile}\0" \
+ 	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
++	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
++		"ums 0 ${devtype} 1;\0" \
+ 	"envboot=mmc dev ${mmcdev}; " \
+ 		"if mmc rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+@@ -45,7 +90,11 @@
+ 	"mmcloados=run args_mmc; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+-				"bootz ${loadaddr} - ${fdtaddr}; " \
++				"if test -n ${uname_r}; then " \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"else " \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi; " \
+ 			"else " \
+ 				"if test ${boot_fdt} = try; then " \
+ 					"bootz; " \
+-- 
+2.15.1
+
