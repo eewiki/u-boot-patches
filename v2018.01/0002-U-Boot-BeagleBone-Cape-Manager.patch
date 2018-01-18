@@ -1,19 +1,19 @@
-From f3dcb949112606b65d643708b07c73682b41113f Mon Sep 17 00:00:00 2001
+From 955967c659cb4b99c81eacef266748353be4dbf1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 9 Jan 2018 14:34:40 -0600
+Date: Wed, 17 Jan 2018 16:16:22 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 420 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 442 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
- board/ti/am335x/hash-string.h             |  59 +++++
- board/ti/am335x/mux.c                     |  15 ++
- include/configs/ti_armv7_common.h         | 189 ++++++++++++++
+ board/ti/am335x/hash-string.h             |  59 ++++
+ board/ti/am335x/mux.c                     |  15 +
+ include/configs/ti_armv7_common.h         | 189 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
- include/environment/ti/mmc.h              |  15 ++
- 8 files changed, 719 insertions(+)
+ include/environment/ti/mmc.h              |  15 +
+ 8 files changed, 741 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8a41a03e7a..ef22233161 100644
+index 8a41a03e7a..547184f4b6 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8a41a03e7a..ef22233161 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,420 @@ void do_board_detect(void)
+@@ -76,9 +77,442 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -108,9 +108,9 @@ index 8a41a03e7a..ef22233161 100644
 +	/* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
 +	/* 14 + 16 + 1 + 4 + 5 = 40 */
 +	char cape_overlay[40];
++	char process_cape_part_number[16];
++	char end_part_number;
 +	char cape_overlay_pass_to_kernel[18];
-+	const char s[2] = ".";
-+	char *token;
 +
 +	//Don't forget about the BeagleBone Classic (White)
 +	char base_dtb=UNK_BASE_DTB;
@@ -245,23 +245,45 @@ index 8a41a03e7a..ef22233161 100644
 +
 +			if (cape_header->header == 0xEE3355AA) {
 +				strlcpy(cape_overlay, "/lib/firmware/", 14 + 1);
++				strlcpy(cape_overlay_pass_to_kernel, "", 2);
++				strlcpy(process_cape_part_number, "..............", 16);
 +
-+				/* cape_header->part_number stop at [.] */
-+				token = strtok(cape_header->part_number, s);
-+				strncat(cape_overlay, token, 16);
++				strlcpy(process_cape_part_number, cape_header->part_number, 16);
++				printf("debug: process_cape_part_number:[%s]\n", process_cape_part_number);
 +
-+				strncat(cape_overlay_pass_to_kernel, token, 16);
-+				strncat(cape_overlay_pass_to_kernel, ",", 1);
++				//Find ending 0x00
++				puts("debug: process_cape_part_number:[");
++				end_part_number=16;
++				for ( int i=0; i <= 15; i++ ) {
++					if ( process_cape_part_number[i] == 0x00 ) {
++						end_part_number=i;
++						i=16;
++					} else {
++						write_hex(process_cape_part_number[i]);
++					}
++				}
++				puts("]\n");
++
++				strncat(cape_overlay, process_cape_part_number, end_part_number);
++				//printf("debug: %s\n", cape_overlay);
 +
 +				strncat(cape_overlay, "-", 1);
++				//printf("debug: %s\n", cape_overlay);
++
 +				strncat(cape_overlay, cape_header->version, 4);
++				//printf("debug: %s\n", cape_overlay);
++
 +				strncat(cape_overlay, ".dtbo", 5);
++				//printf("debug: %s\n", cape_overlay);
 +
 +				unsigned long cape_overlay_hash = hash_string(cape_overlay);
 +
 +				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
 +				write_hex(addr);
 +				printf(": %s [0x%lx]\n", cape_overlay, cape_overlay_hash);
++
++				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
++				strncat(cape_overlay_pass_to_kernel, ",", 1);
 +
 +				switch(cape_overlay_hash) {
 +					case 0x3c766f: /* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
@@ -461,7 +483,7 @@ index 8a41a03e7a..ef22233161 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -813,6 +1225,14 @@ int board_late_init(void)
+@@ -813,6 +1247,14 @@ int board_late_init(void)
  	}
  #endif
  
