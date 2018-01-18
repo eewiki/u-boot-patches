@@ -1,12 +1,12 @@
-From 369405675b4ba45a43b01995381078d0d29cb9f5 Mon Sep 17 00:00:00 2001
+From 0f275910859c38f092e092a0bf9a526b2a2a8b01 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 9 Jan 2018 14:33:02 -0600
+Date: Thu, 18 Jan 2018 14:50:23 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  board/ti/am335x/board.c               |  120 +++-
- board/ti/am335x/board.h               |   43 +-
+ board/ti/am335x/board.h               |   48 +-
  board/ti/am335x/mux.c                 |   18 +-
  configs/am335x_boneblack_defconfig    |    7 +-
  configs/am335x_evm_defconfig          |   36 +-
@@ -16,7 +16,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  299 ++++++++++
  include/environment/ti/mmc.h          |   67 ++-
- 11 files changed, 1675 insertions(+), 75 deletions(-)
+ 11 files changed, 1680 insertions(+), 75 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
@@ -257,7 +257,7 @@ index 1a52bffc00..8a41a03e7a 100644
  		return 0;
  	else if (board_is_bone_lt() && !strcmp(name, "am335x-boneblack"))
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index e13fcff02a..8305939f7e 100644
+index e13fcff02a..6f96532bac 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -24,6 +24,16 @@
@@ -277,7 +277,7 @@ index e13fcff02a..8305939f7e 100644
  static inline int board_is_bone(void)
  {
  	return board_ti_is("A335BONE");
-@@ -34,14 +44,45 @@ static inline int board_is_bone_lt(void)
+@@ -34,14 +44,50 @@ static inline int board_is_bone_lt(void)
  	return board_ti_is("A335BNLT");
  }
  
@@ -312,6 +312,11 @@ index e13fcff02a..8305939f7e 100644
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "EIA0", 4);
 +}
 +
++static inline int board_is_marsboard(void)
++{
++	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "00A5", 4);
++}
++
 +static inline int board_is_os00(void)
 +{
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "OS00", 4);
@@ -320,7 +325,7 @@ index e13fcff02a..8305939f7e 100644
  static inline int board_is_beaglebonex(void)
  {
 -	return board_is_bone() || board_is_bone_lt() || board_is_bbg1();
-+	return board_is_pb() || board_is_bone() || board_is_bone_lt() || board_is_e14bbbi() || board_is_bbg1() || board_is_beaglelogic() || board_is_os00();
++	return board_is_pb() || board_is_bone() || (board_is_bone_lt() && !board_is_marsboard()) || board_is_e14bbbi() || board_is_bbg1() || board_is_beaglelogic() || board_is_os00();
  }
  
  static inline int board_is_evm_sk(void)

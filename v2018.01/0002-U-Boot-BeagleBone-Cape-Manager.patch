@@ -1,19 +1,19 @@
-From 955967c659cb4b99c81eacef266748353be4dbf1 Mon Sep 17 00:00:00 2001
+From 4a7d1730af53b6e5fb83429f464335f986da54cf Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 17 Jan 2018 16:16:22 -0600
+Date: Thu, 18 Jan 2018 14:51:58 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 442 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 451 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++
  board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 189 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 741 insertions(+)
+ 8 files changed, 750 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8a41a03e7a..547184f4b6 100644
+index 8a41a03e7a..4942003439 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8a41a03e7a..547184f4b6 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,442 @@ void do_board_detect(void)
+@@ -76,9 +77,451 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -246,18 +246,27 @@ index 8a41a03e7a..547184f4b6 100644
 +			if (cape_header->header == 0xEE3355AA) {
 +				strlcpy(cape_overlay, "/lib/firmware/", 14 + 1);
 +				strlcpy(cape_overlay_pass_to_kernel, "", 2);
-+				strlcpy(process_cape_part_number, "..............", 16);
++				strlcpy(process_cape_part_number, "...............", 16 + 1);
 +
-+				strlcpy(process_cape_part_number, cape_header->part_number, 16);
++				strlcpy(process_cape_part_number, cape_header->part_number, 16 + 1);
 +				printf("debug: process_cape_part_number:[%s]\n", process_cape_part_number);
++
++				//FIXME: some capes end with '.'
++				if ( process_cape_part_number[15] == 0x2E ) {
++					puts("debug: fixup, extra . in eeprom field\n");
++					process_cape_part_number[15] = 0x00;
++					if ( process_cape_part_number[14] == 0x2E ) {
++						process_cape_part_number[14] = 0x00;
++					}
++				}
 +
 +				//Find ending 0x00
 +				puts("debug: process_cape_part_number:[");
 +				end_part_number=16;
-+				for ( int i=0; i <= 15; i++ ) {
++				for ( int i=0; i <= 16; i++ ) {
 +					if ( process_cape_part_number[i] == 0x00 ) {
 +						end_part_number=i;
-+						i=16;
++						i=17;
 +					} else {
 +						write_hex(process_cape_part_number[i]);
 +					}
@@ -483,7 +492,7 @@ index 8a41a03e7a..547184f4b6 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -813,6 +1247,14 @@ int board_late_init(void)
+@@ -813,6 +1256,14 @@ int board_late_init(void)
  	}
  #endif
  
@@ -499,7 +508,7 @@ index 8a41a03e7a..547184f4b6 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 8305939f7e..acba162ad9 100644
+index 6f96532bac..e4d5daf269 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -11,6 +11,22 @@
@@ -525,7 +534,7 @@ index 8305939f7e..acba162ad9 100644
  /**
   * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
   * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
-@@ -124,5 +140,6 @@ void enable_uart3_pin_mux(void);
+@@ -129,5 +145,6 @@ void enable_uart3_pin_mux(void);
  void enable_uart4_pin_mux(void);
  void enable_uart5_pin_mux(void);
  void enable_i2c0_pin_mux(void);
