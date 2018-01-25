@@ -1,6 +1,6 @@
-From 0f275910859c38f092e092a0bf9a526b2a2a8b01 Mon Sep 17 00:00:00 2001
+From fcf74906abe2a13a54b90ba45a3523a0d3855a0f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 18 Jan 2018 14:50:23 -0600
+Date: Sat, 20 Jan 2018 12:43:22 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -11,12 +11,14 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  configs/am335x_boneblack_defconfig    |    7 +-
  configs/am335x_evm_defconfig          |   36 +-
  configs/am335x_pocketbeagle_defconfig | 1055 +++++++++++++++++++++++++++++++++
+ fs/btrfs/compression.c                |    5 +-
+ fs/btrfs/hash.c                       |    3 +-
  fs/ext4/ext4_common.c                 |    2 +-
  include/configs/am335x_evm.h          |  101 +++-
  include/configs/ti_am335x_common.h    |    2 +
  include/configs/ti_armv7_common.h     |  299 ++++++++++
  include/environment/ti/mmc.h          |   67 ++-
- 11 files changed, 1680 insertions(+), 75 deletions(-)
+ 13 files changed, 1685 insertions(+), 78 deletions(-)
  create mode 100644 configs/am335x_pocketbeagle_defconfig
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
@@ -1534,6 +1536,55 @@ index 0000000000..d817fac61e
 +CONFIG_SMBIOS_MANUFACTURER="ti"
 +# CONFIG_EFI_LOADER is not set
 +# CONFIG_UNIT_TEST is not set
+diff --git a/fs/btrfs/compression.c b/fs/btrfs/compression.c
+index a59ff5a8bb..4e685a0931 100644
+--- a/fs/btrfs/compression.c
++++ b/fs/btrfs/compression.c
+@@ -9,6 +9,7 @@
+ #include "btrfs.h"
+ #include <linux/lzo.h>
+ #include <u-boot/zlib.h>
++#include <asm/unaligned.h>
+ 
+ static u32 decompress_lzo(const u8 *cbuf, u32 clen, u8 *dbuf, u32 dlen)
+ {
+@@ -19,7 +20,7 @@ static u32 decompress_lzo(const u8 *cbuf, u32 clen, u8 *dbuf, u32 dlen)
+ 	if (clen < 4)
+ 		return -1;
+ 
+-	tot_len = le32_to_cpu(*(u32 *) cbuf);
++	tot_len = le32_to_cpu(get_unaligned((u32 *) cbuf));
+ 	cbuf += 4;
+ 	clen -= 4;
+ 	tot_len -= 4;
+@@ -32,7 +33,7 @@ static u32 decompress_lzo(const u8 *cbuf, u32 clen, u8 *dbuf, u32 dlen)
+ 	res = 0;
+ 
+ 	while (tot_len > 4) {
+-		in_len = le32_to_cpu(*(u32 *) cbuf);
++		in_len = le32_to_cpu(get_unaligned((u32 *) cbuf));
+ 		cbuf += 4;
+ 		clen -= 4;
+ 
+diff --git a/fs/btrfs/hash.c b/fs/btrfs/hash.c
+index f8a50e532a..1c75ea8b48 100644
+--- a/fs/btrfs/hash.c
++++ b/fs/btrfs/hash.c
+@@ -8,6 +8,7 @@
+ 
+ #include "btrfs.h"
+ #include <u-boot/crc.h>
++#include <asm/unaligned.h>
+ 
+ static u32 btrfs_crc32c_table[256];
+ 
+@@ -34,5 +35,5 @@ u32 btrfs_csum_data(char *data, u32 seed, size_t len)
+ 
+ void btrfs_csum_final(u32 crc, void *result)
+ {
+-	*((u32 *) result) = cpu_to_le32(~crc);
++	put_unaligned(cpu_to_le32(~crc), (u32 *) result);
+ }
 diff --git a/fs/ext4/ext4_common.c b/fs/ext4/ext4_common.c
 index dac9545365..a8e6fdef51 100644
 --- a/fs/ext4/ext4_common.c
