@@ -1,6 +1,6 @@
-From 4a7d1730af53b6e5fb83429f464335f986da54cf Mon Sep 17 00:00:00 2001
+From 851a46f5bf8510d662a3a3ac27d2a8442dea7aa2 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 18 Jan 2018 14:51:58 -0600
+Date: Wed, 14 Feb 2018 13:40:32 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++
  board/ti/am335x/mux.c                     |  15 +
- include/configs/ti_armv7_common.h         | 189 +++++++++++++
+ include/configs/ti_armv7_common.h         | 192 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 750 insertions(+)
+ 8 files changed, 753 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -654,7 +654,7 @@ index 2b10b64d3a..3733246852 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index b5d2f8b1df..956d3c2c11 100644
+index b5d2f8b1df..827ab87b85 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -348,6 +348,19 @@
@@ -677,12 +677,15 @@ index b5d2f8b1df..956d3c2c11 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -388,6 +401,182 @@
+@@ -388,6 +401,185 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
 +			"if test $board_name = BBBL; then " \
-+				"env delete -f enable_uboot_overlays; fi; " \
++				"if test -n ${uboot_try_cape_universal}; then " \
++					"env delete -f uboot_try_cape_universal; " \
++				"fi;" \
++			"fi;" \
 +			"if test -n ${enable_uboot_overlays}; then " \
 +				"setenv fdt_buffer 0x60000;" \
 +				"if test -n ${uboot_fdt_buffer}; then " \
