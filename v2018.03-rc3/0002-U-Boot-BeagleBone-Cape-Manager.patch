@@ -1,26 +1,26 @@
-From 851a46f5bf8510d662a3a3ac27d2a8442dea7aa2 Mon Sep 17 00:00:00 2001
+From 284226a546a5758cb47a88da19cc839d382ebd9a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 14 Feb 2018 13:40:32 -0600
+Date: Wed, 21 Feb 2018 19:08:30 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 451 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 462 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 ++
  board/ti/am335x/hash-string.h             |  59 ++++
  board/ti/am335x/mux.c                     |  15 +
- include/configs/ti_armv7_common.h         | 192 +++++++++++++
+ include/configs/ti_armv7_common.h         | 199 +++++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 753 insertions(+)
+ 8 files changed, 771 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
-index 1780bbdb6f..a1ee457328 100644
+index dc61131c1e..e16f70d4da 100644
 --- a/arch/arm/mach-omap2/am33xx/clock_am33xx.c
 +++ b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
-@@ -214,6 +214,7 @@ void enable_basic_clocks(void)
+@@ -221,6 +221,7 @@ void enable_basic_clocks(void)
  		&cmper->gpio2clkctrl,
  		&cmper->gpio3clkctrl,
  		&cmper->i2c1clkctrl,
@@ -29,7 +29,7 @@ index 1780bbdb6f..a1ee457328 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8a41a03e7a..4942003439 100644
+index 8a41a03e7a..495179278f 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8a41a03e7a..4942003439 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,451 @@ void do_board_detect(void)
+@@ -76,9 +77,462 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -79,8 +79,9 @@ index 8a41a03e7a..4942003439 100644
 +#define UNK_BASE_DTB	0x0
 +#define BB_BASE_DTB	0x1
 +#define BBB_BASE_DTB	0x2
-+#define BBBL_BASE_DTB	0x3
-+#define BBE_BASE_DTB	0x4
++#define BBGW_BASE_DTB	0x3
++#define BBBL_BASE_DTB	0x4
++#define BBE_BASE_DTB	0x5
 +
 +#define BBB_EMMC	0x1
 +
@@ -163,6 +164,7 @@ index 8a41a03e7a..4942003439 100644
 +		}
 +		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
 +			puts("Model: SeeedStudio BeagleBone Green Wireless:\n");
++			base_dtb=BBGW_BASE_DTB;
 +			virtual_video=NOT_POP;
 +			virtual_audio=NOT_POP;
 +			virtual_wireless=BBGW_WL1835;
@@ -392,19 +394,28 @@ index 8a41a03e7a..4942003439 100644
 +
 +	switch(base_dtb) {
 +		case BB_BASE_DTB:
++			env_set("uboot_base_dtb_univ", "am335x-bone-uboot-univ.dtb");
 +			env_set("uboot_base_dtb", "am335x-bone.dtb");
 +			env_set("uboot_try_cape_universal", "1");
 +			break;
 +		case BBB_BASE_DTB:
++			env_set("uboot_base_dtb_univ", "am335x-boneblack-uboot-univ.dtb");
++			env_set("uboot_base_dtb", "am335x-boneblack-uboot.dtb");
++			env_set("uboot_try_cape_universal", "1");
++			break;
++		case BBGW_BASE_DTB:
++			//gpio-hogs and cape-universal dont mesh very well on bootup...
++			env_set("uboot_base_dtb_univ", "am335x-bonegreen-wireless-uboot-univ.dtb");
 +			env_set("uboot_base_dtb", "am335x-boneblack-uboot.dtb");
 +			env_set("uboot_try_cape_universal", "1");
 +			break;
 +		case BBE_BASE_DTB:
++			env_set("uboot_base_dtb_univ", "am335x-sancloud-bbe-uboot-univ.dtb");
 +			env_set("uboot_base_dtb", "am335x-sancloud-bbe-uboot.dtb");
 +			env_set("uboot_try_cape_universal", "1");
 +			break;
 +		case BBBL_BASE_DTB:
-+			env_set("uboot_base_dtb", "am335x-boneblue.dtb");
++			env_set("uboot_base_dtb_univ", "am335x-boneblue.dtb");
 +			break;
 +	}
 +
@@ -492,7 +503,7 @@ index 8a41a03e7a..4942003439 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -813,6 +1256,14 @@ int board_late_init(void)
+@@ -813,6 +1267,14 @@ int board_late_init(void)
  	}
  #endif
  
@@ -654,22 +665,34 @@ index 2b10b64d3a..3733246852 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  		configure_module_pin_mux(gpio0_18_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index b5d2f8b1df..827ab87b85 100644
+index 617b1ab4c6..50fd603961 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -348,6 +348,19 @@
+@@ -348,6 +348,31 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
 +			"if test -n ${enable_uboot_overlays}; then " \
-+				"if test -n ${uboot_base_dtb}; then " \
++				"if test -n ${uboot_base_dtb_univ}; then " \
 +					"if test -n ${dtb}; then " \
-+						"echo uboot_overlays: dtb=${dtb} in /boot/uEnv.txt, unable to use [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
++						"echo uboot_overlays: dtb=${dtb} in /boot/uEnv.txt, unable to use [uboot_base_dtb=${uboot_base_dtb_univ}] ... ;" \
 +					"else " \
-+						"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
-+						"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb}; then " \
-+							"setenv fdtfile ${uboot_base_dtb};" \
++						"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb_univ}] ... ;" \
++						"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb_univ}; then " \
++							"setenv fdtfile ${uboot_base_dtb_univ};" \
 +							"echo uboot_overlays: Switching too: dtb=${fdtfile} ...;" \
++							"if test -n ${uboot_try_cape_universal}; then " \
++								"env delete -f uboot_try_cape_universal; " \
++							"fi;" \
++							"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
++						"else " \
++							"if test -n ${uboot_base_dtb}; then " \
++								"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
++								"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb}; then " \
++									"setenv fdtfile ${uboot_base_dtb};" \
++									"echo uboot_overlays: Switching too: dtb=${fdtfile} ...;" \
++								"fi;" \
++							"fi;" \
 +						"fi;" \
 +					"fi;" \
 +				"fi;" \
@@ -677,15 +700,10 @@ index b5d2f8b1df..827ab87b85 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -388,6 +401,185 @@
+@@ -388,6 +413,180 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
-+			"if test $board_name = BBBL; then " \
-+				"if test -n ${uboot_try_cape_universal}; then " \
-+					"env delete -f uboot_try_cape_universal; " \
-+				"fi;" \
-+			"fi;" \
 +			"if test -n ${enable_uboot_overlays}; then " \
 +				"setenv fdt_buffer 0x60000;" \
 +				"if test -n ${uboot_fdt_buffer}; then " \
@@ -864,12 +882,12 @@ index b5d2f8b1df..827ab87b85 100644
  			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
  				"echo loading ${bootdir}/${rdfile} ...; "\
 diff --git a/include/configs/ti_armv7_omap.h b/include/configs/ti_armv7_omap.h
-index da5fc8108f..c513fff82a 100644
+index 80d4476cf0..6a2d7406d9 100644
 --- a/include/configs/ti_armv7_omap.h
 +++ b/include/configs/ti_armv7_omap.h
-@@ -16,6 +16,9 @@
- #define CONFIG_SYS_OMAP24_I2C_SPEED	100000
- #define CONFIG_SYS_OMAP24_I2C_SLAVE	1
+@@ -14,6 +14,9 @@
+ 
+ /* I2C IP block */
  
 +#define CONFIG_SYS_OMAP24_I2C_SPEED2	100000
 +#define CONFIG_SYS_OMAP24_I2C_SLAVE2	1
@@ -904,5 +922,5 @@ index 0364f62c3d..d48d6c2d91 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.15.1
+2.16.1
 
