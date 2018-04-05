@@ -1,6 +1,6 @@
-From e0bd735cd5ea9228035b01fc0e5fec175ba2c89b Mon Sep 17 00:00:00 2001
+From 219c9af8c24701d018db0a91aa792d0b0779a7d0 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 5 Apr 2018 11:04:01 -0500
+Date: Thu, 5 Apr 2018 11:17:23 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -29,7 +29,7 @@ index dc61131c1e..e16f70d4da 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 80a954523f..b39656a372 100644
+index 1f68561d35..86e4433b91 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -40,6 +40,7 @@
@@ -503,7 +503,7 @@ index 80a954523f..b39656a372 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -845,6 +1299,14 @@ int board_late_init(void)
+@@ -750,6 +1204,14 @@ int board_init(void)
  	}
  #endif
  
@@ -517,7 +517,7 @@ index 80a954523f..b39656a372 100644
 +
  	return 0;
  }
- #endif
+ 
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
 index 6f96532bac..e4d5daf269 100644
 --- a/board/ti/am335x/board.h
