@@ -1,0 +1,185 @@
+From 91fa7f1d06ede45eb2d2663e394c0450d21824a1 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Thu, 26 Oct 2017 11:40:50 -0500
+Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/mx23_olinuxino_defconfig |   3 ++
+ include/configs/mx23_olinuxino.h | 112 +++++++++++++++++++++++++++++++++------
+ 2 files changed, 100 insertions(+), 15 deletions(-)
+
+diff --git a/configs/mx23_olinuxino_defconfig b/configs/mx23_olinuxino_defconfig
+index 628c11d851..d2ed31162d 100644
+--- a/configs/mx23_olinuxino_defconfig
++++ b/configs/mx23_olinuxino_defconfig
+@@ -10,6 +10,7 @@ CONFIG_VERSION_VARIABLE=y
+ CONFIG_ARCH_MISC_INIT=y
+ CONFIG_SPL=y
+ CONFIG_HUSH_PARSER=y
++CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_GPIO=y
+ CONFIG_CMD_MMC=y
+@@ -18,7 +19,9 @@ CONFIG_CMD_USB=y
+ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_CACHE=y
+ CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
+ CONFIG_CMD_FAT=y
++CONFIG_CMD_FS_GENERIC=y
+ CONFIG_ENV_IS_IN_MMC=y
+ CONFIG_LED_STATUS=y
+ CONFIG_LED_STATUS_GPIO=y
+diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
+index 36ef186510..1a763ba6af 100644
+--- a/include/configs/mx23_olinuxino.h
++++ b/include/configs/mx23_olinuxino.h
+@@ -12,6 +12,8 @@
+ 
+ /* U-Boot Commands */
+ 
++#define CONFIG_SUPPORT_RAW_INITRD
++
+ /* Memory configuration */
+ #define CONFIG_NR_DRAM_BANKS		1		/* 1 bank of DRAM */
+ #define PHYS_SDRAM_1			0x40000000	/* Base address */
+@@ -59,20 +61,58 @@
+ 	"console=ttyAMA0\0" \
+ 	"fdt_file=imx23-olinuxino.dtb\0" \
+ 	"fdt_addr=0x41000000\0" \
++	"fdtdir=\0" \
++	"bootfile=\0" \
++	"bootdir=\0" \
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
++	"optargs=\0" \
++	"cmdline=\0" \
+ 	"mmcdev=0\0" \
+ 	"mmcpart=2\0" \
+-	"mmcroot=/dev/mmcblk0p3 rw rootwait\0" \
++	"mmcroot=/dev/mmcblk0p2 ro\0" \
++	"mmcrootfstype=ext4 rootwait fixrtc\0" \
+ 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+-		"root=${mmcroot}\0" \
++		"${optargs} " \
++		"root=${mmcroot} " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"loadbootenv=load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt\0" \
++	"importbootenv=echo Importing environment from mmc (uEnv.txt)...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
+ 	"loadbootscript="  \
+ 		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; "	\
+ 		"source\0" \
+-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+-	"mmcboot=echo Booting from mmc ...; " \
++	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdt_file} ...;  load mmc ${bootpart} ${fdt_addr} ${fdtdir}/${fdt_file}\0" \
++	"mmcboot=mmc dev ${mmcdev}; " \
++		"if mmc rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e mmc ${bootpart} /boot/uEnv.txt; then " \
++					"load mmc ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdt_file ${dtb};" \
++						"echo using ${fdt_file} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"setenv mmcroot /dev/mmcblk${mmcdev}p${mmcpart} ro;" \
++						"if test -n ${uuid}; then " \
++							"setenv mmcroot UUID=${uuid} ro;" \
++						"fi;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++	"mmcboot_old=echo Booting from mmc ...; " \
+ 		"run mmcargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+ 			"if run loadfdt; then " \
+@@ -111,19 +151,61 @@
+ 			"fi; " \
+ 		"else " \
+ 			"bootm; " \
++		"fi;\0" \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e mmc ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e mmc ${bootpart} ${fdtdir}/${fdt_file}; then " \
++										"run loadfdt;" \
++									"else " \
++										"echo; echo unable to find ${fdt_file} ...; echo booting legacy ...;"\
++										"run mmcargs;" \
++										"echo debug: [${bootargs}] ... ;" \
++										"echo debug: [bootz ${loadaddr}] ... ;" \
++										"bootz ${loadaddr}; " \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"run mmcargs;" \
++			"echo debug: [${bootargs}] ... ;" \
++			"echo debug: [bootz ${loadaddr} - ${fdt_addr}] ... ;" \
++			"bootz ${loadaddr} - ${fdt_addr}; " \
+ 		"fi;\0"
+ 
+ #define CONFIG_BOOTCOMMAND \
+-	"mmc dev ${mmcdev}; if mmc rescan; then " \
+-		"if run loadbootscript; then " \
+-			"run bootscript; " \
+-		"else " \
+-			"if run loaduimage; then " \
+-				"run mmcboot; " \
+-			"else run netboot; " \
+-			"fi; " \
+-		"fi; " \
+-	"else run netboot; fi"
++	"run mmcboot;"
+ 
+ /* The rest of the configuration is shared */
+ #include <configs/mxs.h>
+-- 
+2.14.2
+
