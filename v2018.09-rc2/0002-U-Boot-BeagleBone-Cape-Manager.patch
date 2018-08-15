@@ -1,6 +1,6 @@
-From ef50da7733767e9100f57eb8bf08c31183f1a92f Mon Sep 17 00:00:00 2001
+From cb48b8d839897fcca0e861882fda8e6bacb6b71c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 14 Aug 2018 11:48:50 -0500
+Date: Tue, 14 Aug 2018 21:05:56 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  board/ti/am335x/board.h                   |  17 +
  board/ti/am335x/hash-string.h             |  59 +++
  board/ti/am335x/mux.c                     |  15 +
- include/configs/ti_armv7_common.h         | 216 ++++++++++
+ include/configs/ti_armv7_common.h         | 219 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 788 insertions(+)
+ 8 files changed, 791 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 32cdf63e3d..fb871c29c3 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e3dd9d2165..07f8c541e2 100644
+index e3dd9d2165..7d0600a98d 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -503,9 +503,9 @@ index e3dd9d2165..07f8c541e2 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -750,6 +1204,14 @@ int board_init(void)
+@@ -855,6 +1309,14 @@ int board_late_init(void)
+ 			env_set("serial#", board_serial);
  	}
- #endif
  
 +#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 +#ifdef CONFIG_TI_I2C_BOARD_DETECT
@@ -517,7 +517,7 @@ index e3dd9d2165..07f8c541e2 100644
 +
  	return 0;
  }
- 
+ #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
 index 23de0ba4d1..e30cd77957 100644
 --- a/board/ti/am335x/board.h
@@ -665,19 +665,26 @@ index c71d8c4156..879b1c4a42 100644
  		configure_module_pin_mux(mii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 4206d7547a..36361ee524 100644
+index 4206d7547a..2b5c6eb423 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -338,6 +338,48 @@
+@@ -338,6 +338,51 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"echo debug: [enable_uboot_overlays=${enable_uboot_overlays}] ... ;" \
 +			"if test -n ${enable_uboot_overlays}; then " \
-+				"if test -n ${enable_uboot_cape_universal}; then " \
-+					"if test -n ${uboot_base_dtb_univ}; then " \
-+						"if test -n ${dtb}; then " \
-+							"echo uboot_overlays: dtb=${dtb} in /boot/uEnv.txt, unable to use [uboot_base_dtb=${uboot_base_dtb_univ}] ... ;" \
-+						"else " \
++				"if test -n ${dtb}; then " \
++					"echo uboot_overlays: dtb=${dtb} is set in /boot/uEnv.txt, unable to use [${uboot_base_dtb_univ} or ${uboot_base_dtb}] ... ;" \
++					"if test -n ${enable_uboot_overlays}; then " \
++						"env delete -f enable_uboot_overlays; " \
++						"echo uboot_overlays: disabling [enable_uboot_overlays=1] as dtb=${dtb} is set in /boot/uEnv.txt ... ;" \
++					"fi;" \
++				"else " \
++					"echo debug: [enable_uboot_cape_universal=${enable_uboot_cape_universal}] ... ;" \
++					"if test -n ${enable_uboot_cape_universal}; then " \
++						"echo debug: [uboot_base_dtb_univ=${uboot_base_dtb_univ}] ... ;" \
++						"if test -n ${uboot_base_dtb_univ}; then " \
 +							"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb_univ}] ... ;" \
 +							"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb_univ}; then " \
 +								"setenv fdtfile ${uboot_base_dtb_univ};" \
@@ -687,6 +694,8 @@ index 4206d7547a..36361ee524 100644
 +								"fi;" \
 +								"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
 +							"else " \
++								"echo debug: unable to find [${uboot_base_dtb_univ}] using [${uboot_base_dtb}] instead ... ;" \
++								"echo debug: [uboot_base_dtb_univ=${uboot_base_dtb}] ... ;" \
 +								"if test -n ${uboot_base_dtb}; then " \
 +									"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
 +									"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb}; then " \
@@ -696,19 +705,13 @@ index 4206d7547a..36361ee524 100644
 +								"fi;" \
 +							"fi;" \
 +						"fi;" \
-+					"fi;" \
-+				"else " \
-+					"if test -n ${uboot_base_dtb_univ}; then " \
-+						"if test -n ${dtb}; then " \
-+							"echo uboot_overlays: dtb=${dtb} in /boot/uEnv.txt, unable to use [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
-+						"else " \
++					"else " \
++						"echo debug: [uboot_base_dtb_univ=${uboot_base_dtb}] ... ;" \
++						"if test -n ${uboot_base_dtb}; then " \
 +							"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
-+							"if test -n ${uboot_base_dtb}; then " \
-+								"echo uboot_overlays: [uboot_base_dtb=${uboot_base_dtb}] ... ;" \
-+								"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb}; then " \
-+									"setenv fdtfile ${uboot_base_dtb};" \
-+									"echo uboot_overlays: Switching too: dtb=${fdtfile} ...;" \
-+								"fi;" \
++							"if test -e ${devtype} ${bootpart} ${fdtdir}/${uboot_base_dtb}; then " \
++								"setenv fdtfile ${uboot_base_dtb};" \
++								"echo uboot_overlays: Switching too: dtb=${fdtfile} ...;" \
 +							"fi;" \
 +						"fi;" \
 +					"fi;" \
@@ -717,7 +720,7 @@ index 4206d7547a..36361ee524 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -378,6 +420,180 @@
+@@ -378,6 +423,180 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
