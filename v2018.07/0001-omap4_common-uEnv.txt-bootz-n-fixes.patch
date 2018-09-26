@@ -1,15 +1,15 @@
-From cc1a150ad32954085a9259cc0251adb717958461 Mon Sep 17 00:00:00 2001
+From 3a51c248f25e100dcee724868732252842a19347 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 20 Jun 2018 15:17:08 -0500
+Date: Wed, 26 Sep 2018 16:29:53 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/omap4_panda_defconfig     |   5 +-
  include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
- include/configs/ti_omap4_common.h |   8 +-
+ include/configs/ti_omap4_common.h |  10 ++-
  include/environment/ti/mmc.h      |  31 +++++++-
- 4 files changed, 163 insertions(+), 7 deletions(-)
+ 4 files changed, 164 insertions(+), 8 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
 index 41df480be3..6561e05ccd 100644
@@ -172,17 +172,19 @@ index 9257e2b0a4..745889a86b 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 33761c65e9..7dfc14a424 100644
+index 33761c65e9..0c8d353009 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -35,6 +35,7 @@
+@@ -35,7 +35,8 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
 +/* Comment out next line for ES Rev B3 or A4 with new "M" Micron memory... */
- #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
 @@ -69,9 +70,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
@@ -257,5 +259,5 @@ index 785fc15345..9fdc703da0 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.17.1
+2.19.0
 

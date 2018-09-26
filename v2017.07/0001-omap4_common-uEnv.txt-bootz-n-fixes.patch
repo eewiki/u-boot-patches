@@ -1,21 +1,21 @@
-From e63563b8e6d5243b6566188cc445a91a05be9456 Mon Sep 17 00:00:00 2001
+From 3a1fdf5b8ce1629092c2b4a7beeb0228506950d6 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 17 Apr 2017 21:09:22 -0500
+Date: Wed, 26 Sep 2018 16:07:34 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/omap4_panda_defconfig     |   5 +-
- include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++++++++++
- include/configs/ti_omap4_common.h |   8 ++-
- include/environment/ti/mmc.h      |  31 ++++++++--
- 4 files changed, 163 insertions(+), 7 deletions(-)
+ include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
+ include/configs/ti_omap4_common.h |  10 ++-
+ include/environment/ti/mmc.h      |  31 +++++++-
+ 4 files changed, 164 insertions(+), 8 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index 91e8caf541..965560c728 100644
+index 3d91f137e8..94d73663ce 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
-@@ -10,6 +10,10 @@ CONFIG_SPL=y
+@@ -11,6 +11,10 @@ CONFIG_SPL=y
  # CONFIG_SPL_EXT_SUPPORT is not set
  # CONFIG_SPL_I2C_SUPPORT is not set
  CONFIG_SPL_OS_BOOT=y
@@ -26,7 +26,7 @@ index 91e8caf541..965560c728 100644
  # CONFIG_CMD_IMLS is not set
  CONFIG_CMD_ASKENV=y
  # CONFIG_CMD_FLASH is not set
-@@ -20,7 +24,6 @@ CONFIG_CMD_USB=y
+@@ -21,7 +25,6 @@ CONFIG_CMD_USB=y
  CONFIG_CMD_GPIO=y
  # CONFIG_CMD_SETEXPR is not set
  # CONFIG_CMD_NFS is not set
@@ -35,7 +35,7 @@ index 91e8caf541..965560c728 100644
  CONFIG_SYS_NS16550=y
  CONFIG_USB=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 1561d54c9a..8855f7c718 100644
+index a4676d3a7f..d549a2b451 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -132,6 +132,132 @@
@@ -172,18 +172,20 @@ index 1561d54c9a..8855f7c718 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index b85db500b5..929ce370ed 100644
+index 1a6551e24d..3c709a334c 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -40,6 +40,7 @@
+@@ -36,7 +36,8 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
 +/* Comment out next line for ES Rev B3 or A4 with new "M" Micron memory... */
- #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
-@@ -77,9 +78,10 @@
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
+@@ -73,9 +74,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
  	"bootcmd_" #devtypel #instance "=" \
@@ -196,7 +198,7 @@ index b85db500b5..929ce370ed 100644
  
  #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
  	#devtypel #instance " "
-@@ -134,6 +136,8 @@
+@@ -130,6 +132,8 @@
  			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -206,10 +208,10 @@ index b85db500b5..929ce370ed 100644
  
  /*
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index b987f71516..ae4c6e3431 100644
+index 4305ebdaaf..3cdae35d2f 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -9,11 +9,33 @@
+@@ -12,11 +12,33 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -246,7 +248,7 @@ index b987f71516..ae4c6e3431 100644
  	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
  	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
  		"source ${loadaddr}\0" \
-@@ -22,7 +44,8 @@
+@@ -25,7 +47,8 @@
  		"env import -t ${loadaddr} ${filesize}\0" \
  	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
  	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
@@ -257,5 +259,5 @@ index b987f71516..ae4c6e3431 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.11.0
+2.19.0
 

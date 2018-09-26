@@ -1,21 +1,21 @@
-From d03da7cd14baf0cc5d24cb0af80e28dc1ef0ea5a Mon Sep 17 00:00:00 2001
+From b72b0344a05f25c78c90019b6caffc6ac09936b7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 26 Oct 2017 11:51:06 -0500
+Date: Wed, 26 Sep 2018 16:19:29 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/omap4_panda_defconfig     |   5 +-
- include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++++++++++
- include/configs/ti_omap4_common.h |   8 ++-
- include/environment/ti/mmc.h      |  31 ++++++++--
- 4 files changed, 163 insertions(+), 7 deletions(-)
+ include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
+ include/configs/ti_omap4_common.h |  10 ++-
+ include/environment/ti/mmc.h      |  31 +++++++-
+ 4 files changed, 164 insertions(+), 8 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index d208d0ca8e..8e86539b1c 100644
+index aa0c36eb95..5143eeb707 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
-@@ -11,6 +11,10 @@ CONFIG_SPL=y
+@@ -12,6 +12,10 @@ CONFIG_SPL=y
  # CONFIG_SPL_EXT_SUPPORT is not set
  # CONFIG_SPL_I2C_SUPPORT is not set
  CONFIG_SPL_OS_BOOT=y
@@ -26,7 +26,7 @@ index d208d0ca8e..8e86539b1c 100644
  CONFIG_CMD_SPL=y
  CONFIG_CMD_ASKENV=y
  # CONFIG_CMD_FLASH is not set
-@@ -21,7 +25,6 @@ CONFIG_CMD_SPI=y
+@@ -22,7 +26,6 @@ CONFIG_CMD_SPI=y
  CONFIG_CMD_USB=y
  # CONFIG_CMD_SETEXPR is not set
  # CONFIG_CMD_NFS is not set
@@ -35,10 +35,10 @@ index d208d0ca8e..8e86539b1c 100644
  CONFIG_ENV_FAT_INTERFACE="mmc"
  CONFIG_ENV_FAT_DEVICE_AND_PART="0:1"
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 91e139853c..c21631b9d5 100644
+index 4771e74940..a3b6fa0522 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -129,6 +129,132 @@
+@@ -125,6 +125,132 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -172,18 +172,20 @@ index 91e139853c..c21631b9d5 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 018e4c2512..8fbe721ee1 100644
+index 844a9e55b3..912d60a4bb 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -36,6 +36,7 @@
+@@ -36,7 +36,8 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
 +/* Comment out next line for ES Rev B3 or A4 with new "M" Micron memory... */
- #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
-@@ -73,9 +74,10 @@
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
+@@ -71,9 +72,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
  	"bootcmd_" #devtypel #instance "=" \
@@ -196,7 +198,7 @@ index 018e4c2512..8fbe721ee1 100644
  
  #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
  	#devtypel #instance " "
-@@ -130,6 +132,8 @@
+@@ -120,6 +122,8 @@
  			"setenv fdtfile omap4-duovero-parlor.dtb; fi;" \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0" \
@@ -257,5 +259,5 @@ index 4305ebdaaf..3cdae35d2f 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.14.2
+2.19.0
 

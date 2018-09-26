@@ -1,18 +1,18 @@
-From 9813e4512efd2b37cec994e2b0650dd1e5a64ceb Mon Sep 17 00:00:00 2001
+From 0a36c922a5c4df5fddf28d100bc34225808c5180 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 12 Sep 2017 10:25:43 -0500
+Date: Wed, 26 Sep 2018 16:11:10 -0500
 Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/omap4_panda_defconfig     |   5 +-
- include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++++++++++
- include/configs/ti_omap4_common.h |   8 ++-
- include/environment/ti/mmc.h      |  31 ++++++++--
- 4 files changed, 163 insertions(+), 7 deletions(-)
+ include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
+ include/configs/ti_omap4_common.h |  10 ++-
+ include/environment/ti/mmc.h      |  31 +++++++-
+ 4 files changed, 164 insertions(+), 8 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index 5cee869d0b..31d6c80dd5 100644
+index b2d6c0aec7..db9dc50a93 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
 @@ -11,6 +11,10 @@ CONFIG_SPL=y
@@ -35,10 +35,10 @@ index 5cee869d0b..31d6c80dd5 100644
  CONFIG_ENV_FAT_INTERFACE="mmc"
  CONFIG_ENV_FAT_DEVICE_AND_PART="0:1"
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index ac3eb5d729..52a37c374e 100644
+index 91e139853c..c21631b9d5 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -132,6 +132,132 @@
+@@ -129,6 +129,132 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -172,17 +172,19 @@ index ac3eb5d729..52a37c374e 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/configs/ti_omap4_common.h b/include/configs/ti_omap4_common.h
-index 018e4c2512..8fbe721ee1 100644
+index 018e4c2512..920f50aa72 100644
 --- a/include/configs/ti_omap4_common.h
 +++ b/include/configs/ti_omap4_common.h
-@@ -36,6 +36,7 @@
+@@ -36,7 +36,8 @@
   * the timings to use or use pre-determined timings (based on using the
   * dynamic method.  Default to the static timing infomation.
   */
+-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
 +/* Comment out next line for ES Rev B3 or A4 with new "M" Micron memory... */
- #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
++/* #define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS */
  #ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
  #define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
+ #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
 @@ -73,9 +74,10 @@
   */
  #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
@@ -257,5 +259,5 @@ index 4305ebdaaf..3cdae35d2f 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.14.1
+2.19.0
 
