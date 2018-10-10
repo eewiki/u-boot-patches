@@ -1,16 +1,16 @@
-From 2dfe74ec8853fa281a8db7d9f516d831ad489292 Mon Sep 17 00:00:00 2001
+From 9f2c42f8e06613b4ace8d96dd04987f7a13fbb61 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 6 Dec 2017 13:27:53 -0600
+Date: Wed, 10 Oct 2018 11:36:54 -0500
 Subject: [PATCH] udoo: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  configs/udoo_defconfig |   6 ++
- include/configs/udoo.h | 202 +++++++++++++++++++++++++++++++++----------------
- 2 files changed, 144 insertions(+), 64 deletions(-)
+ include/configs/udoo.h | 203 ++++++++++++++++++++++++++++-------------
+ 2 files changed, 145 insertions(+), 64 deletions(-)
 
 diff --git a/configs/udoo_defconfig b/configs/udoo_defconfig
-index 52de8ca..d8ba6eb 100644
+index 52de8ca46c..d8ba6ebd86 100644
 --- a/configs/udoo_defconfig
 +++ b/configs/udoo_defconfig
 @@ -16,11 +16,17 @@ CONFIG_SUPPORT_RAW_INITRD=y
@@ -32,7 +32,7 @@ index 52de8ca..d8ba6eb 100644
  CONFIG_CMD_DHCP=y
  CONFIG_CMD_MII=y
 diff --git a/include/configs/udoo.h b/include/configs/udoo.h
-index 985f306..77e04f0 100644
+index 985f306813..040266b88a 100644
 --- a/include/configs/udoo.h
 +++ b/include/configs/udoo.h
 @@ -45,19 +45,21 @@
@@ -63,7 +63,7 @@ index 985f306..77e04f0 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -72,73 +74,144 @@
+@@ -72,73 +74,146 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -242,6 +242,8 @@ index 985f306..77e04f0 100644
 +#define BOOT_TARGET_DEVICES(func) \
 +	func(MMC, mmc, 0) \
 +	func(MMC, mmc, 1)
++
++#undef CONFIG_BOOTCOMMAND
  
  #define CONFIG_BOOTCOMMAND \
  	   "run findfdt; " \
@@ -267,5 +269,5 @@ index 985f306..77e04f0 100644
  /* Physical Memory Map */
  #define PHYS_SDRAM			MMDC0_ARB_BASE_ADDR
 -- 
-2.15.0
+2.19.1
 
