@@ -1,6 +1,6 @@
-From 80b194bea64911bc62b13622d87fbd627f876f9a Mon Sep 17 00:00:00 2001
+From ac1d2d4b711f3f013220cce6163097ba4d6c75a9 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 7 Sep 2018 22:47:21 -0500
+Date: Fri, 12 Oct 2018 12:49:27 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -16,9 +16,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  configs/am335x_evm_defconfig                  |  46 ++-
  env/common.c                                  |   2 +
  include/configs/am335x_evm.h                  |  95 +++++-
- include/configs/ti_armv7_common.h             | 299 ++++++++++++++++++
+ include/configs/ti_armv7_common.h             | 311 ++++++++++++++++++
  include/environment/ti/mmc.h                  |  67 +++-
- 13 files changed, 634 insertions(+), 70 deletions(-)
+ 13 files changed, 646 insertions(+), 70 deletions(-)
 
 diff --git a/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h b/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h
 index 878ef3e5d2..b42c7e67e9 100644
@@ -569,7 +569,7 @@ index 3317cef355..8f76def865 100644
  
  	return 0;
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index f1aa653a9a..2477c7d7ba 100644
+index f1aa653a9a..7b6c036384 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -58,9 +58,14 @@
@@ -631,8 +631,8 @@ index f1aa653a9a..2477c7d7ba 100644
 +			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbl_footer; run eeprom_dump; reset; fi; " \
 +		"if test $board_eeprom_header = bbbw_blank; then " \
 +			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_bbbw_footer; run eeprom_dump; reset; fi; " \
-+		"if test $board_eeprom_header = os00_blank; then " \
-+			"run eeprom_dump; run eeprom_blank; run eeprom_bbb_header; run eeprom_os00_footer; run eeprom_dump; reset; fi; " \
++		"if test $board_eeprom_header = pocketbeagle_blank; then " \
++			"run eeprom_dump; run eeprom_blank; run eeprom_pocketbeagle; run eeprom_dump; reset; fi; " \
 +		"if test $board_eeprom_header = beaglelogic_blank; then " \
 +			"run eeprom_dump; run eeprom_blank; run eeprom_beaglelogic; run eeprom_dump; reset; fi;  \0" \
  	"ramboot=echo Booting from ramdisk ...; " \
@@ -740,10 +740,10 @@ index f1aa653a9a..2477c7d7ba 100644
  #define CONFIG_ENV_SECT_SIZE		(128 << 10)	/* 128 KiB */
  #define CONFIG_ENV_OFFSET		(512 << 10)	/* 512 KiB */
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 55b9b45eec..2fa0694228 100644
+index 55b9b45eec..baa5e32b14 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -116,6 +116,305 @@
+@@ -116,6 +116,317 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -811,11 +811,23 @@ index 55b9b45eec..2fa0694228 100644
 +		"i2c mw 0x50 0x0e.2 41; " \
 +		"i2c mw 0x50 0x0f.2 35; " \
 +		"\0" \
-+	"eeprom_os00_footer= " \
-+		"i2c mw 0x50 0x0c.2 4F; " \
-+		"i2c mw 0x50 0x0d.2 53; " \
-+		"i2c mw 0x50 0x0e.2 30; " \
-+		"i2c mw 0x50 0x0f.2 30; " \
++	"eeprom_pocketbeagle= " \
++		"i2c mw 0x50 0x00.2 aa; " \
++		"i2c mw 0x50 0x01.2 55; " \
++		"i2c mw 0x50 0x02.2 33; " \
++		"i2c mw 0x50 0x03.2 ee; " \
++		"i2c mw 0x50 0x04.2 41; " \
++		"i2c mw 0x50 0x05.2 33; " \
++		"i2c mw 0x50 0x06.2 33; " \
++		"i2c mw 0x50 0x07.2 35; " \
++		"i2c mw 0x50 0x08.2 50; " \
++		"i2c mw 0x50 0x09.2 42; " \
++		"i2c mw 0x50 0x0a.2 47; " \
++		"i2c mw 0x50 0x0b.2 4c; " \
++		"i2c mw 0x50 0x0c.2 30; " \
++		"i2c mw 0x50 0x0d.2 30; " \
++		"i2c mw 0x50 0x0e.2 41; " \
++		"i2c mw 0x50 0x0f.2 32; " \
 +		"\0" \
 +	"eeprom_beaglelogic= " \
 +		"i2c mw 0x50 0x00.2 aa; " \
@@ -1141,5 +1153,5 @@ index 785fc15345..110c426058 100644
  				"if test ${boot_fdt} = try; then " \
  					"bootz; " \
 -- 
-2.18.0
+2.19.1
 
