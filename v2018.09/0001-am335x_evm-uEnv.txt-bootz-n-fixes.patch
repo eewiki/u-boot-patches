@@ -1,6 +1,6 @@
-From ac1d2d4b711f3f013220cce6163097ba4d6c75a9 Mon Sep 17 00:00:00 2001
+From 2c77329836fb4ec1677af57eec9634575fe9b5e9 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 12 Oct 2018 12:49:27 -0500
+Date: Thu, 18 Oct 2018 12:07:50 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,7 +10,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/mach-omap2/am33xx/board.c            |  22 +-
  arch/arm/mach-omap2/hwinit-common.c           |  10 +
  board/ti/am335x/board.c                       |  99 +++++-
- board/ti/am335x/board.h                       |  40 ++-
+ board/ti/am335x/board.h                       |  33 +-
  board/ti/am335x/mux.c                         |  10 +-
  configs/am335x_boneblack_defconfig            |  12 +-
  configs/am335x_evm_defconfig                  |  46 ++-
@@ -318,7 +318,7 @@ index a359d20021..e3dd9d2165 100644
  		return 0;
  	else if (board_is_bone() && !strcmp(name, "am335x-bone"))
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 48df914af9..23de0ba4d1 100644
+index 48df914af9..873174f433 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -23,6 +23,11 @@
@@ -350,7 +350,7 @@ index 48df914af9..23de0ba4d1 100644
  static inline int board_is_bbg1(void)
  {
  	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "BBG1", 4);
-@@ -48,10 +63,31 @@ static inline int board_is_bben(void)
+@@ -48,10 +63,26 @@ static inline int board_is_bben(void)
  	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "SE", 2);
  }
  
@@ -365,11 +365,6 @@ index 48df914af9..23de0ba4d1 100644
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "EIA0", 4);
 +}
 +
-+static inline int board_is_marsboard(void)
-+{
-+	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "00A5", 4);
-+}
-+
 +static inline int board_is_os00(void)
 +{
 +	return board_is_bone_lt() && !strncmp(board_ti_get_rev(), "OS00", 4);
@@ -377,9 +372,8 @@ index 48df914af9..23de0ba4d1 100644
 +
  static inline int board_is_beaglebonex(void)
  {
--	return board_is_pb() || board_is_bone() || board_is_bone_lt() ||
+ 	return board_is_pb() || board_is_bone() || board_is_bone_lt() ||
 -	       board_is_bbg1() || board_is_bben();
-+	return board_is_pb() || board_is_bone() || (board_is_bone_lt() && !board_is_marsboard()) ||
 +	       board_is_bbg1() || board_is_bben() || board_is_e14bbbi() || board_is_beaglelogic() || board_is_os00();
  }
  
