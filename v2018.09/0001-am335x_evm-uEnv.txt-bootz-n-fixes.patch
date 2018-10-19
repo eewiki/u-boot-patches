@@ -1,6 +1,6 @@
-From 2c77329836fb4ec1677af57eec9634575fe9b5e9 Mon Sep 17 00:00:00 2001
+From 22e3d97916bf6abdc31e90357786b4e8425081f4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 18 Oct 2018 12:07:50 -0500
+Date: Fri, 19 Oct 2018 14:01:06 -0500
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -11,14 +11,14 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/mach-omap2/hwinit-common.c           |  10 +
  board/ti/am335x/board.c                       |  99 +++++-
  board/ti/am335x/board.h                       |  33 +-
- board/ti/am335x/mux.c                         |  10 +-
+ board/ti/am335x/mux.c                         |  11 +-
  configs/am335x_boneblack_defconfig            |  12 +-
  configs/am335x_evm_defconfig                  |  46 ++-
  env/common.c                                  |   2 +
  include/configs/am335x_evm.h                  |  95 +++++-
  include/configs/ti_armv7_common.h             | 311 ++++++++++++++++++
  include/environment/ti/mmc.h                  |  67 +++-
- 13 files changed, 646 insertions(+), 70 deletions(-)
+ 13 files changed, 640 insertions(+), 70 deletions(-)
 
 diff --git a/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h b/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h
 index 878ef3e5d2..b42c7e67e9 100644
@@ -379,10 +379,18 @@ index 48df914af9..873174f433 100644
  
  static inline int board_is_evm_sk(void)
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 41333f93f4..c71d8c4156 100644
+index 41333f93f4..1660f2f681 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
-@@ -341,7 +341,11 @@ static unsigned short detect_daughter_board_profile(void)
+@@ -65,7 +65,6 @@ static struct module_pin_mux mmc0_pin_mux[] = {
+ 	{OFFSET(mmc0_dat0), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_DAT0 */
+ 	{OFFSET(mmc0_clk), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CLK */
+ 	{OFFSET(mmc0_cmd), (MODE(0) | RXACTIVE | PULLUP_EN)},	/* MMC0_CMD */
+-	{OFFSET(mcasp0_aclkr), (MODE(4) | RXACTIVE)},		/* MMC0_WP */
+ 	{OFFSET(spi0_cs1), (MODE(7) | RXACTIVE | PULLUP_EN)},	/* GPIO0_6 */
+ 	{-1},
+ };
+@@ -341,7 +340,11 @@ static unsigned short detect_daughter_board_profile(void)
  void enable_board_pin_mux(void)
  {
  	/* Do board-specific muxes. */
@@ -395,7 +403,7 @@ index 41333f93f4..c71d8c4156 100644
  		/* Beaglebone pinmux */
  		configure_module_pin_mux(mii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux);
-@@ -380,15 +384,13 @@ void enable_board_pin_mux(void)
+@@ -380,15 +383,13 @@ void enable_board_pin_mux(void)
  		configure_module_pin_mux(rgmii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
  	} else if (board_is_bone_lt()) {
