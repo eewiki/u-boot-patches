@@ -1,41 +1,15 @@
-From 452d62fe287f5a087adbbed51cedf7df8f6d8c8a Mon Sep 17 00:00:00 2001
+From ce7616a0f85806f7b761793aa65d11e981cae7f7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 20 Dec 2018 12:48:30 -0600
+Date: Thu, 3 Jan 2019 11:21:25 -0600
 Subject: [PATCH] de0_nano fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/Kconfig                       | 3 ---
- configs/socfpga_de0_nano_soc_defconfig | 3 ++-
- include/configs/socfpga_common.h       | 5 +++++
- 3 files changed, 7 insertions(+), 4 deletions(-)
+ configs/socfpga_de0_nano_soc_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index cb7ec58079..cbf2aed48e 100644
---- a/arch/arm/Kconfig
-+++ b/arch/arm/Kconfig
-@@ -811,11 +811,9 @@ config ARCH_SOCFPGA
- 	select ARM64 if TARGET_SOCFPGA_STRATIX10
- 	select CPU_V7A if TARGET_SOCFPGA_GEN5 || TARGET_SOCFPGA_ARRIA10
- 	select DM
--	select DM_SERIAL
- 	select ENABLE_ARM_SOC_BOOT0_HOOK if TARGET_SOCFPGA_GEN5 || TARGET_SOCFPGA_ARRIA10
- 	select OF_CONTROL
- 	select SPL_DM_RESET if DM_RESET
--	select SPL_DM_SERIAL
- 	select SPL_LIBCOMMON_SUPPORT
- 	select SPL_LIBGENERIC_SUPPORT
- 	select SPL_NAND_SUPPORT if SPL_NAND_DENALI
-@@ -824,7 +822,6 @@ config ARCH_SOCFPGA
- 	select SPL_SERIAL_SUPPORT
- 	select SPL_WATCHDOG_SUPPORT
- 	select SUPPORT_SPL
--	select SYS_NS16550
- 	select SYS_THUMB_BUILD if TARGET_SOCFPGA_GEN5 || TARGET_SOCFPGA_ARRIA10
- 	imply CMD_DM
- 	imply CMD_MTDPARTS
 diff --git a/configs/socfpga_de0_nano_soc_defconfig b/configs/socfpga_de0_nano_soc_defconfig
-index 1a9f2b6038..d4c260530a 100644
+index 1a9f2b6038..881824fa53 100644
 --- a/configs/socfpga_de0_nano_soc_defconfig
 +++ b/configs/socfpga_de0_nano_soc_defconfig
 @@ -12,7 +12,7 @@ CONFIG_FIT=y
@@ -47,30 +21,6 @@ index 1a9f2b6038..d4c260530a 100644
  CONFIG_VERSION_VARIABLE=y
  # CONFIG_DISPLAY_BOARDINFO is not set
  CONFIG_DISPLAY_BOARDINFO_LATE=y
-@@ -56,6 +56,7 @@ CONFIG_DM_ETH=y
- CONFIG_ETH_DESIGNWARE=y
- CONFIG_MII=y
- CONFIG_DM_RESET=y
-+CONFIG_SYS_NS16550=y
- CONFIG_SPI=y
- CONFIG_CADENCE_QSPI=y
- CONFIG_DESIGNWARE_SPI=y
-diff --git a/include/configs/socfpga_common.h b/include/configs/socfpga_common.h
-index bd8f5c8c41..67074fa87d 100644
---- a/include/configs/socfpga_common.h
-+++ b/include/configs/socfpga_common.h
-@@ -184,6 +184,11 @@ unsigned int cm_get_qspi_controller_clk_hz(void);
-  * Serial Driver
-  */
- #define CONFIG_SYS_NS16550_SERIAL
-+#define CONFIG_SYS_NS16550_REG_SIZE	-4
-+#if defined(CONFIG_TARGET_SOCFPGA_GEN5)
-+#define CONFIG_SYS_NS16550_COM1		SOCFPGA_UART0_ADDRESS
-+#define CONFIG_SYS_NS16550_CLK		100000000
-+#endif
- 
- /*
-  * USB
 -- 
-2.19.2
+2.20.1
 
