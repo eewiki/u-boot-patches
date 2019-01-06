@@ -627,9 +627,9 @@ index 1660f2f681..0772268cd0 100644
  
 +static struct module_pin_mux i2c2_pin_mux[] = {
 +	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
-+			PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
 +	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
-+			PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
 +	{-1},
 +};
 +
