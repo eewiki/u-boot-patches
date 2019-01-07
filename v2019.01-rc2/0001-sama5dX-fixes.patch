@@ -1,6 +1,6 @@
-From 96915895e78dc23a957ca68ab4df3b7a9526c64b Mon Sep 17 00:00:00 2001
+From ec9242ca165eb0eeb0e62bdac7d93e9af277afb1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 5 Dec 2018 15:30:43 -0600
+Date: Mon, 7 Jan 2019 14:54:49 -0600
 Subject: [PATCH] sama5dX fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -15,11 +15,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  include/configs/at91-sama5_common.h    |  4 +++-
  include/configs/sama5d27_som1_ek.h     | 10 ++++------
  include/configs/sama5d2_xplained.h     |  6 ++++--
- include/configs/sama5d3_xplained.h     |  2 +-
- 11 files changed, 50 insertions(+), 16 deletions(-)
+ 10 files changed, 49 insertions(+), 15 deletions(-)
 
 diff --git a/arch/arm/mach-at91/spl.c b/arch/arm/mach-at91/spl.c
-index 8bfb2a452b..ac0898ad2b 100644
+index 6da6d41be2..4a1f6c0f76 100644
 --- a/arch/arm/mach-at91/spl.c
 +++ b/arch/arm/mach-at91/spl.c
 @@ -37,7 +37,11 @@ u32 spl_boot_device(void)
@@ -79,10 +78,10 @@ index fd2526158c..5a0b1fcb58 100644
 +CONFIG_AUTOBOOT_STOP_STR=" "
 +CONFIG_CMD_PART=y
 diff --git a/configs/sama5d3_xplained_mmc_defconfig b/configs/sama5d3_xplained_mmc_defconfig
-index 9ff71deb8c..bec74f0716 100644
+index 51d5aeaf0e..13bfbd9e40 100644
 --- a/configs/sama5d3_xplained_mmc_defconfig
 +++ b/configs/sama5d3_xplained_mmc_defconfig
-@@ -22,7 +22,6 @@ CONFIG_FIT=y
+@@ -23,7 +23,6 @@ CONFIG_FIT=y
  CONFIG_SD_BOOT=y
  CONFIG_BOOTDELAY=3
  CONFIG_USE_BOOTARGS=y
@@ -90,7 +89,7 @@ index 9ff71deb8c..bec74f0716 100644
  # CONFIG_DISPLAY_BOARDINFO is not set
  CONFIG_SPL_SEPARATE_BSS=y
  CONFIG_HUSH_PARSER=y
-@@ -80,3 +79,8 @@ CONFIG_W1_GPIO=y
+@@ -82,3 +81,8 @@ CONFIG_W1_GPIO=y
  CONFIG_W1_EEPROM=y
  CONFIG_W1_EEPROM_DS24XXX=y
  CONFIG_OF_LIBFDT_OVERLAY=y
@@ -100,10 +99,10 @@ index 9ff71deb8c..bec74f0716 100644
 +CONFIG_AUTOBOOT_STOP_STR=" "
 +CONFIG_CMD_PART=y
 diff --git a/configs/sama5d3xek_mmc_defconfig b/configs/sama5d3xek_mmc_defconfig
-index 6faea0ec3f..31db2a9fce 100644
+index 49d4334213..f09f69a249 100644
 --- a/configs/sama5d3xek_mmc_defconfig
 +++ b/configs/sama5d3xek_mmc_defconfig
-@@ -22,17 +22,21 @@ CONFIG_FIT=y
+@@ -23,17 +23,21 @@ CONFIG_FIT=y
  CONFIG_SD_BOOT=y
  CONFIG_BOOTDELAY=3
  CONFIG_USE_BOOTARGS=y
@@ -127,10 +126,10 @@ index 6faea0ec3f..31db2a9fce 100644
  CONFIG_CMD_NAND_TRIMFFS=y
  CONFIG_CMD_SF=y
 diff --git a/configs/sama5d4_xplained_mmc_defconfig b/configs/sama5d4_xplained_mmc_defconfig
-index bfcea3f519..18c20a018c 100644
+index 35b8302b60..f39988e3ea 100644
 --- a/configs/sama5d4_xplained_mmc_defconfig
 +++ b/configs/sama5d4_xplained_mmc_defconfig
-@@ -22,7 +22,6 @@ CONFIG_FIT=y
+@@ -23,7 +23,6 @@ CONFIG_FIT=y
  CONFIG_SD_BOOT=y
  CONFIG_BOOTDELAY=3
  CONFIG_USE_BOOTARGS=y
@@ -138,7 +137,7 @@ index bfcea3f519..18c20a018c 100644
  CONFIG_MISC_INIT_R=y
  # CONFIG_DISPLAY_BOARDINFO is not set
  CONFIG_SPL_SEPARATE_BSS=y
-@@ -88,3 +87,9 @@ CONFIG_W1_GPIO=y
+@@ -89,3 +88,9 @@ CONFIG_W1_GPIO=y
  CONFIG_W1_EEPROM=y
  CONFIG_W1_EEPROM_DS24XXX=y
  CONFIG_OF_LIBFDT_OVERLAY=y
@@ -149,10 +148,10 @@ index bfcea3f519..18c20a018c 100644
 +CONFIG_CMD_PART=y
 +CONFIG_CMD_EXT4=y
 diff --git a/configs/sama5d4ek_mmc_defconfig b/configs/sama5d4ek_mmc_defconfig
-index 45e6539913..45c356698e 100644
+index bd238f7f14..b637fbf60e 100644
 --- a/configs/sama5d4ek_mmc_defconfig
 +++ b/configs/sama5d4ek_mmc_defconfig
-@@ -22,22 +22,27 @@ CONFIG_FIT=y
+@@ -23,22 +23,27 @@ CONFIG_FIT=y
  CONFIG_SD_BOOT=y
  CONFIG_BOOTDELAY=3
  CONFIG_USE_BOOTARGS=y
@@ -241,25 +240,6 @@ index 2cec1c7b42..1883396c4e 100644
  				"bootz 0x22000000 - 0x21000000"
  
  #elif CONFIG_SPI_BOOT
-diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
-index d0d8087ca3..feefbb54ff 100644
---- a/include/configs/sama5d3_xplained.h
-+++ b/include/configs/sama5d3_xplained.h
-@@ -80,7 +80,6 @@
- #elif CONFIG_NAND_BOOT
- #define CONFIG_SPL_NAND_DRIVERS
- #define CONFIG_SPL_NAND_BASE
--#endif
- #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
- #define CONFIG_SYS_NAND_5_ADDR_CYCLE
- #define CONFIG_SYS_NAND_PAGE_SIZE	0x800
-@@ -89,5 +88,6 @@
- #define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
- #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
- #define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
-+#endif
- 
- #endif
 -- 
-2.19.2
+2.20.1
 
