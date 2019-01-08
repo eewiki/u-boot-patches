@@ -1,0 +1,245 @@
+From ec9242ca165eb0eeb0e62bdac7d93e9af277afb1 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Mon, 7 Jan 2019 14:54:49 -0600
+Subject: [PATCH] sama5dX fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ arch/arm/mach-at91/spl.c               |  4 ++++
+ configs/sama5d27_som1_ek_mmc_defconfig |  8 +++++++-
+ configs/sama5d2_xplained_mmc_defconfig |  6 +++++-
+ configs/sama5d3_xplained_mmc_defconfig |  6 +++++-
+ configs/sama5d3xek_mmc_defconfig       |  6 +++++-
+ configs/sama5d4_xplained_mmc_defconfig |  7 ++++++-
+ configs/sama5d4ek_mmc_defconfig        |  7 ++++++-
+ include/configs/at91-sama5_common.h    |  4 +++-
+ include/configs/sama5d27_som1_ek.h     | 10 ++++------
+ include/configs/sama5d2_xplained.h     |  6 ++++--
+ 10 files changed, 49 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/mach-at91/spl.c b/arch/arm/mach-at91/spl.c
+index 6da6d41be2..4a1f6c0f76 100644
+--- a/arch/arm/mach-at91/spl.c
++++ b/arch/arm/mach-at91/spl.c
+@@ -37,7 +37,11 @@ u32 spl_boot_device(void)
+ #if defined(CONFIG_SYS_USE_MMC) || defined(CONFIG_SD_BOOT)
+ 	if (dev == ATMEL_SAMA5_BOOT_FROM_MCI) {
+ #if defined(CONFIG_SPL_OF_CONTROL)
++#if defined(CONFIG_TARGET_SAMA5D2_XPLAINED)
++		return BOOT_DEVICE_MMC2;
++#else
+ 		return BOOT_DEVICE_MMC1;
++#endif
+ #else
+ 		if (off == 0)
+ 			return BOOT_DEVICE_MMC1;
+diff --git a/configs/sama5d27_som1_ek_mmc_defconfig b/configs/sama5d27_som1_ek_mmc_defconfig
+index e260554a21..28fcccf1af 100644
+--- a/configs/sama5d27_som1_ek_mmc_defconfig
++++ b/configs/sama5d27_som1_ek_mmc_defconfig
+@@ -19,7 +19,7 @@ CONFIG_DEBUG_UART=y
+ CONFIG_ENV_VARS_UBOOT_CONFIG=y
+ CONFIG_NR_DRAM_BANKS=1
+ CONFIG_FIT=y
+-CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2"
++CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+@@ -94,3 +94,9 @@ CONFIG_W1_GPIO=y
+ CONFIG_W1_EEPROM=y
+ CONFIG_W1_EEPROM_DS24XXX=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_USE_BOOTARGS=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
++CONFIG_CMD_PART=y
+diff --git a/configs/sama5d2_xplained_mmc_defconfig b/configs/sama5d2_xplained_mmc_defconfig
+index fd2526158c..5a0b1fcb58 100644
+--- a/configs/sama5d2_xplained_mmc_defconfig
++++ b/configs/sama5d2_xplained_mmc_defconfig
+@@ -23,7 +23,6 @@ CONFIG_SYS_EXTRA_OPTIONS="SAMA5D2,SYS_USE_MMC"
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyS0,115200 earlyprintk root=/dev/mmcblk1p2 rw rootwait"
+ CONFIG_MISC_INIT_R=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL_SEPARATE_BSS=y
+@@ -92,3 +91,8 @@ CONFIG_W1_GPIO=y
+ CONFIG_W1_EEPROM=y
+ CONFIG_W1_EEPROM_DS24XXX=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
++CONFIG_CMD_PART=y
+diff --git a/configs/sama5d3_xplained_mmc_defconfig b/configs/sama5d3_xplained_mmc_defconfig
+index 51d5aeaf0e..13bfbd9e40 100644
+--- a/configs/sama5d3_xplained_mmc_defconfig
++++ b/configs/sama5d3_xplained_mmc_defconfig
+@@ -23,7 +23,6 @@ CONFIG_FIT=y
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL_SEPARATE_BSS=y
+ CONFIG_HUSH_PARSER=y
+@@ -82,3 +81,8 @@ CONFIG_W1_GPIO=y
+ CONFIG_W1_EEPROM=y
+ CONFIG_W1_EEPROM_DS24XXX=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
++CONFIG_CMD_PART=y
+diff --git a/configs/sama5d3xek_mmc_defconfig b/configs/sama5d3xek_mmc_defconfig
+index 49d4334213..f09f69a249 100644
+--- a/configs/sama5d3xek_mmc_defconfig
++++ b/configs/sama5d3xek_mmc_defconfig
+@@ -23,17 +23,21 @@ CONFIG_FIT=y
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
+ # CONFIG_CONSOLE_MUX is not set
+ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL_SEPARATE_BSS=y
+ CONFIG_HUSH_PARSER=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_IMI is not set
+ CONFIG_CMD_IMLS=y
+ # CONFIG_CMD_LOADS is not set
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_NAND=y
+ CONFIG_CMD_NAND_TRIMFFS=y
+ CONFIG_CMD_SF=y
+diff --git a/configs/sama5d4_xplained_mmc_defconfig b/configs/sama5d4_xplained_mmc_defconfig
+index 35b8302b60..f39988e3ea 100644
+--- a/configs/sama5d4_xplained_mmc_defconfig
++++ b/configs/sama5d4_xplained_mmc_defconfig
+@@ -23,7 +23,6 @@ CONFIG_FIT=y
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
+ CONFIG_MISC_INIT_R=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL_SEPARATE_BSS=y
+@@ -89,3 +88,9 @@ CONFIG_W1_GPIO=y
+ CONFIG_W1_EEPROM=y
+ CONFIG_W1_EEPROM_DS24XXX=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
++CONFIG_CMD_PART=y
++CONFIG_CMD_EXT4=y
+diff --git a/configs/sama5d4ek_mmc_defconfig b/configs/sama5d4ek_mmc_defconfig
+index bd238f7f14..b637fbf60e 100644
+--- a/configs/sama5d4ek_mmc_defconfig
++++ b/configs/sama5d4ek_mmc_defconfig
+@@ -23,22 +23,27 @@ CONFIG_FIT=y
+ CONFIG_SD_BOOT=y
+ CONFIG_BOOTDELAY=3
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
+ # CONFIG_CONSOLE_MUX is not set
+ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_SPL_SEPARATE_BSS=y
+ CONFIG_HUSH_PARSER=y
++CONFIG_AUTOBOOT_KEYED=y
++CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
++CONFIG_AUTOBOOT_DELAY_STR="d"
++CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_BOOTZ=y
+ # CONFIG_CMD_IMI is not set
+ # CONFIG_CMD_FLASH is not set
+ # CONFIG_CMD_LOADS is not set
+ CONFIG_CMD_MMC=y
+ CONFIG_CMD_NAND=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_SF=y
+ CONFIG_CMD_USB=y
+ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_PING=y
++CONFIG_CMD_EXT4=y
+ CONFIG_CMD_FAT=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_SPL_OF_CONTROL=y
+diff --git a/include/configs/at91-sama5_common.h b/include/configs/at91-sama5_common.h
+index 30c6cd47ca..78be99a4c0 100644
+--- a/include/configs/at91-sama5_common.h
++++ b/include/configs/at91-sama5_common.h
+@@ -49,7 +49,9 @@
+ #define CONFIG_BOOTCOMMAND	"if test ! -n ${dtb_name}; then "	\
+ 				    "setenv dtb_name at91-${board_name}.dtb; " \
+ 				"fi; "					\
+-				"fatload mmc 0:1 0x21000000 ${dtb_name}; " \
++				"part uuid mmc 0:2 partuuid; " \
++				"setenv bootargs console=ttyS0,115200 root=PARTUUID=${partuuid} ro rootwait; " \
++				"fatload mmc 0:1 0x21000000 /dtbs/${dtb_name}; " \
+ 				"fatload mmc 0:1 0x22000000 zImage; "	\
+ 				"bootz 0x22000000 - 0x21000000"
+ 
+diff --git a/include/configs/sama5d27_som1_ek.h b/include/configs/sama5d27_som1_ek.h
+index 7c7479b4d4..81b7fa4ce4 100644
+--- a/include/configs/sama5d27_som1_ek.h
++++ b/include/configs/sama5d27_som1_ek.h
+@@ -38,8 +38,10 @@
+ /* u-boot env in sd/mmc card */
+ #define CONFIG_ENV_SIZE		0x4000
+ /* bootstrap + u-boot + env in sd card */
+-#define CONFIG_BOOTCOMMAND	"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x21000000 at91-sama5d27_som1_ek.dtb; " \
+-				"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x22000000 zImage; " \
++#define CONFIG_BOOTCOMMAND	"part uuid mmc 0:2 partuuid; " \
++				"setenv bootargs console=ttyS0,115200 root=PARTUUID=${partuuid} ro rootwait; " \
++				"fatload mmc 0:1 0x21000000 /dtbs/at91-sama5d27_som1_ek.dtb; " \
++				"fatload mmc 0:1 0x22000000 zImage; " \
+ 				"bootz 0x22000000 - 0x21000000"
+ #endif
+ 
+@@ -51,10 +53,6 @@
+ 					"sf read 0x21000000 0xc0000 0x20000; "	\
+ 					"sf read 0x22000000 0xe0000 0x400000; "	\
+ 					"bootz 0x22000000 - 0x21000000"
+-#undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS \
+-	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
+-#endif
+ 
+ /* SPL */
+ #define CONFIG_SPL_TEXT_BASE		0x200000
+diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
+index 2cec1c7b42..1883396c4e 100644
+--- a/include/configs/sama5d2_xplained.h
++++ b/include/configs/sama5d2_xplained.h
+@@ -36,8 +36,10 @@
+ /* bootstrap + u-boot + env in sd card */
+ #undef CONFIG_BOOTCOMMAND
+ 
+-#define CONFIG_BOOTCOMMAND	"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x21000000 at91-sama5d2_xplained.dtb; " \
+-				"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x22000000 zImage; " \
++#define CONFIG_BOOTCOMMAND	"part uuid mmc 1:2 partuuid; " \
++				"setenv bootargs console=ttyS0,115200 root=PARTUUID=${partuuid} ro rootwait; " \
++				"fatload mmc 1:1 0x21000000 /dtbs/at91-sama5d2_xplained.dtb; " \
++				"fatload mmc 1:1 0x22000000 zImage; " \
+ 				"bootz 0x22000000 - 0x21000000"
+ 
+ #elif CONFIG_SPI_BOOT
+-- 
+2.20.1
+

@@ -1,0 +1,647 @@
+From 79817e805daae3cb0cc0e7866c343a3bca09a418 Mon Sep 17 00:00:00 2001
+From: "Derald D. Woods" <woods.technical@gmail.com>
+Date: Sat, 15 Dec 2018 01:36:46 -0600
+Subject: [PATCH] ARM: at91: Convert SPL_GENERATE_ATMEL_PMECC_HEADER to Kconfig
+
+This commit converts the following items to Kconfig:
+
+CONFIG_ATMEL_NAND_HWECC
+CONFIG_ATMEL_NAND_HW_PMECC
+CONFIG_PMECC_CAP
+CONFIG_PMECC_SECTOR_SIZE
+CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+
+[PMECC References]
+https://www.at91.com/linux4sam/bin/view/Linux4SAM/PmeccConfigure
+https://www.at91.com/linux4sam/bin/view/Linux4SAM/AT91Bootstrap
+
+[Mailing List Thread]
+https://lists.denx.de/pipermail/u-boot/2018-December/350666.html
+
+Fixes: 5541543f ("configs: at91: Remove CONFIG_SYS_EXTRA_OPTIONS assignment")
+Reported-by: Daniel Evans <photonthunder@gmail.com>
+Cc: Eugen Hristev <eugen.hristev@microchip.com>
+Signed-off-by: Derald D. Woods <woods.technical@gmail.com>
+---
+ configs/at91sam9n12ek_mmc_defconfig          |  1 +
+ configs/at91sam9n12ek_nandflash_defconfig    |  3 ++
+ configs/at91sam9n12ek_spiflash_defconfig     |  3 ++
+ configs/at91sam9x5ek_dataflash_defconfig     |  3 ++
+ configs/at91sam9x5ek_mmc_defconfig           |  1 +
+ configs/at91sam9x5ek_nandflash_defconfig     |  3 ++
+ configs/at91sam9x5ek_spiflash_defconfig      |  3 ++
+ configs/sama5d3_xplained_mmc_defconfig       |  1 +
+ configs/sama5d3_xplained_nandflash_defconfig |  3 ++
+ configs/sama5d3xek_mmc_defconfig             |  1 +
+ configs/sama5d3xek_nandflash_defconfig       |  3 ++
+ configs/sama5d3xek_spiflash_defconfig        |  3 ++
+ configs/sama5d4_xplained_mmc_defconfig       |  1 +
+ configs/sama5d4_xplained_nandflash_defconfig |  3 ++
+ configs/sama5d4_xplained_spiflash_defconfig  |  3 ++
+ configs/sama5d4ek_mmc_defconfig              |  1 +
+ configs/sama5d4ek_nandflash_defconfig        |  3 ++
+ configs/sama5d4ek_spiflash_defconfig         |  3 ++
+ configs/wb45n_defconfig                      |  3 ++
+ configs/wb50n_defconfig                      |  3 ++
+ doc/README.atmel_pmecc                       | 13 ++++---
+ drivers/mtd/nand/raw/Kconfig                 | 38 ++++++++++++++++++++
+ include/configs/at91sam9n12ek.h              |  7 ----
+ include/configs/at91sam9x5ek.h               |  7 ----
+ include/configs/sama5d3_xplained.h           |  7 ----
+ include/configs/sama5d3xek.h                 |  7 ----
+ include/configs/sama5d4_xplained.h           |  6 ----
+ include/configs/sama5d4ek.h                  |  6 ----
+ include/configs/wb45n.h                      |  7 ----
+ include/configs/wb50n.h                      |  6 ----
+ scripts/config_whitelist.txt                 |  5 ---
+ 31 files changed, 92 insertions(+), 65 deletions(-)
+
+diff --git a/configs/at91sam9n12ek_mmc_defconfig b/configs/at91sam9n12ek_mmc_defconfig
+index 6b2cfe9c42..7b46eb498d 100644
+--- a/configs/at91sam9n12ek_mmc_defconfig
++++ b/configs/at91sam9n12ek_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9N12EK=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9n12ek_nandflash_defconfig b/configs/at91sam9n12ek_nandflash_defconfig
+index 354c24ff16..4e34a517fd 100644
+--- a/configs/at91sam9n12ek_nandflash_defconfig
++++ b/configs/at91sam9n12ek_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9N12EK=y
++CONFIG_PMECC_CAP=2
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9n12ek_spiflash_defconfig b/configs/at91sam9n12ek_spiflash_defconfig
+index 63889355bf..500c3ab088 100644
+--- a/configs/at91sam9n12ek_spiflash_defconfig
++++ b/configs/at91sam9n12ek_spiflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9N12EK=y
++CONFIG_PMECC_CAP=2
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9x5ek_dataflash_defconfig b/configs/at91sam9x5ek_dataflash_defconfig
+index dc13509715..60d865cc23 100644
+--- a/configs/at91sam9x5ek_dataflash_defconfig
++++ b/configs/at91sam9x5ek_dataflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9X5EK=y
++CONFIG_PMECC_CAP=2
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9x5ek_mmc_defconfig b/configs/at91sam9x5ek_mmc_defconfig
+index ff86f93e61..75f7fbd199 100644
+--- a/configs/at91sam9x5ek_mmc_defconfig
++++ b/configs/at91sam9x5ek_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9X5EK=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9x5ek_nandflash_defconfig b/configs/at91sam9x5ek_nandflash_defconfig
+index b2b3ddb6d9..dd6bdee7f9 100644
+--- a/configs/at91sam9x5ek_nandflash_defconfig
++++ b/configs/at91sam9x5ek_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9X5EK=y
++CONFIG_PMECC_CAP=2
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/at91sam9x5ek_spiflash_defconfig b/configs/at91sam9x5ek_spiflash_defconfig
+index d0eebcdc75..8d8108888c 100644
+--- a/configs/at91sam9x5ek_spiflash_defconfig
++++ b/configs/at91sam9x5ek_spiflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_AT91SAM9X5EK=y
++CONFIG_PMECC_CAP=2
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SYS_MALLOC_F_LEN=0x2000
+ CONFIG_DEBUG_UART_BOARD_INIT=y
+ CONFIG_DEBUG_UART_BASE=0xfffff200
+diff --git a/configs/sama5d3_xplained_mmc_defconfig b/configs/sama5d3_xplained_mmc_defconfig
+index eab38ec366..51d5aeaf0e 100644
+--- a/configs/sama5d3_xplained_mmc_defconfig
++++ b/configs/sama5d3_xplained_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D3_XPLAINED=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d3_xplained_nandflash_defconfig b/configs/sama5d3_xplained_nandflash_defconfig
+index ff7d2bffdd..ce1f28607e 100644
+--- a/configs/sama5d3_xplained_nandflash_defconfig
++++ b/configs/sama5d3_xplained_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D3_XPLAINED=y
++CONFIG_PMECC_CAP=4
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d3xek_mmc_defconfig b/configs/sama5d3xek_mmc_defconfig
+index 6faea0ec3f..49d4334213 100644
+--- a/configs/sama5d3xek_mmc_defconfig
++++ b/configs/sama5d3xek_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D3XEK=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d3xek_nandflash_defconfig b/configs/sama5d3xek_nandflash_defconfig
+index e641279ee1..b0d56e0e3e 100644
+--- a/configs/sama5d3xek_nandflash_defconfig
++++ b/configs/sama5d3xek_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D3XEK=y
++CONFIG_PMECC_CAP=4
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d3xek_spiflash_defconfig b/configs/sama5d3xek_spiflash_defconfig
+index 37f603d528..cf2fb9e65b 100644
+--- a/configs/sama5d3xek_spiflash_defconfig
++++ b/configs/sama5d3xek_spiflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D3XEK=y
++CONFIG_PMECC_CAP=4
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4_xplained_mmc_defconfig b/configs/sama5d4_xplained_mmc_defconfig
+index bfcea3f519..35b8302b60 100644
+--- a/configs/sama5d4_xplained_mmc_defconfig
++++ b/configs/sama5d4_xplained_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4_XPLAINED=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4_xplained_nandflash_defconfig b/configs/sama5d4_xplained_nandflash_defconfig
+index 2c1b7f17c0..93714ed0c7 100644
+--- a/configs/sama5d4_xplained_nandflash_defconfig
++++ b/configs/sama5d4_xplained_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4_XPLAINED=y
++CONFIG_PMECC_CAP=8
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4_xplained_spiflash_defconfig b/configs/sama5d4_xplained_spiflash_defconfig
+index a89dd11a8c..e1eb0c72cd 100644
+--- a/configs/sama5d4_xplained_spiflash_defconfig
++++ b/configs/sama5d4_xplained_spiflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4_XPLAINED=y
++CONFIG_PMECC_CAP=8
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4ek_mmc_defconfig b/configs/sama5d4ek_mmc_defconfig
+index 45e6539913..bd238f7f14 100644
+--- a/configs/sama5d4ek_mmc_defconfig
++++ b/configs/sama5d4ek_mmc_defconfig
+@@ -2,6 +2,7 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4EK=y
++# CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER is not set
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4ek_nandflash_defconfig b/configs/sama5d4ek_nandflash_defconfig
+index 1497110452..3816bfb273 100644
+--- a/configs/sama5d4ek_nandflash_defconfig
++++ b/configs/sama5d4ek_nandflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4EK=y
++CONFIG_PMECC_CAP=8
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/sama5d4ek_spiflash_defconfig b/configs/sama5d4ek_spiflash_defconfig
+index dad32b5711..242081e6a1 100644
+--- a/configs/sama5d4ek_spiflash_defconfig
++++ b/configs/sama5d4ek_spiflash_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x26f00000
+ CONFIG_TARGET_SAMA5D4EK=y
++CONFIG_PMECC_CAP=8
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/wb45n_defconfig b/configs/wb45n_defconfig
+index 9d881e5d41..15fc17ac00 100644
+--- a/configs/wb45n_defconfig
++++ b/configs/wb45n_defconfig
+@@ -3,6 +3,9 @@ CONFIG_SYS_THUMB_BUILD=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x23f00000
+ CONFIG_TARGET_WB45N=y
++CONFIG_PMECC_CAP=4
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/configs/wb50n_defconfig b/configs/wb50n_defconfig
+index c74eba1012..a7e9a53448 100644
+--- a/configs/wb50n_defconfig
++++ b/configs/wb50n_defconfig
+@@ -2,6 +2,9 @@ CONFIG_ARM=y
+ CONFIG_ARCH_AT91=y
+ CONFIG_SYS_TEXT_BASE=0x23f00000
+ CONFIG_TARGET_WB50N=y
++CONFIG_PMECC_CAP=8
++CONFIG_PMECC_SECTOR_SIZE=512
++CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ CONFIG_SPL_GPIO_SUPPORT=y
+ CONFIG_SPL_LIBCOMMON_SUPPORT=y
+ CONFIG_SPL_LIBGENERIC_SUPPORT=y
+diff --git a/doc/README.atmel_pmecc b/doc/README.atmel_pmecc
+index 274d860f06..c86d085779 100644
+--- a/doc/README.atmel_pmecc
++++ b/doc/README.atmel_pmecc
+@@ -20,13 +20,12 @@ To use PMECC in this driver, the user needs to set:
+ 	2. The PMECC sector size: CONFIG_PMECC_SECTOR_SIZE.
+ 	   It only can be 512 or 1024.
+ 
+-Take AT91SAM9X5EK as an example, the board definition file likes:
++Take 'configs/at91sam9x5ek_nandflash_defconfig' as an example, the board
++configuration file has the following entries:
+ 
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC		1
+-#define CONFIG_ATMEL_NAND_HW_PMECC	1
+-#define CONFIG_PMECC_CAP		2
+-#define CONFIG_PMECC_SECTOR_SIZE	512
++	CONFIG_PMECC_CAP=2
++	CONFIG_PMECC_SECTOR_SIZE=512
++	CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER=y
+ 
+ How to enable PMECC header for direct programmable boot.bin
+ -----------------------------------------------------------
+@@ -40,7 +39,7 @@ sama5d3 SoC spec (as of 03. April 2014) defines how this PMECC header has to
+ look like. In order to do so we have a new image type added to mkimage to
+ generate this PMECC header and integrated this into the build process of SPL.
+ 
+-To enable the generation of atmel PMECC header for SPL one need to define
++To enable the generation of atmel PMECC header for SPL one needs to define
+ CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER. The required parameters are taken from
+ board configuration and compiled into the host tools atmel_pmecc_params. This
+ tool will be called in build process to parametrize mkimage for atmelimage
+diff --git a/drivers/mtd/nand/raw/Kconfig b/drivers/mtd/nand/raw/Kconfig
+index 008f7b4b4b..b99732736a 100644
+--- a/drivers/mtd/nand/raw/Kconfig
++++ b/drivers/mtd/nand/raw/Kconfig
+@@ -16,6 +16,44 @@ config NAND_ATMEL
+ 	  Enable this driver for NAND flash platforms using an Atmel NAND
+ 	  controller.
+ 
++if NAND_ATMEL
++
++config ATMEL_NAND_HWECC
++	bool "Atmel Hardware ECC"
++	default n
++
++config ATMEL_NAND_HW_PMECC
++	bool "Atmel Programmable Multibit ECC (PMECC)"
++	select ATMEL_NAND_HWECC
++	default n
++	help
++	  The Programmable Multibit ECC (PMECC) controller is a programmable
++	  binary BCH(Bose, Chaudhuri and Hocquenghem) encoder and decoder.
++
++config PMECC_CAP
++	int "PMECC Correctable ECC Bits"
++	depends on ATMEL_NAND_HW_PMECC
++	default 2
++	help
++	  Correctable ECC bits, can be 2, 4, 8, 12, and 24.
++
++config PMECC_SECTOR_SIZE
++	int "PMECC Sector Size"
++	depends on ATMEL_NAND_HW_PMECC
++	default 512
++	help
++	  Sector size, in bytes, can be 512 or 1024.
++
++config SPL_GENERATE_ATMEL_PMECC_HEADER
++	bool "Atmel PMECC Header Generation"
++	select ATMEL_NAND_HWECC
++	select ATMEL_NAND_HW_PMECC
++	default n
++	help
++	  Generate Programmable Multibit ECC (PMECC) header for SPL image.
++
++endif
++
+ config NAND_DAVINCI
+ 	bool "Support TI Davinci NAND controller"
+ 	help
+diff --git a/include/configs/at91sam9n12ek.h b/include/configs/at91sam9n12ek.h
+index 6cd267eee6..777a99b730 100644
+--- a/include/configs/at91sam9n12ek.h
++++ b/include/configs/at91sam9n12ek.h
+@@ -59,12 +59,6 @@
+ #define CONFIG_SYS_NAND_READY_PIN	GPIO_PIN_PD(5)
+ #endif
+ 
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+-#define CONFIG_PMECC_CAP		2
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+-
+ #define CONFIG_EXTRA_ENV_SETTINGS                                       \
+ 	"console=console=ttyS0,115200\0"                                \
+ 	"mtdparts="CONFIG_MTDPARTS_DEFAULT"\0"					\
+@@ -177,6 +171,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
+index 63305a7cdd..6adb965c3c 100644
+--- a/include/configs/at91sam9x5ek.h
++++ b/include/configs/at91sam9x5ek.h
+@@ -55,12 +55,6 @@
+ #define CONFIG_SYS_NAND_READY_PIN	AT91_PIN_PD5
+ #endif
+ 
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC		1
+-#define CONFIG_ATMEL_NAND_HW_PMECC	1
+-#define CONFIG_PMECC_CAP		2
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+-
+ /* USB */
+ #ifdef CONFIG_CMD_USB
+ #ifndef CONFIG_USB_EHCI_HCD
+@@ -151,6 +145,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/sama5d3_xplained.h b/include/configs/sama5d3_xplained.h
+index d0d8087ca3..8a9a19d38e 100644
+--- a/include/configs/sama5d3_xplained.h
++++ b/include/configs/sama5d3_xplained.h
+@@ -43,14 +43,8 @@
+ #define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
+ #define CONFIG_SYS_NAND_ONFI_DETECTION
+ #endif
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+-#define CONFIG_PMECC_CAP		4
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+ 
+ /* USB */
+-
+ #ifdef CONFIG_CMD_USB
+ #define CONFIG_USB_ATMEL
+ #define CONFIG_USB_ATMEL_CLK_SEL_UPLL
+@@ -88,6 +82,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/sama5d3xek.h b/include/configs/sama5d3xek.h
+index 4d3c3b8314..ca1c2b0861 100644
+--- a/include/configs/sama5d3xek.h
++++ b/include/configs/sama5d3xek.h
+@@ -62,14 +62,8 @@
+ #define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
+ #define CONFIG_SYS_NAND_ONFI_DETECTION
+ #endif
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+-#define CONFIG_PMECC_CAP		4
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+ 
+ /* USB */
+-
+ #ifdef CONFIG_CMD_USB
+ #define CONFIG_USB_ATMEL_CLK_SEL_UPLL
+ #define CONFIG_USB_OHCI_NEW
+@@ -109,6 +103,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/sama5d4_xplained.h b/include/configs/sama5d4_xplained.h
+index 7f8ac178f3..bbb16993ec 100644
+--- a/include/configs/sama5d4_xplained.h
++++ b/include/configs/sama5d4_xplained.h
+@@ -37,9 +37,6 @@
+ /* our CLE is AD22 */
+ #define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
+ #define CONFIG_SYS_NAND_ONFI_DETECTION
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+ #endif
+ 
+ /* SPL */
+@@ -64,8 +61,6 @@
+ #define CONFIG_SPL_NAND_DRIVERS
+ #define CONFIG_SPL_NAND_BASE
+ #endif
+-#define CONFIG_PMECC_CAP		8
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+ #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
+ #define CONFIG_SYS_NAND_5_ADDR_CYCLE
+ #define CONFIG_SYS_NAND_PAGE_SIZE	0x1000
+@@ -73,6 +68,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		224
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x40000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/sama5d4ek.h b/include/configs/sama5d4ek.h
+index aa8573d8ba..d58041650c 100644
+--- a/include/configs/sama5d4ek.h
++++ b/include/configs/sama5d4ek.h
+@@ -37,9 +37,6 @@
+ /* our CLE is AD22 */
+ #define CONFIG_SYS_NAND_MASK_CLE	(1 << 22)
+ #define CONFIG_SYS_NAND_ONFI_DETECTION
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+ #endif
+ 
+ /* SPL */
+@@ -63,8 +60,6 @@
+ #define CONFIG_SPL_NAND_DRIVERS
+ #define CONFIG_SPL_NAND_BASE
+ #endif
+-#define CONFIG_PMECC_CAP		8
+-#define CONFIG_PMECC_SECTOR_SIZE	512
+ #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
+ #define CONFIG_SYS_NAND_5_ADDR_CYCLE
+ #define CONFIG_SYS_NAND_PAGE_SIZE	0x1000
+@@ -72,6 +67,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE		224
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	0x40000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/include/configs/wb45n.h b/include/configs/wb45n.h
+index b516b66c35..add4019b31 100644
+--- a/include/configs/wb45n.h
++++ b/include/configs/wb45n.h
+@@ -48,12 +48,6 @@
+ #define CONFIG_SYS_NAND_ENABLE_PIN  AT91_PIN_PD4
+ #define CONFIG_SYS_NAND_READY_PIN   AT91_PIN_PD5
+ 
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC     1
+-#define CONFIG_ATMEL_NAND_HW_PMECC  1
+-#define CONFIG_PMECC_CAP            4
+-#define CONFIG_PMECC_SECTOR_SIZE    512
+-
+ #define CONFIG_RBTREE
+ #define CONFIG_LZO
+ 
+@@ -141,6 +135,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE     64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE  0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS   0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif				/* __CONFIG_H__ */
+diff --git a/include/configs/wb50n.h b/include/configs/wb50n.h
+index 40ca9d602b..2684b6c16c 100644
+--- a/include/configs/wb50n.h
++++ b/include/configs/wb50n.h
+@@ -57,11 +57,6 @@
+ /* our CLE is AD22 */
+ #define CONFIG_SYS_NAND_MASK_CLE    (1 << 22)
+ #define CONFIG_SYS_NAND_ONFI_DETECTION
+-/* PMECC & PMERRLOC */
+-#define CONFIG_ATMEL_NAND_HWECC
+-#define CONFIG_ATMEL_NAND_HW_PMECC
+-#define CONFIG_PMECC_CAP            8
+-#define CONFIG_PMECC_SECTOR_SIZE    512
+ 
+ /* Ethernet Hardware */
+ #define CONFIG_MACB
+@@ -118,6 +113,5 @@
+ #define CONFIG_SYS_NAND_OOBSIZE     64
+ #define CONFIG_SYS_NAND_BLOCK_SIZE  0x20000
+ #define CONFIG_SYS_NAND_BAD_BLOCK_POS   0x0
+-#define CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ 
+ #endif
+diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
+index b8addeaf69..f798c6542a 100644
+--- a/scripts/config_whitelist.txt
++++ b/scripts/config_whitelist.txt
+@@ -97,8 +97,6 @@ CONFIG_ATMEL_LCD_BGR555
+ CONFIG_ATMEL_LCD_RGB565
+ CONFIG_ATMEL_LEGACY
+ CONFIG_ATMEL_MCI_8BIT
+-CONFIG_ATMEL_NAND_HWECC
+-CONFIG_ATMEL_NAND_HW_PMECC
+ CONFIG_ATMEL_SPI0
+ CONFIG_AT_TRANS
+ CONFIG_AUTO_ZRELADDR
+@@ -1509,8 +1507,6 @@ CONFIG_PLATINUM_PROJECT
+ CONFIG_PM
+ CONFIG_PMC_BR_PRELIM
+ CONFIG_PMC_OR_PRELIM
+-CONFIG_PMECC_CAP
+-CONFIG_PMECC_SECTOR_SIZE
+ CONFIG_PME_PLAT_CLK_DIV
+ CONFIG_PMU
+ CONFIG_PMW_BASE
+@@ -1875,7 +1871,6 @@ CONFIG_SPL_FS_LOAD_ARGS_NAME
+ CONFIG_SPL_FS_LOAD_KERNEL_NAME
+ CONFIG_SPL_FS_LOAD_PAYLOAD_NAME
+ CONFIG_SPL_GD_ADDR
+-CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER
+ CONFIG_SPL_INIT_MINIMAL
+ CONFIG_SPL_JR0_LIODN_NS
+ CONFIG_SPL_JR0_LIODN_S
+-- 
+2.20.1
+
