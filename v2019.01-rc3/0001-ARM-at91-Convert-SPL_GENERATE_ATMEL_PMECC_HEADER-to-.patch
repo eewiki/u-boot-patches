@@ -357,7 +357,7 @@ index 274d860f06..c86d085779 100644
  board configuration and compiled into the host tools atmel_pmecc_params. This
  tool will be called in build process to parametrize mkimage for atmelimage
 diff --git a/drivers/mtd/nand/raw/Kconfig b/drivers/mtd/nand/raw/Kconfig
-index 008f7b4b4b..b99732736a 100644
+index fd1723feda..86d97c3f81 100644
 --- a/drivers/mtd/nand/raw/Kconfig
 +++ b/drivers/mtd/nand/raw/Kconfig
 @@ -16,6 +16,44 @@ config NAND_ATMEL
@@ -613,10 +613,10 @@ index 40ca9d602b..2684b6c16c 100644
  
  #endif
 diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
-index b8addeaf69..f798c6542a 100644
+index 527050de97..3a04da61fb 100644
 --- a/scripts/config_whitelist.txt
 +++ b/scripts/config_whitelist.txt
-@@ -97,8 +97,6 @@ CONFIG_ATMEL_LCD_BGR555
+@@ -96,8 +96,6 @@ CONFIG_ATMEL_LCD_BGR555
  CONFIG_ATMEL_LCD_RGB565
  CONFIG_ATMEL_LEGACY
  CONFIG_ATMEL_MCI_8BIT
@@ -625,7 +625,7 @@ index b8addeaf69..f798c6542a 100644
  CONFIG_ATMEL_SPI0
  CONFIG_AT_TRANS
  CONFIG_AUTO_ZRELADDR
-@@ -1509,8 +1507,6 @@ CONFIG_PLATINUM_PROJECT
+@@ -1503,8 +1501,6 @@ CONFIG_PLATINUM_PROJECT
  CONFIG_PM
  CONFIG_PMC_BR_PRELIM
  CONFIG_PMC_OR_PRELIM
@@ -634,7 +634,7 @@ index b8addeaf69..f798c6542a 100644
  CONFIG_PME_PLAT_CLK_DIV
  CONFIG_PMU
  CONFIG_PMW_BASE
-@@ -1875,7 +1871,6 @@ CONFIG_SPL_FS_LOAD_ARGS_NAME
+@@ -1869,7 +1865,6 @@ CONFIG_SPL_FS_LOAD_ARGS_NAME
  CONFIG_SPL_FS_LOAD_KERNEL_NAME
  CONFIG_SPL_FS_LOAD_PAYLOAD_NAME
  CONFIG_SPL_GD_ADDR

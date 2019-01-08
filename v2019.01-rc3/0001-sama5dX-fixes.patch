@@ -1,21 +1,21 @@
-From ec9242ca165eb0eeb0e62bdac7d93e9af277afb1 Mon Sep 17 00:00:00 2001
+From 1e716b89bfe0cbe4ce7e0cb81d5ea4f1dd75158e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 7 Jan 2019 14:54:49 -0600
+Date: Tue, 8 Jan 2019 11:43:07 -0600
 Subject: [PATCH] sama5dX fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- arch/arm/mach-at91/spl.c               |  4 ++++
- configs/sama5d27_som1_ek_mmc_defconfig |  8 +++++++-
- configs/sama5d2_xplained_mmc_defconfig |  6 +++++-
- configs/sama5d3_xplained_mmc_defconfig |  6 +++++-
- configs/sama5d3xek_mmc_defconfig       |  6 +++++-
- configs/sama5d4_xplained_mmc_defconfig |  7 ++++++-
- configs/sama5d4ek_mmc_defconfig        |  7 ++++++-
- include/configs/at91-sama5_common.h    |  4 +++-
- include/configs/sama5d27_som1_ek.h     | 10 ++++------
- include/configs/sama5d2_xplained.h     |  6 ++++--
- 10 files changed, 49 insertions(+), 15 deletions(-)
+ arch/arm/mach-at91/spl.c               | 4 ++++
+ configs/sama5d27_som1_ek_mmc_defconfig | 8 +++++++-
+ configs/sama5d2_xplained_mmc_defconfig | 6 +++++-
+ configs/sama5d3_xplained_mmc_defconfig | 6 +++++-
+ configs/sama5d3xek_mmc_defconfig       | 6 +++++-
+ configs/sama5d4_xplained_mmc_defconfig | 7 ++++++-
+ configs/sama5d4ek_mmc_defconfig        | 7 ++++++-
+ include/configs/at91-sama5_common.h    | 4 +++-
+ include/configs/sama5d27_som1_ek.h     | 9 ++++-----
+ include/configs/sama5d2_xplained.h     | 6 ++++--
+ 10 files changed, 49 insertions(+), 14 deletions(-)
 
 diff --git a/arch/arm/mach-at91/spl.c b/arch/arm/mach-at91/spl.c
 index 6da6d41be2..4a1f6c0f76 100644
@@ -196,7 +196,7 @@ index 30c6cd47ca..78be99a4c0 100644
  				"bootz 0x22000000 - 0x21000000"
  
 diff --git a/include/configs/sama5d27_som1_ek.h b/include/configs/sama5d27_som1_ek.h
-index 7c7479b4d4..81b7fa4ce4 100644
+index 7c7479b4d4..e82ad04077 100644
 --- a/include/configs/sama5d27_som1_ek.h
 +++ b/include/configs/sama5d27_som1_ek.h
 @@ -38,8 +38,10 @@
@@ -212,17 +212,16 @@ index 7c7479b4d4..81b7fa4ce4 100644
  				"bootz 0x22000000 - 0x21000000"
  #endif
  
-@@ -51,10 +53,6 @@
+@@ -51,9 +53,6 @@
  					"sf read 0x21000000 0xc0000 0x20000; "	\
  					"sf read 0x22000000 0xe0000 0x400000; "	\
  					"bootz 0x22000000 - 0x21000000"
 -#undef CONFIG_BOOTARGS
 -#define CONFIG_BOOTARGS \
 -	"console=ttyS0,115200 earlyprintk root=/dev/mmcblk0p2 rw rootwait"
--#endif
+ #endif
  
  /* SPL */
- #define CONFIG_SPL_TEXT_BASE		0x200000
 diff --git a/include/configs/sama5d2_xplained.h b/include/configs/sama5d2_xplained.h
 index 2cec1c7b42..1883396c4e 100644
 --- a/include/configs/sama5d2_xplained.h
