@@ -1,40 +1,39 @@
-From 8f9288f63e0e67c5c145ec0a17cab1b164154032 Mon Sep 17 00:00:00 2001
+From fb3d9cff09f1527688b1d9c2e6ccd91962fc20c7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 28 Sep 2016 10:25:33 -0500
+Date: Wed, 16 Jan 2019 17:02:58 -0600
 Subject: [PATCH] vf610twr: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/vf610twr_defconfig |  2 ++
- include/configs/vf610twr.h | 80 ++++++++++++++++++++++++++++++++++++----------
+ configs/vf610twr_defconfig |  3 ++
+ include/configs/vf610twr.h | 79 ++++++++++++++++++++++++++++++--------
  2 files changed, 65 insertions(+), 17 deletions(-)
 
 diff --git a/configs/vf610twr_defconfig b/configs/vf610twr_defconfig
-index 5794c28..49b6a7c 100644
+index 504eebbf5d..89666f387a 100644
 --- a/configs/vf610twr_defconfig
 +++ b/configs/vf610twr_defconfig
-@@ -15,6 +15,8 @@ CONFIG_CMD_DHCP=y
+@@ -17,12 +17,15 @@ CONFIG_CMD_FUSE=y
+ CONFIG_CMD_GPIO=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_MMC=y
++CONFIG_CMD_PART=y
+ CONFIG_CMD_NAND_TRIMFFS=y
+ # CONFIG_CMD_SETEXPR is not set
+ CONFIG_CMD_DHCP=y
  CONFIG_CMD_MII=y
  CONFIG_CMD_PING=y
  CONFIG_CMD_FAT=y
 +CONFIG_CMD_EXT4=y
 +CONFIG_CMD_FS_GENERIC=y
+ CONFIG_MTDIDS_DEFAULT="nand0=fsl_nfc"
+ CONFIG_MTDPARTS_DEFAULT="mtdparts=fsl_nfc:128k(vf-bcb)ro,1408k(u-boot)ro,512k(u-boot-env),4m(kernel),512k(fdt),-(rootfs)"
  CONFIG_CMD_UBI=y
- CONFIG_OF_CONTROL=y
- CONFIG_DM=y
 diff --git a/include/configs/vf610twr.h b/include/configs/vf610twr.h
-index 03586f0..0ba42b6 100644
+index 686a383739..d7ddb990ad 100644
 --- a/include/configs/vf610twr.h
 +++ b/include/configs/vf610twr.h
-@@ -76,6 +76,7 @@
- 
- #define CONFIG_GENERIC_MMC
- #define CONFIG_DOS_PARTITION
-+#define CONFIG_SUPPORT_RAW_INITRD
- 
- #define CONFIG_FEC_MXC
- #define CONFIG_MII
-@@ -130,13 +131,16 @@
+@@ -91,13 +91,16 @@
  	MEM_LAYOUT_ENV_SETTINGS \
  	"script=boot.scr\0" \
  	"image=zImage\0" \
@@ -53,7 +52,7 @@ index 03586f0..0ba42b6 100644
  	"update_sd_firmware_filename=u-boot.imx\0" \
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
-@@ -151,15 +155,41 @@
+@@ -112,15 +115,41 @@
  				"mmc write ${loadaddr} 0x2 ${fw_sz}; " \
  			"fi; "	\
  		"fi\0" \
@@ -100,7 +99,7 @@ index 03586f0..0ba42b6 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -197,19 +227,35 @@
+@@ -158,19 +187,35 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -145,7 +144,7 @@ index 03586f0..0ba42b6 100644
 +	   "run mmcboot;"
  
  /* Miscellaneous configurable options */
- #define CONFIG_SYS_LONGHELP		/* undef to save memory */
+ 
 -- 
-2.9.3
+2.20.1
 
