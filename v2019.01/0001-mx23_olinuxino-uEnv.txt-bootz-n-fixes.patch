@@ -1,16 +1,16 @@
-From 398a79461822f291a9556c44b6cc7bcaee0b5c18 Mon Sep 17 00:00:00 2001
+From b3ca95bed2bec10375ae1cc75abcec4ddee91573 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 8 Jan 2019 09:12:42 -0600
+Date: Wed, 16 Jan 2019 13:26:25 -0600
 Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/mx23_olinuxino_defconfig |   3 +
+ configs/mx23_olinuxino_defconfig |   4 ++
  include/configs/mx23_olinuxino.h | 112 ++++++++++++++++++++++++++-----
- 2 files changed, 100 insertions(+), 15 deletions(-)
+ 2 files changed, 101 insertions(+), 15 deletions(-)
 
 diff --git a/configs/mx23_olinuxino_defconfig b/configs/mx23_olinuxino_defconfig
-index 0e552a6ac4..ff9b5923cf 100644
+index 0e552a6ac4..85314534ba 100644
 --- a/configs/mx23_olinuxino_defconfig
 +++ b/configs/mx23_olinuxino_defconfig
 @@ -16,6 +16,7 @@ CONFIG_ARCH_MISC_INIT=y
@@ -31,6 +31,11 @@ index 0e552a6ac4..ff9b5923cf 100644
  CONFIG_ENV_IS_IN_MMC=y
  CONFIG_LED_STATUS=y
  CONFIG_LED_STATUS_GPIO=y
+@@ -41,3 +44,4 @@ CONFIG_USB_STORAGE=y
+ CONFIG_USB_HOST_ETHER=y
+ CONFIG_USB_ETHER_SMSC95XX=y
+ CONFIG_OF_LIBFDT=y
++# CONFIG_EFI_LOADER is not set
 diff --git a/include/configs/mx23_olinuxino.h b/include/configs/mx23_olinuxino.h
 index 330f020f78..76c007c20a 100644
 --- a/include/configs/mx23_olinuxino.h
