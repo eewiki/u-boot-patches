@@ -1,19 +1,19 @@
-From 1ef04c9aae37d00033f3fc4504b5fb2977bd728f Mon Sep 17 00:00:00 2001
+From e30578012381637bd6d49e40c199b045debacd86 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 19 Oct 2018 14:07:38 -0500
+Date: Wed, 23 Jan 2019 14:58:40 -0600
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 462 ++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 465 ++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 +
  board/ti/am335x/hash-string.h             |  59 +++
  board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 211 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 783 insertions(+)
+ 8 files changed, 786 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 32cdf63e3d..fb871c29c3 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index ed933d7ee8..085910cdaf 100644
+index 8e2eb43056..af0f148089 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index ed933d7ee8..085910cdaf 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,462 @@ void do_board_detect(void)
+@@ -77,9 +78,465 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -312,6 +312,9 @@ index ed933d7ee8..085910cdaf 100644
 +					case 0x93b574f: /* /lib/firmware/BB-GREEN-HDMI-00A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
++					case 0x9dcd73f: /* /lib/firmware/BB-BONE-NH10C-01-00A0.dtbo */
++						virtual_video=PINS_TAKEN;
++						break;
 +					case 0xb1b7bbf: /* /lib/firmware/bb-justboom-amp-00A0.dtbo */
 +						virtual_audio=PINS_TAKEN;
 +						break;
@@ -503,7 +506,7 @@ index ed933d7ee8..085910cdaf 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -933,6 +1387,14 @@ int board_late_init(void)
+@@ -946,6 +1403,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -618,7 +621,7 @@ index 0000000000..b267a87788
 +  return hval;
 +}
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 1660f2f681..0772268cd0 100644
+index 5a709e42b7..9e5244b351 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
 @@ -119,6 +119,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
@@ -648,7 +651,7 @@ index 1660f2f681..0772268cd0 100644
  /*
   * The AM335x GP EVM, if daughter card(s) are connected, can have 8
   * different profiles.  These profiles determine what peripherals are
-@@ -355,6 +368,7 @@ void enable_board_pin_mux(void)
+@@ -366,6 +379,7 @@ void enable_board_pin_mux(void)
  #else
  		configure_module_pin_mux(mmc1_pin_mux);
  #endif
@@ -656,7 +659,7 @@ index 1660f2f681..0772268cd0 100644
  	} else if (board_is_gp_evm()) {
  		/* General Purpose EVM */
  		unsigned short profile = detect_daughter_board_profile();
-@@ -398,6 +412,7 @@ void enable_board_pin_mux(void)
+@@ -409,6 +423,7 @@ void enable_board_pin_mux(void)
  #else
  		configure_module_pin_mux(mmc1_pin_mux);
  #endif
@@ -665,10 +668,10 @@ index 1660f2f681..0772268cd0 100644
  		configure_module_pin_mux(mii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index baa5e32b14..ac2d61fe6d 100644
+index 4e921bbba6..b4b6706203 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -347,6 +347,43 @@
+@@ -333,6 +333,43 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -712,7 +715,7 @@ index baa5e32b14..ac2d61fe6d 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -387,6 +424,180 @@
+@@ -373,6 +410,180 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -934,5 +937,5 @@ index 110c426058..d6bbe3ea8e 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.19.1
+2.20.1
 
