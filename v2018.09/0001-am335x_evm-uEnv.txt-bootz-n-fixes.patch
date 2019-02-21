@@ -1,6 +1,6 @@
-From 22e3d97916bf6abdc31e90357786b4e8425081f4 Mon Sep 17 00:00:00 2001
+From 1c3ed1a12fc98c254c2775078205306356dc3f8b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 19 Oct 2018 14:01:06 -0500
+Date: Thu, 21 Feb 2019 16:00:30 -0600
 Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -97,7 +97,7 @@ index 1a24acb748..91f59855c7 100644
   * vcores_init() - Assign omap_vcores based on board
   *
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index a359d20021..e3dd9d2165 100644
+index a359d20021..7ade2bec16 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -28,6 +28,7 @@
@@ -274,7 +274,7 @@ index a359d20021..e3dd9d2165 100644
 -	if (board_is_bone() || board_is_bone_lt() || board_is_bben() ||
 -	    board_is_idk()) {
 +if (!board_is_pb()) {
-+	if (board_is_bone() || (board_is_bone_lt() && !board_is_m10a()) || board_is_bben() ||
++	if (board_is_bone() || (board_is_bone_lt() && !board_is_m10a()) || !board_is_bben() ||
 +	    board_is_idk() || board_is_beaglelogic()) {
 +		puts("eth0: MII MODE\n");
  		writel(MII_MODE_ENABLE, &cdev->miisel);
@@ -1155,5 +1155,5 @@ index 785fc15345..110c426058 100644
  				"if test ${boot_fdt} = try; then " \
  					"bootz; " \
 -- 
-2.19.1
+2.20.1
 
