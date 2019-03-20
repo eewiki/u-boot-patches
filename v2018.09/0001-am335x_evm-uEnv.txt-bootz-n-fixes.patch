@@ -274,7 +274,7 @@ index a359d20021..7ade2bec16 100644
 -	if (board_is_bone() || board_is_bone_lt() || board_is_bben() ||
 -	    board_is_idk()) {
 +if (!board_is_pb()) {
-+	if (board_is_bone() || (board_is_bone_lt() && !board_is_m10a()) || !board_is_bben() ||
++	if (board_is_bone() || (board_is_bone_lt() && !board_is_m10a() && !board_is_bben()) ||
 +	    board_is_idk() || board_is_beaglelogic()) {
 +		puts("eth0: MII MODE\n");
  		writel(MII_MODE_ENABLE, &cdev->miisel);

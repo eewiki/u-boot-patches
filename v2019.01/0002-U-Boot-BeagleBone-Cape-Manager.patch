@@ -1,19 +1,19 @@
-From e30578012381637bd6d49e40c199b045debacd86 Mon Sep 17 00:00:00 2001
+From bcf0a0159b74864e09a85fb32121c3ae906c73cb Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 23 Jan 2019 14:58:40 -0600
+Date: Wed, 20 Mar 2019 15:49:41 -0500
 Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 465 ++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 468 ++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 +
  board/ti/am335x/hash-string.h             |  59 +++
  board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 211 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 786 insertions(+)
+ 8 files changed, 789 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 32cdf63e3d..fb871c29c3 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 8e2eb43056..af0f148089 100644
+index 812c5ca16b..db05282d44 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 8e2eb43056..af0f148089 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,465 @@ void do_board_detect(void)
+@@ -77,9 +78,468 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -325,6 +325,9 @@ index 8e2eb43056..af0f148089 100644
 +					case 0xd4c9eff: /* /lib/firmware/bb-justboom-digi-00A0.dtbo */
 +						virtual_audio=PINS_TAKEN;
 +						break;
++					case 0xe05061f: /* /lib/firmware/BBORG_DISPLAY70-00A2.dtbo */
++						virtual_video=PINS_TAKEN;
++						break;
 +					case 0xe3f55df: /* /lib/firmware/BB-BONE-NH7C-01-A0.dtbo */
 +						virtual_video=PINS_TAKEN;
 +						break;
@@ -506,7 +509,7 @@ index 8e2eb43056..af0f148089 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -946,6 +1403,14 @@ int board_late_init(void)
+@@ -946,6 +1406,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
