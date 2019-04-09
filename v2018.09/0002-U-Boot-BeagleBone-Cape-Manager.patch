@@ -1,19 +1,19 @@
-From 0d5be16f1050390260aa042bab8fc71660583459 Mon Sep 17 00:00:00 2001
+From 238c25ec929952ddc72b6f0c4e1d928d9d44069a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 20 Mar 2019 15:47:10 -0500
-Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 468 ++++++++++++++++++++++
+ board/ti/am335x/board.c                   | 449 ++++++++++++++++++++++
  board/ti/am335x/board.h                   |  17 +
  board/ti/am335x/hash-string.h             |  59 +++
  board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 211 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 789 insertions(+)
+ 8 files changed, 770 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +29,7 @@ index 32cdf63e3d..fb871c29c3 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 9eb285d6cb..8d8b5be12b 100644
+index 9eb285d6cb..fb72bfdf74 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,7 +40,7 @@ index 9eb285d6cb..8d8b5be12b 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -76,9 +77,468 @@ void do_board_detect(void)
+@@ -76,9 +77,449 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -55,23 +55,6 @@ index 9eb285d6cb..8d8b5be12b 100644
 +#define CAPE_EEPROM_ADDR1	0x55
 +#define CAPE_EEPROM_ADDR2	0x56
 +#define CAPE_EEPROM_ADDR3	0x57
-+
-+void write_hex (unsigned char i)
-+{
-+	char cc;
-+
-+	cc = i >> 4;
-+	cc &= 0xf;
-+	if (cc > 9)
-+		serial_putc (cc + 55);
-+	else
-+		serial_putc (cc + 48);
-+	cc = i & 0xf;
-+	if (cc > 9)
-+		serial_putc (cc + 55);
-+	else
-+		serial_putc (cc + 48);
-+}
 +
 +#define NOT_POP		0x0
 +#define PINS_TAKEN	0x0
@@ -235,7 +218,7 @@ index 9eb285d6cb..8d8b5be12b 100644
 +
 +	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
 +		if (i2c_probe(addr)) {
-+			puts("BeagleBone: cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++			printf("BeagleBone: cape eeprom: i2c_probe: 0x%x:\n", addr);
 +		} else {
 +			/* read the eeprom using i2c */
 +			if (i2c_read(addr, 0, 2, (uchar *)cape_header,
@@ -270,7 +253,7 @@ index 9eb285d6cb..8d8b5be12b 100644
 +						end_part_number=i;
 +						i=17;
 +					} else {
-+						write_hex(process_cape_part_number[i]);
++						printf("%x", process_cape_part_number[i]);
 +					}
 +				}
 +				puts("]\n");
@@ -289,9 +272,7 @@ index 9eb285d6cb..8d8b5be12b 100644
 +
 +				unsigned long cape_overlay_hash = hash_string(cape_overlay);
 +
-+				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
-+				write_hex(addr);
-+				printf(": %s [0x%lx]\n", cape_overlay, cape_overlay_hash);
++				printf("BeagleBone: cape eeprom: i2c_probe: 0x%x: %s [0x%lx]\n", addr, cape_overlay, cape_overlay_hash);
 +
 +				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
 +				strncat(cape_overlay_pass_to_kernel, ",", 1);
@@ -393,7 +374,7 @@ index 9eb285d6cb..8d8b5be12b 100644
 +				}
 +				env_set("uboot_detected_capes", "1");
 +			} else {
-+				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++				printf("BeagleBone: found invalid cape eeprom: i2c_probe: 0x%x:\n", addr);
 +			}
 +		}
 +	}//for
@@ -509,7 +490,7 @@ index 9eb285d6cb..8d8b5be12b 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -855,6 +1315,14 @@ int board_late_init(void)
+@@ -855,6 +1296,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  

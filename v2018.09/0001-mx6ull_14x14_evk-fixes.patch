@@ -1,18 +1,18 @@
-From 6efb4f15034d3caac600db548a9a59d13376a8e6 Mon Sep 17 00:00:00 2001
+From ba57a415c1d44b004127e630d8bf4bbe2d29f822 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 24 May 2017 12:59:55 -0500
+Date: Tue, 2 Apr 2019 16:38:26 -0500
 Subject: [PATCH] mx6ull_14x14_evk fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx6ullevk.h | 132 ++++++++++++++++++++++++++++++++++++++------
+ include/configs/mx6ullevk.h | 132 +++++++++++++++++++++++++++++++-----
  1 file changed, 115 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/mx6ullevk.h b/include/configs/mx6ullevk.h
-index 19b0630d9d..eef65d5659 100644
+index c64d0929ab..e593d7e10b 100644
 --- a/include/configs/mx6ullevk.h
 +++ b/include/configs/mx6ullevk.h
-@@ -62,22 +62,66 @@
+@@ -57,22 +57,66 @@
  	"initrd_high=0xffffffff\0" \
  	"fdt_file=imx6ull-14x14-evk.dtb\0" \
  	"fdt_addr=0x83000000\0" \
@@ -85,7 +85,7 @@ index 19b0630d9d..eef65d5659 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -116,19 +160,73 @@
+@@ -111,19 +155,73 @@
  		"else " \
  			"bootz; " \
  		"fi;\0" \
@@ -171,5 +171,5 @@ index 19b0630d9d..eef65d5659 100644
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_MEMTEST_START	0x80000000
 -- 
-2.11.0
+2.20.1
 

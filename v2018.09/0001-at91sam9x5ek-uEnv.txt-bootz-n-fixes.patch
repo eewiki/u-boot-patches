@@ -1,6 +1,6 @@
-From 503718e753312abe95485f66807fb763e0278b3a Mon Sep 17 00:00:00 2001
+From 2b6daf696300c75555e2ad69e1253f8b44e3a5a7 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 8 Oct 2018 14:17:47 -0500
+Date: Tue, 2 Apr 2019 16:11:59 -0500
 Subject: [PATCH] at91sam9x5ek: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -92,5 +92,5 @@ index d48b7d0785..985539826a 100644
  
  /*
 -- 
-2.19.0
+2.20.1
 

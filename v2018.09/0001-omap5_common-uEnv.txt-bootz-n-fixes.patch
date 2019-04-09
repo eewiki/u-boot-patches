@@ -1,7 +1,7 @@
-From b71edf151c44fdfcfb25e265c4c44e0f01597508 Mon Sep 17 00:00:00 2001
+From 22a86e25797ed2438ef8ce19b47d5dbc0892c5a8 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 20 Jun 2018 15:20:38 -0500
-Subject: [PATCH] ti_omap5_common: uEnv.txt, bootz, n fixes
+Date: Tue, 2 Apr 2019 17:02:06 -0500
+Subject: [PATCH] omap5_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -36,10 +36,10 @@ index 52b76e260a..71b2d191bc 100644
  CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
  CONFIG_SCSI_AHCI=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 9257e2b0a4..0f09b02b5e 100644
+index 55b9b45eec..fae7d39dcb 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -119,6 +119,132 @@
+@@ -116,6 +116,132 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -186,10 +186,10 @@ index 8bf4a6b7e9..e8c3dfb36d 100644
  	NETARGS \
  
 diff --git a/include/environment/ti/boot.h b/include/environment/ti/boot.h
-index a43b211df5..20ad3bd798 100644
+index 2893cd4287..8f3013ae91 100644
 --- a/include/environment/ti/boot.h
 +++ b/include/environment/ti/boot.h
-@@ -110,16 +110,14 @@
+@@ -136,16 +136,14 @@
  			"echo WARNING: Could not determine device tree to use; fi; \0"
  
  #define CONFIG_BOOTCOMMAND \
@@ -265,5 +265,5 @@ index 785fc15345..9fdc703da0 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.17.1
+2.20.1
 

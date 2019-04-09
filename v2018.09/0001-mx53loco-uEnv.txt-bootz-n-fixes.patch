@@ -1,7 +1,7 @@
-From 03f808850886a9492a85050476c17e8b14d85cbb Mon Sep 17 00:00:00 2001
+From be4fb7953cad23c92591593aab719d1df364ec5e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 3 Jul 2018 09:19:17 -0500
-Subject: [PATCH] mx53loco: uEnv.txt, bootz, n fixes
+Date: Mon, 8 Apr 2019 12:42:45 -0500
+Subject: [PATCH] mx53loco-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -9,10 +9,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 121 insertions(+), 17 deletions(-)
 
 diff --git a/include/configs/mx53loco.h b/include/configs/mx53loco.h
-index 0c74e563a0..4e8fd7c9ae 100644
+index 816164e87e..590d915bea 100644
 --- a/include/configs/mx53loco.h
 +++ b/include/configs/mx53loco.h
-@@ -68,25 +68,74 @@
+@@ -67,25 +67,74 @@
  
  #define CONFIG_ETHPRIME		"FEC0"
  
@@ -94,7 +94,7 @@ index 0c74e563a0..4e8fd7c9ae 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -125,19 +174,74 @@
+@@ -124,19 +173,74 @@
  			"fi; " \
  		"else " \
  			"bootz; " \
@@ -180,5 +180,5 @@ index 0c74e563a0..4e8fd7c9ae 100644
  #define CONFIG_ARP_TIMEOUT	200UL
  
 -- 
-2.18.0
+2.20.1
 

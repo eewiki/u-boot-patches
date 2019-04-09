@@ -1,21 +1,21 @@
-From fd75494564dc83b883805781f4b5c56e2d7d9067 Mon Sep 17 00:00:00 2001
+From 8951403f84bfbd3fc9cab785e1c76a327208cc33 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 6 Mar 2018 10:45:57 -0600
+Date: Tue, 2 Apr 2019 16:01:59 -0500
 Subject: [PATCH] am43xx_evm fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/am43xx_evm_defconfig      |   7 +++
+ configs/am43xx_evm_defconfig      |   7 ++
  include/configs/am43xx_evm.h      |   6 ++
- include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++++++++++
- include/environment/ti/mmc.h      |  43 ++++++++++---
+ include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
+ include/environment/ti/mmc.h      |  43 +++++++---
  4 files changed, 172 insertions(+), 10 deletions(-)
 
 diff --git a/configs/am43xx_evm_defconfig b/configs/am43xx_evm_defconfig
-index 172b292c3f..b2792396dc 100644
+index 9e7ffee9bb..cbe2369544 100644
 --- a/configs/am43xx_evm_defconfig
 +++ b/configs/am43xx_evm_defconfig
-@@ -56,3 +56,10 @@ CONFIG_USB_GADGET_MANUFACTURER="Texas Instruments"
+@@ -60,3 +60,10 @@ CONFIG_USB_GADGET_MANUFACTURER="Texas Instruments"
  CONFIG_USB_GADGET_VENDOR_NUM=0x0403
  CONFIG_USB_GADGET_PRODUCT_NUM=0xbd00
  CONFIG_USB_GADGET_DOWNLOAD=y
@@ -27,10 +27,10 @@ index 172b292c3f..b2792396dc 100644
 +CONFIG_FS_BTRFS=y
 +CONFIG_CMD_BTRFS=y
 diff --git a/include/configs/am43xx_evm.h b/include/configs/am43xx_evm.h
-index 663f861706..957093b42b 100644
+index 9d0d342478..fd395a415c 100644
 --- a/include/configs/am43xx_evm.h
 +++ b/include/configs/am43xx_evm.h
-@@ -196,6 +196,8 @@
+@@ -193,6 +193,8 @@
  			"setenv fdtfile am437x-idk-evm.dtb; fi; " \
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree; fi; \0" \
@@ -39,7 +39,7 @@ index 663f861706..957093b42b 100644
  	NANDARGS \
  	NETARGS \
  	DFUARGS \
-@@ -205,6 +207,10 @@
+@@ -202,6 +204,10 @@
  		"run update_to_fit;"	\
  	"fi;"	\
  	"run findfdt; " \
@@ -51,10 +51,10 @@ index 663f861706..957093b42b 100644
  	"run mmcboot;" \
  	"run usbboot;" \
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 4771e74940..e5893ec926 100644
+index 55b9b45eec..fae7d39dcb 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -125,6 +125,132 @@
+@@ -116,6 +116,132 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -188,10 +188,10 @@ index 4771e74940..e5893ec926 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 4305ebdaaf..4c7a323180 100644
+index 785fc15345..d8fe15abc3 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -12,22 +12,45 @@
+@@ -11,22 +11,45 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
@@ -248,5 +248,5 @@ index 4305ebdaaf..4c7a323180 100644
  			"if run loadbootscript; then " \
  				"run bootscript;" \
 -- 
-2.16.1
+2.20.1
 

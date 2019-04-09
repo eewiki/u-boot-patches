@@ -1,6 +1,6 @@
-From 0f134600b4fd3578dac193ac9fe5c310059f6891 Mon Sep 17 00:00:00 2001
+From 4ea93bf2bbc86f125dca97c0e66b09bf45ffa19e Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 10 Oct 2018 11:44:47 -0500
+Date: Fri, 5 Apr 2019 11:54:27 -0500
 Subject: [PATCH] wandboard: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -204,5 +204,5 @@ index b03a1c550c..7bf8c06964 100644
  #define CONFIG_ENV_OFFSET		(768 * 1024)
  #define CONFIG_SYS_MMC_ENV_DEV		0
 -- 
-2.19.0
+2.20.1
 

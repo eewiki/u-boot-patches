@@ -1,6 +1,6 @@
-From 94facd6ecca41ee1604074bd2643a8d64e5ad611 Mon Sep 17 00:00:00 2001
+From e7f345ec82d74786dd691d16b856f8106e20164d Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 8 Oct 2018 15:04:45 -0500
+Date: Fri, 5 Apr 2019 11:46:33 -0500
 Subject: [PATCH] de0_nano fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -72,5 +72,5 @@ index 2330143cf1..bd369e15c5 100644
  /*
   * USB
 -- 
-2.19.0
+2.20.1
 

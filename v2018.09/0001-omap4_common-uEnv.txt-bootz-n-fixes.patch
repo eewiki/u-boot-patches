@@ -1,7 +1,7 @@
-From 819452b196a751464b997658f663bf4c02a09975 Mon Sep 17 00:00:00 2001
+From d1e0b9944e89aff7aab081283cb6d2fb4b99d97a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 26 Sep 2018 16:35:09 -0500
-Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
+Date: Tue, 2 Apr 2019 16:55:32 -0500
+Subject: [PATCH] omap4_common: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -259,5 +259,5 @@ index 785fc15345..9fdc703da0 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.19.0
+2.20.1
 

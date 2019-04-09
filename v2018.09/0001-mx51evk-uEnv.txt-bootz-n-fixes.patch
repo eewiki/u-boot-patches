@@ -1,6 +1,6 @@
-From 6b5206815faf4ac8f6a81000b6b86a920160dec7 Mon Sep 17 00:00:00 2001
+From 4b7a56b925f12e9d6cebba5c6b54cb952fc2e3ea Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 8 Oct 2018 14:07:10 -0500
+Date: Tue, 2 Apr 2019 16:27:53 -0500
 Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -227,5 +227,5 @@ index eb172c97b3..17f295f74d 100644
  #define CONFIG_ARP_TIMEOUT	200UL
  
 -- 
-2.19.1
+2.20.1
 

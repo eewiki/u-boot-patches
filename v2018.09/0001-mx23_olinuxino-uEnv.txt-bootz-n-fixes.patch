@@ -1,6 +1,6 @@
-From 3503a60f5e3affe479a9dbca0494c2ee10f79555 Mon Sep 17 00:00:00 2001
+From d953c105d07f419841d4e7769189c73268bdf09b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 8 Oct 2018 14:11:22 -0500
+Date: Tue, 2 Apr 2019 16:20:39 -0500
 Subject: [PATCH] mx23_olinuxino: uEnv.txt, bootz, n fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -181,5 +181,5 @@ index 330f020f78..76c007c20a 100644
  /* The rest of the configuration is shared */
  #include <configs/mxs.h>
 -- 
-2.19.0
+2.20.1
 
