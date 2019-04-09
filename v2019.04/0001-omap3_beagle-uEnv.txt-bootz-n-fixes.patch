@@ -1,0 +1,490 @@
+From dec42e5642d9dca155a1bfd3cbc8dcf8056692cd Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] omap3_beagle-uEnv.txt-bootz-n-fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ board/ti/beagle/beagle.c          |  38 +++++++--
+ include/configs/omap3_beagle.h    | 134 +++++++-----------------------
+ include/configs/ti_armv7_common.h | 128 +++++++++++++++++++++++++++-
+ include/environment/ti/mmc.h      |  45 +++++++---
+ 4 files changed, 222 insertions(+), 123 deletions(-)
+
+diff --git a/board/ti/beagle/beagle.c b/board/ti/beagle/beagle.c
+index 91e0a4c026..055bcb498c 100644
+--- a/board/ti/beagle/beagle.c
++++ b/board/ti/beagle/beagle.c
+@@ -55,6 +55,7 @@
+ #define BBTOYS_WIFI			0x01000B00
+ #define BBTOYS_VGA			0x02000B00
+ #define BBTOYS_LCD			0x03000B00
++#define BBTOYS_ULCD			0x04000B00
+ #define BCT_BRETTL3			0x01000F00
+ #define BCT_BRETTL4			0x02000F00
+ #define LSR_COM6L_ADPT			0x01001300
+@@ -210,25 +211,25 @@ void get_board_mem_timings(struct board_sdrc_timings *timings)
+  *		bus 1 for the availability of an AT24C01B serial EEPROM.
+  *		returns the device_vendor field from the EEPROM
+  */
+-static unsigned int get_expansion_id(void)
++static unsigned int get_expansion_id(int eeprom_address)
+ {
+ 	i2c_set_bus_num(EXPANSION_EEPROM_I2C_BUS);
+ 
+ 	/* return BEAGLE_NO_EEPROM if eeprom doesn't respond */
+-	if (i2c_probe(EXPANSION_EEPROM_I2C_ADDRESS) == 1) {
++	if (i2c_probe(eeprom_address) == 1) {
+ 		i2c_set_bus_num(TWL4030_I2C_BUS);
+ 		return BEAGLE_NO_EEPROM;
+ 	}
+ 
+ 	/* read configuration data */
+-	i2c_read(EXPANSION_EEPROM_I2C_ADDRESS, 0, 1, (u8 *)&expansion_config,
++	i2c_read(eeprom_address, 0, 1, (u8 *)&expansion_config,
+ 		 sizeof(expansion_config));
+ 
+ 	/* retry reading configuration data with 16bit addressing */
+ 	if ((expansion_config.device_vendor == 0xFFFFFF00) ||
+ 	    (expansion_config.device_vendor == 0xFFFFFFFF)) {
+ 		printf("EEPROM is blank or 8bit addressing failed: retrying with 16bit:\n");
+-		i2c_read(EXPANSION_EEPROM_I2C_ADDRESS, 0, 2, (u8 *)&expansion_config,
++		i2c_read(eeprom_address, 0, 2, (u8 *)&expansion_config,
+ 			 sizeof(expansion_config));
+ 	}
+ 
+@@ -340,15 +341,18 @@ int misc_init_r(void)
+ 	case REVISION_AXBX:
+ 		printf("Beagle Rev Ax/Bx\n");
+ 		env_set("beaglerev", "AxBx");
++		env_set("musb", "musb_hdrc.fifo_mode=5");
+ 		break;
+ 	case REVISION_CX:
+ 		printf("Beagle Rev C1/C2/C3\n");
+ 		env_set("beaglerev", "Cx");
++		env_set("musb", "musb_hdrc.fifo_mode=5");
+ 		MUX_BEAGLE_C();
+ 		break;
+ 	case REVISION_C4:
+ 		printf("Beagle Rev C4\n");
+ 		env_set("beaglerev", "C4");
++		env_set("musb", "musb_hdrc.fifo_mode=5");
+ 		MUX_BEAGLE_C();
+ 		/* Set VAUX2 to 1.8V for EHCI PHY */
+ 		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+@@ -389,7 +393,7 @@ int misc_init_r(void)
+ 		generate_fake_mac = true;
+ 	}
+ 
+-	switch (get_expansion_id()) {
++	switch (get_expansion_id(EXPANSION_EEPROM_I2C_ADDRESS)) {
+ 	case TINCANTOOLS_ZIPPY:
+ 		printf("Recognized Tincantools Zippy board (rev %d %s)\n",
+ 			expansion_config.revision,
+@@ -469,6 +473,30 @@ int misc_init_r(void)
+ 		env_set("buddy", "unknown");
+ 	}
+ 
++	if (expansion_config.content == 1)
++		env_set(expansion_config.env_var, expansion_config.env_setting);
++
++	/* Scan 0x51 as well for loop-thru boards */
++	switch (get_expansion_id(EXPANSION_EEPROM_I2C_ADDRESS + 1)) {
++	case BBTOYS_ULCD:
++		printf("Recognized BeagleBoardToys uLCD-lite board\n");
++		env_set("buddy2", "bbtoys-ulcd");
++		env_set("defaultdisplay", "dvi");
++		env_set("dvimode", "800x480MR-16@60");
++		env_set("lcd1", "i2c mw 40 00 00; i2c mw 40 04 80; i2c mw 40 0d 05");
++		env_set("lcdcmd", "i2c dev 1 ; run lcd1; i2c dev 0");
++		env_set("kmsmode", "video=DVI-D-1:800x480");
++		break;
++	case BEAGLE_NO_EEPROM:
++		printf("No EEPROM on expansion board\n");
++		env_set("buddy2", "none");
++		break;
++	default:
++		printf("Unrecognized expansion board: %x\n",
++			expansion_config.device_vendor);
++		env_set("buddy2", "unknown");
++	}
++
+ 	if (expansion_config.content == 1)
+ 		env_set(expansion_config.env_var, expansion_config.env_setting);
+ 
+diff --git a/include/configs/omap3_beagle.h b/include/configs/omap3_beagle.h
+index 7698a90c4e..135a4f5efc 100644
+--- a/include/configs/omap3_beagle.h
++++ b/include/configs/omap3_beagle.h
+@@ -72,7 +72,10 @@
+ #define BOOTENV_DEV_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	"bootcmd_" #devtypel #instance "=" \
+ 	"setenv mmcdev " #instance "; " \
+-	"run mmcboot\0"
++	"setenv devtype mmc; " \
++	"setenv mmcblk 0; " \
++	"setenv mmcdev 0; " \
++	"run boot\0"
+ #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
+ 	#devtypel #instance " "
+ 
+@@ -103,33 +106,33 @@
+ #endif /* CONFIG_NAND */
+ 
+ #include <config_distro_bootcmd.h>
++#include <environment/ti/mmc.h>
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS \
+ 	MEM_LAYOUT_ENV_SETTINGS \
+-	"fdtfile=" CONFIG_DEFAULT_FDT_FILE "\0" \
+-	"fdt_high=0xffffffff\0" \
++	DEFAULT_MMC_TI_ARGS \
+ 	"console=ttyO2,115200n8\0" \
++	"fdtfile=undefined\0" \
++	"bootpart=0:2\0" \
+ 	"bootdir=/boot\0" \
+-	"bootenv=uEnv.txt\0" \
+ 	"bootfile=zImage\0" \
+-	"bootpart=0:2\0" \
+-	"bootubivol=rootfs\0" \
+-	"bootubipart=rootfs\0" \
+ 	"usbtty=cdc_acm\0" \
+-	"mpurate=auto\0" \
+-	"buddy=none\0" \
+-	"camera=none\0" \
+-	"vram=12M\0" \
+-	"dvimode=640x480MR-16@60\0" \
+-	"defaultdisplay=dvi\0" \
+-	"defaultargs=setenv defargs " \
+-		"mpurate=${mpurate} " \
+-		"buddy=${buddy} "\
+-		"camera=${camera} "\
+-		"vram=${vram} " \
+-		"omapfb.mode=dvi:${dvimode} " \
+-		"omapdss.def_disp=${defaultdisplay}\0" \
+-	"optargs=\0" \
++	"vram=16M\0" \
++	"loadbootscript=load ${devtype} ${mmcdev} ${loadaddr} boot.scr\0" \
++	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++		"source ${loadaddr}\0" \
++	"bootenv=uEnv.txt\0" \
++	"loadbootenv=load ${devtype} ${bootpart} ${loadaddr} ${bootenv}\0" \
++	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++		"env import -t ${loadaddr} ${filesize}\0" \
++	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loaduimage=load ${devtype} ${mmcdev} ${loadaddr} uImage\0" \
++	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
++		"run args_mmc; " \
++		"bootz ${loadaddr} - ${fdtaddr}\0" \
++	"uimageboot=echo Booting from mmc${mmcdev} ...; " \
++		"run args_mmc; " \
++		"bootm ${loadaddr}\0" \
+ 	"findfdt=" \
+ 		"if test $beaglerev = AxBx; then " \
+ 			"setenv fdtfile omap3-beagle.dtb; fi; " \
+@@ -143,91 +146,10 @@
+ 			"setenv fdtfile omap3-beagle-xm.dtb; fi; " \
+ 		"if test $fdtfile = undefined; then " \
+ 			"echo WARNING: Could not determine device tree to use; fi\0" \
+-	"mmcdev=0\0" \
+-	"mmcpart=2\0" \
+-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+-	"mmcrootfstype=ext4 rootwait\0" \
+-	"mmcargs=run defaultargs; setenv bootargs console=${console} " \
+-		"${mtdparts} " \
+-		"${defargs} " \
+-		"${optargs} " \
+-		"root=${mmcroot} " \
+-		"rootfstype=${mmcrootfstype}\0" \
+-	"userbutton_xm=gpio input 4;\0" \
+-	"userbutton_nonxm=gpio input 7;\0" \
+-	"userbutton=if gpio input 173; then " \
+-			"run userbutton_xm; " \
+-		"else " \
+-			"run userbutton_nonxm; " \
+-		"fi;\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
+-	"ext4bootenv=ext4load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootenv}\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
+-		"env import -t ${loadaddr} ${filesize}\0" \
+-	"mmcbootenv=setenv bootpart ${mmcdev}:${mmcpart}; " \
+-		"mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
+-			"if run userbutton; then " \
+-				"setenv bootenv uEnv.txt;" \
+-			"else " \
+-				"setenv bootenv user.txt;" \
+-			"fi;" \
+-			"run loadbootenv && run importbootenv; " \
+-			"run ext4bootenv && run importbootenv; " \
+-			"if test -n $uenvcmd; then " \
+-				"echo Running uenvcmd ...; " \
+-				"run uenvcmd; " \
+-			"fi; " \
+-		"fi\0" \
+-	"validatefdt=" \
+-		"if test $beaglerev = xMAB; then " \
+-			"if test ! -e mmc ${bootpart} ${bootdir}/${fdtfile}; then " \
+-				"setenv fdtfile omap3-beagle-xm.dtb; " \
+-			"fi; " \
+-		"fi; \0" \
+-	"loadimage=ext4load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loaddtb=run validatefdt; ext4load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+-	"mmcboot=run mmcbootenv; " \
+-		"if run loadimage && run loaddtb; then " \
+-			"echo Booting ${bootdir}/${bootfile} from mmc ${bootpart} ...; " \
+-			"run mmcargs; " \
+-			"if test ${bootfile} = uImage; then " \
+-				"bootm ${loadaddr} - ${fdtaddr}; " \
+-			"fi; " \
+-			"if test ${bootfile} = zImage; then " \
+-				"bootz ${loadaddr} - ${fdtaddr}; " \
+-			"fi; " \
+-		"fi\0" \
+-	"nandroot=ubi0:rootfs ubi.mtd=rootfs rw\0" \
+-	"nandrootfstype=ubifs rootwait\0" \
+-	"nandargs=run defaultargs; setenv bootargs console=${console} " \
+-		"${mtdparts} " \
+-		"${defargs} " \
+-		"${optargs} " \
+-		"root=${nandroot} " \
+-		"rootfstype=${nandrootfstype}\0" \
+-	"nandboot=if nand read ${loadaddr} kernel && nand read ${fdtaddr} dtb; then " \
+-			"echo Booting uImage from NAND MTD 'kernel' partition ...; " \
+-			"run nandargs; " \
+-			"bootm ${loadaddr} - ${fdtaddr}; " \
+-		"fi\0" \
+-	"loadramdisk=ext4load mmc ${bootpart} ${rdaddr} ${bootdir}/${ramdisk}\0" \
+-	"ramdisk=rootfs.ext2.gz.uboot\0" \
+-	"ramdisk_size=16384\0" \
+-	"ramroot=/dev/ram rw\0" \
+-	"ramrootfstype=ext2\0" \
+-	"ramargs=run defaultargs; setenv bootargs console=${console} " \
+-		"${mtdparts} " \
+-		"${defargs} " \
+-		"${optargs} " \
+-		"root=${ramroot} ramdisk_size=${ramdisk_size} " \
+-	 	"rootfstype=${ramrootfstype}\0" \
+-	"ramboot=run mmcbootenv; " \
+-		"if run loadimage && run loaddtb && run loadramdisk; then " \
+-			"echo Booting ${bootdir}/${bootfile} from mmc ${bootpart} w/ramdisk ...; " \
+-			"run ramargs; " \
+-			"bootz ${loadaddr} ${rdaddr} ${fdtaddr}; " \
+-		"fi\0" \
++	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	EEWIKI_BOOT \
++	EEWIKI_UNAME_BOOT \
+ 	BOOTENV
+ 
+ #endif /* __CONFIG_H */
+diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
+index 828fb1b2a5..ef6927a08d 100644
+--- a/include/configs/ti_armv7_common.h
++++ b/include/configs/ti_armv7_common.h
+@@ -47,7 +47,7 @@
+ 	"ramdisk_addr_r=0x88080000\0" \
+ 	"scriptaddr=0x80000000\0" \
+ 	"pxefile_addr_r=0x80100000\0" \
+-	"bootm_size=0x10000000\0" \
++	"bootm_size=0x0a000000\0" \
+ 	"boot_fdt=try\0"
+ 
+ #define DEFAULT_FIT_TI_ARGS \
+@@ -102,6 +102,132 @@
+ /* Boot Argument Buffer Size */
+ #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
+ 
++#define EEWIKI_BOOT \
++	"boot=${devtype} dev ${mmcdev}; " \
++		"if ${devtype} rescan; then " \
++			"echo SD/MMC found on device ${mmcdev};" \
++			"setenv bootpart ${mmcdev}:1; " \
++			"echo Checking for: /uEnv.txt ...;" \
++			"if test -e ${devtype} ${bootpart} /uEnv.txt; then " \
++				"load ${devtype} ${bootpart} ${loadaddr} /uEnv.txt;" \
++				"env import -t ${loadaddr} ${filesize};" \
++				"echo Loaded environment from /uEnv.txt;" \
++				"echo Checking if uenvcmd is set ...;" \
++				"if test -n ${uenvcmd}; then " \
++					"echo Running uenvcmd ...;" \
++					"run uenvcmd;" \
++				"fi;" \
++			"fi; " \
++			"echo Checking for: /boot/uEnv.txt ...;" \
++			"for i in 1 2 3 4 5 6 7 ; do " \
++				"setenv mmcpart ${i};" \
++				"setenv bootpart ${mmcdev}:${mmcpart};" \
++				"if test -e ${devtype} ${bootpart} /boot/uEnv.txt; then " \
++					"load ${devtype} ${bootpart} ${loadaddr} /boot/uEnv.txt;" \
++					"env import -t ${loadaddr} ${filesize};" \
++					"echo Loaded environment from /boot/uEnv.txt;" \
++					"if test -n ${dtb}; then " \
++						"setenv fdtfile ${dtb};" \
++						"echo Using: dtb=${fdtfile} ...;" \
++					"fi;" \
++					"echo Checking if uname_r is set in /boot/uEnv.txt...;" \
++					"if test -n ${uname_r}; then " \
++						"setenv oldroot /dev/mmcblk${mmcblk}p${mmcpart};" \
++						"echo Running uname_boot ...;" \
++						"run uname_boot;" \
++					"fi;" \
++				"fi;" \
++			"done;" \
++		"fi;\0" \
++
++#define EEWIKI_UNAME_BOOT \
++	"uname_boot="\
++		"setenv bootdir /boot; " \
++		"setenv bootfile vmlinuz-${uname_r}; " \
++		"if test -e ${devtype} ${bootpart} ${bootdir}/${bootfile}; then " \
++			"echo loading ${bootdir}/${bootfile} ...; "\
++			"run loadimage;" \
++			"setenv fdtdir /boot/dtbs/${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++				"run loadfdt;" \
++			"else " \
++				"setenv fdtdir /usr/lib/linux-image-${uname_r}; " \
++				"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++					"run loadfdt;" \
++				"else " \
++					"setenv fdtdir /lib/firmware/${uname_r}/device-tree; " \
++					"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++						"run loadfdt;" \
++					"else " \
++						"setenv fdtdir /boot/dtb-${uname_r}; " \
++						"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++							"run loadfdt;" \
++						"else " \
++							"setenv fdtdir /boot/dtbs; " \
++							"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++								"run loadfdt;" \
++							"else " \
++								"setenv fdtdir /boot/dtb; " \
++								"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++									"run loadfdt;" \
++								"else " \
++									"setenv fdtdir /boot; " \
++									"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
++										"run loadfdt;" \
++									"else " \
++										"echo; echo unable to find ${fdtfile} ...; echo booting legacy ...;"\
++										"run args_mmc;" \
++										"echo debug: [${bootargs}] ... ;" \
++										"echo debug: [bootz ${loadaddr}] ... ;" \
++										"bootz ${loadaddr}; " \
++									"fi;" \
++								"fi;" \
++							"fi;" \
++						"fi;" \
++					"fi;" \
++				"fi;" \
++			"fi; " \
++			"setenv rdfile initrd.img-${uname_r}; " \
++			"if test -e ${devtype} ${bootpart} ${bootdir}/${rdfile}; then " \
++				"echo loading ${bootdir}/${rdfile} ...; "\
++				"run loadrd;" \
++				"if test -n ${netinstall_enable}; then " \
++					"run args_netinstall; run message;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++				"if test -n ${uuid}; then " \
++					"run args_mmc_uuid;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"else " \
++					"run args_mmc_old;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} ${rdaddr}:${rdsize} ${fdtaddr}; " \
++				"fi;" \
++			"else " \
++				"if test -n ${uenv_root}; then " \
++					"run args_uenv_root;" \
++					"echo debug: [${bootargs}] ... ;" \
++					"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++					"bootz ${loadaddr} - ${fdtaddr}; " \
++				"fi;" \
++				"run args_mmc_old;" \
++				"echo debug: [${bootargs}] ... ;" \
++				"echo debug: [bootz ${loadaddr} - ${fdtaddr}] ... ;" \
++				"bootz ${loadaddr} - ${fdtaddr}; " \
++			"fi;" \
++		"fi;\0" \
++
+ /*
+  * When we have SPI, NOR or NAND flash we expect to be making use of
+  * mtdparts, both for ease of use in U-Boot and for passing information
+diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
+index 785fc15345..81019c52e1 100644
+--- a/include/environment/ti/mmc.h
++++ b/include/environment/ti/mmc.h
+@@ -11,22 +11,45 @@
+ #define DEFAULT_MMC_TI_ARGS \
+ 	"mmcdev=0\0" \
+ 	"mmcrootfstype=ext4 rootwait\0" \
+-	"finduuid=part uuid mmc ${bootpart} uuid\0" \
++	"finduuid=part uuid ${interface} ${bootpart} uuid\0" \
+ 	"args_mmc=run finduuid;setenv bootargs console=${console} " \
+ 		"${optargs} " \
+-		"root=PARTUUID=${uuid} rw " \
+-		"rootfstype=${mmcrootfstype}\0" \
+-	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+-	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
++		"root=PARTUUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_old=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${oldroot} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_mmc_uuid=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=UUID=${uuid} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${cmdline}\0" \
++	"args_uenv_root=setenv bootargs console=${console} " \
++		"${optargs} " \
++		"root=${uenv_root} ro " \
++		"rootfstype=${mmcrootfstype} " \
++		"${musb} ${cmdline}\0" \
++	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
++		"${optargs} " \
++		"${cape_disable} " \
++		"${cape_enable} " \
++		"root=/dev/ram rw " \
++		"${cmdline}\0" \
++	"loadbootscript=load ${interface} ${mmcdev} ${loadaddr} boot.scr\0" \
++	"bootscript=echo Running bootscript from ${interface}${mmcdev} ...; " \
+ 		"source ${loadaddr}\0" \
+ 	"bootenvfile=uEnv.txt\0" \
+-	"importbootenv=echo Importing environment from mmc${mmcdev} ...; " \
++	"importbootenv=echo Importing environment from ${interface}${mmcdev} ...; " \
+ 		"env import -t ${loadaddr} ${filesize}\0" \
+-	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
+-	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+-	"loadfdt=load ${devtype} ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+-	"envboot=mmc dev ${mmcdev}; " \
+-		"if mmc rescan; then " \
++	"loadbootenv=fatload ${interface} ${mmcdev} ${loadaddr} ${bootenvfile}\0" \
++	"loadimage=load ${interface} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
++	"loadrd=load ${interface} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
++	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...;  load ${interface} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
++	"envboot=${interface} dev ${mmcdev}; " \
++		"if ${interface} rescan; then " \
+ 			"echo SD/MMC found on device ${mmcdev};" \
+ 			"if run loadbootscript; then " \
+ 				"run bootscript;" \
+-- 
+2.20.1
+
