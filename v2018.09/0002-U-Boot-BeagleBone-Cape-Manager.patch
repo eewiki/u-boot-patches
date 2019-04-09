@@ -1,4 +1,4 @@
-From 238c25ec929952ddc72b6f0c4e1d928d9d44069a Mon Sep 17 00:00:00 2001
+From 7e11ff2804fcac36dcadb34305450951980941be Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
@@ -7,13 +7,12 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
  board/ti/am335x/board.c                   | 449 ++++++++++++++++++++++
- board/ti/am335x/board.h                   |  17 +
+ board/ti/am335x/board.h                   |  16 +
  board/ti/am335x/hash-string.h             |  59 +++
- board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 211 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 770 insertions(+)
+ 7 files changed, 754 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -506,7 +505,7 @@ index 9eb285d6cb..fb72bfdf74 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 873174f433..c90034617f 100644
+index a4e0e04f8f..c90034617f 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -10,6 +10,22 @@
@@ -532,13 +531,6 @@ index 873174f433..c90034617f 100644
  /**
   * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
   * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
-@@ -124,5 +140,6 @@ void enable_uart3_pin_mux(void);
- void enable_uart4_pin_mux(void);
- void enable_uart5_pin_mux(void);
- void enable_i2c0_pin_mux(void);
-+void enable_i2c2_pin_mux(void);
- void enable_board_pin_mux(void);
- #endif
 diff --git a/board/ti/am335x/hash-string.h b/board/ti/am335x/hash-string.h
 new file mode 100644
 index 0000000000..b267a87788
@@ -604,53 +596,6 @@ index 0000000000..b267a87788
 +    }
 +  return hval;
 +}
-diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 1660f2f681..64fb73ee64 100644
---- a/board/ti/am335x/mux.c
-+++ b/board/ti/am335x/mux.c
-@@ -119,6 +119,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
- 	{-1},
- };
- 
-+static struct module_pin_mux i2c2_pin_mux[] = {
-+	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
-+			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
-+	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
-+			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
-+	{-1},
-+};
-+
- static struct module_pin_mux spi0_pin_mux[] = {
- 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
- 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
-@@ -303,6 +311,11 @@ void enable_i2c0_pin_mux(void)
- 	configure_module_pin_mux(i2c0_pin_mux);
- }
- 
-+void enable_i2c2_pin_mux(void)
-+{
-+	configure_module_pin_mux(i2c2_pin_mux);
-+}
-+
- /*
-  * The AM335x GP EVM, if daughter card(s) are connected, can have 8
-  * different profiles.  These profiles determine what peripherals are
-@@ -355,6 +368,7 @@ void enable_board_pin_mux(void)
- #else
- 		configure_module_pin_mux(mmc1_pin_mux);
- #endif
-+		configure_module_pin_mux(i2c2_pin_mux);
- 	} else if (board_is_gp_evm()) {
- 		/* General Purpose EVM */
- 		unsigned short profile = detect_daughter_board_profile();
-@@ -398,6 +412,7 @@ void enable_board_pin_mux(void)
- #else
- 		configure_module_pin_mux(mmc1_pin_mux);
- #endif
-+		configure_module_pin_mux(i2c2_pin_mux);
- 	} else if (board_is_pb()) {
- 		configure_module_pin_mux(mii1_pin_mux);
- 		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index baa5e32b14..ac2d61fe6d 100644
 --- a/include/configs/ti_armv7_common.h
