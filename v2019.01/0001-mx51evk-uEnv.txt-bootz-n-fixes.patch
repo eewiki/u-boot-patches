@@ -1,7 +1,7 @@
-From 6b5206815faf4ac8f6a81000b6b86a920160dec7 Mon Sep 17 00:00:00 2001
+From 08d724b76adaa7435fcf64699b48e7fb6421a608 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 8 Oct 2018 14:07:10 -0500
-Subject: [PATCH] mx51evk: uEnv.txt, bootz, n fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] mx51evk-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -11,24 +11,25 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  3 files changed, 129 insertions(+), 26 deletions(-)
 
 diff --git a/configs/mx51evk_defconfig b/configs/mx51evk_defconfig
-index e93e81f3c3..80990155f2 100644
+index e93e81f3c3..31685dd91c 100644
 --- a/configs/mx51evk_defconfig
 +++ b/configs/mx51evk_defconfig
-@@ -20,6 +20,9 @@ CONFIG_CMD_MII=y
+@@ -19,7 +19,10 @@ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_MII=y
  CONFIG_CMD_PING=y
  CONFIG_CMD_DATE=y
- CONFIG_CMD_FAT=y
 +CONFIG_CMD_EXT2=y
 +CONFIG_CMD_EXT4=y
+ CONFIG_CMD_FAT=y
 +CONFIG_CMD_FS_GENERIC=y
  CONFIG_ENV_IS_IN_MMC=y
  CONFIG_FSL_ESDHC=y
  CONFIG_MII=y
 diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
-index 4528345c67..4d3397ccde 100644
+index 99e5882866..25c9332488 100644
 --- a/drivers/mmc/fsl_esdhc.c
 +++ b/drivers/mmc/fsl_esdhc.c
-@@ -329,15 +329,8 @@ static int esdhc_setup_data(struct fsl_esdhc_priv *priv, struct mmc *mmc,
+@@ -331,15 +331,8 @@ static int esdhc_setup_data(struct fsl_esdhc_priv *priv, struct mmc *mmc,
  	 * Rounding up to next power of 2
  	 * => timeout + 13 = log2(mmc->clock/4) + 1
  	 * => timeout + 13 = fls(mmc->clock/4)
@@ -227,5 +228,5 @@ index eb172c97b3..17f295f74d 100644
  #define CONFIG_ARP_TIMEOUT	200UL
  
 -- 
-2.19.1
+2.20.1
 

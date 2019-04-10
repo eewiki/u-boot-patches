@@ -1,40 +1,43 @@
-From 97c520eba0a05a4d627930282f786a4074b72a20 Mon Sep 17 00:00:00 2001
+From a8cf3aaf85a935b0b4b38b4b1aaa741adfea99d1 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 30 Oct 2018 14:29:00 -0500
-Subject: [PATCH] at91sam9x5ek: uEnv.txt, bootz, n fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] at91sam9x5ek-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/at91sam9x5ek_mmc_defconfig |  6 ++--
+ configs/at91sam9x5ek_mmc_defconfig |  5 ++--
  include/configs/at91sam9x5ek.h     | 46 ++++++++++++++++++++++++++++++
- 2 files changed, 50 insertions(+), 2 deletions(-)
+ 2 files changed, 49 insertions(+), 2 deletions(-)
 
 diff --git a/configs/at91sam9x5ek_mmc_defconfig b/configs/at91sam9x5ek_mmc_defconfig
-index a44ab6bd90..29318f2f27 100644
+index ff86f93e61..831f7faed5 100644
 --- a/configs/at91sam9x5ek_mmc_defconfig
 +++ b/configs/at91sam9x5ek_mmc_defconfig
-@@ -11,8 +11,7 @@ CONFIG_NR_DRAM_BANKS=1
+@@ -11,8 +11,6 @@ CONFIG_NR_DRAM_BANKS=1
  CONFIG_FIT=y
  CONFIG_SD_BOOT=y
  CONFIG_BOOTDELAY=3
 -CONFIG_USE_BOOTARGS=y
 -CONFIG_BOOTARGS="mem=128M console=ttyS0,115200 mtdparts=atmel_nand:8M(bootstrap/uboot/kernel)ro,-(rootfs) root=/dev/mmcblk0p2 rw rootfstype=ext4 rootwait"
-+# CONFIG_USE_BOOTARGS is not set
  # CONFIG_CONSOLE_MUX is not set
  CONFIG_SYS_CONSOLE_IS_IN_ENV=y
  # CONFIG_DISPLAY_BOARDINFO is not set
-@@ -63,3 +62,6 @@ CONFIG_USB_EHCI_HCD=y
- CONFIG_USB_STORAGE=y
- CONFIG_DM_VIDEO=y
- CONFIG_ATMEL_HLCD=y
+@@ -28,7 +26,10 @@ CONFIG_CMD_USB=y
+ # CONFIG_CMD_SETEXPR is not set
+ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_PING=y
 +CONFIG_CMD_EXT2=y
 +CONFIG_CMD_EXT4=y
+ CONFIG_CMD_FAT=y
 +CONFIG_CMD_FS_GENERIC=y
+ CONFIG_CMD_MTDPARTS=y
+ CONFIG_CMD_UBI=y
+ CONFIG_OF_CONTROL=y
 diff --git a/include/configs/at91sam9x5ek.h b/include/configs/at91sam9x5ek.h
-index d48b7d0785..985539826a 100644
+index 63305a7cdd..2b3eddfb92 100644
 --- a/include/configs/at91sam9x5ek.h
 +++ b/include/configs/at91sam9x5ek.h
-@@ -108,6 +108,52 @@
+@@ -109,6 +109,52 @@
  #else /* CONFIG_SD_BOOT */
  /* bootstrap + u-boot + env + linux in mmc */
  #define CONFIG_ENV_SIZE		0x4000
@@ -88,5 +91,5 @@ index d48b7d0785..985539826a 100644
  
  /*
 -- 
-2.19.1
+2.20.1
 

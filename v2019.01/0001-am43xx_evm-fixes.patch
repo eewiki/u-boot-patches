@@ -1,31 +1,38 @@
-From 761598a31b46c902e04e83b0b65b1cb3cc3b0b3f Mon Sep 17 00:00:00 2001
+From 21ade461f45a4d5942a8fcabacbbf750082af222 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 20 Dec 2018 12:41:15 -0600
-Subject: [PATCH] am43xx_evm fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] am43xx_evm-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- configs/am43xx_evm_defconfig      |   7 ++
+ configs/am43xx_evm_defconfig      |   5 ++
  include/configs/am43xx_evm.h      |   6 ++
  include/configs/ti_armv7_common.h | 126 ++++++++++++++++++++++++++++++
  include/environment/ti/mmc.h      |  43 +++++++---
- 4 files changed, 172 insertions(+), 10 deletions(-)
+ 4 files changed, 170 insertions(+), 10 deletions(-)
 
 diff --git a/configs/am43xx_evm_defconfig b/configs/am43xx_evm_defconfig
-index 9bbda434ee..165f6dab28 100644
+index e3464145eb..436e8786ed 100644
 --- a/configs/am43xx_evm_defconfig
 +++ b/configs/am43xx_evm_defconfig
-@@ -78,3 +78,10 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0403
- CONFIG_USB_GADGET_PRODUCT_NUM=0xbd00
- CONFIG_USB_GADGET_DOWNLOAD=y
- CONFIG_USB_ETHER=y
+@@ -18,12 +18,17 @@ CONFIG_SPL_NET_VCI_STRING="AM43xx U-Boot SPL"
+ CONFIG_SPL_OS_BOOT=y
+ CONFIG_SPL_USB_GADGET=y
+ CONFIG_SPL_USB_ETHER=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
 +CONFIG_AUTOBOOT_DELAY_STR="d"
 +CONFIG_AUTOBOOT_STOP_STR=" "
-+CONFIG_CMD_FS_GENERIC=y
-+CONFIG_FS_BTRFS=y
+ CONFIG_CMD_SPL=y
+ CONFIG_CMD_SPL_NAND_OFS=0x00100000
+ CONFIG_CMD_SPL_WRITE_SIZE=0x40000
+ # CONFIG_CMD_FLASH is not set
+ CONFIG_CMD_NAND=y
+ # CONFIG_CMD_SETEXPR is not set
 +CONFIG_CMD_BTRFS=y
+ CONFIG_CMD_MTDPARTS=y
+ CONFIG_MTDIDS_DEFAULT="nand0=nand.0"
+ CONFIG_MTDPARTS_DEFAULT="mtdparts=nand.0:256k(NAND.SPL),256k(NAND.SPL.backup1),256k(NAND.SPL.backup2),256k(NAND.SPL.backup3),512k(NAND.u-boot-spl-os),1m(NAND.u-boot),256k(NAND.u-boot-env),256k(NAND.u-boot-env.backup1),7m(NAND.kernel),-(NAND.file-system)"
 diff --git a/include/configs/am43xx_evm.h b/include/configs/am43xx_evm.h
 index ed71f4ce56..0574c919f0 100644
 --- a/include/configs/am43xx_evm.h
@@ -248,5 +255,5 @@ index 785fc15345..d8fe15abc3 100644
  			"if run loadbootscript; then " \
  				"run bootscript;" \
 -- 
-2.19.2
+2.20.1
 

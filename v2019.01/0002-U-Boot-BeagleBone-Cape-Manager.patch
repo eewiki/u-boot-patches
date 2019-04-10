@@ -1,19 +1,18 @@
-From bcf0a0159b74864e09a85fb32121c3ae906c73cb Mon Sep 17 00:00:00 2001
+From efd88f847e84563ac94400585c7220d996869d93 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 20 Mar 2019 15:49:41 -0500
-Subject: [PATCH 2/2] U-Boot: BeagleBone Cape Manager
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/am33xx/clock_am33xx.c |   1 +
- board/ti/am335x/board.c                   | 468 ++++++++++++++++++++++
- board/ti/am335x/board.h                   |  17 +
+ board/ti/am335x/board.c                   | 453 ++++++++++++++++++++++
+ board/ti/am335x/board.h                   |  16 +
  board/ti/am335x/hash-string.h             |  59 +++
- board/ti/am335x/mux.c                     |  15 +
  include/configs/ti_armv7_common.h         | 211 ++++++++++
  include/configs/ti_armv7_omap.h           |   3 +
  include/environment/ti/mmc.h              |  15 +
- 8 files changed, 789 insertions(+)
+ 7 files changed, 758 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/arch/arm/mach-omap2/am33xx/clock_am33xx.c b/arch/arm/mach-omap2/am33xx/clock_am33xx.c
@@ -29,7 +28,7 @@ index 32cdf63e3d..fb871c29c3 100644
  		&cmper->spi0clkctrl,
  		&cmrtc->rtcclkctrl,
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 812c5ca16b..db05282d44 100644
+index 3e8183059a..47a7168517 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -40,14 +39,16 @@ index 812c5ca16b..db05282d44 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,468 @@ void do_board_detect(void)
+@@ -77,9 +78,453 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
 +
 +	//hack-ish, needs to mux'ed early, in do_cape_detect was too late...
 +	enable_i2c2_pin_mux();
++#ifndef CONFIG_DM_I2C
 +	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
++#endif
  }
  #endif
  
@@ -55,23 +56,6 @@ index 812c5ca16b..db05282d44 100644
 +#define CAPE_EEPROM_ADDR1	0x55
 +#define CAPE_EEPROM_ADDR2	0x56
 +#define CAPE_EEPROM_ADDR3	0x57
-+
-+void write_hex (unsigned char i)
-+{
-+	char cc;
-+
-+	cc = i >> 4;
-+	cc &= 0xf;
-+	if (cc > 9)
-+		serial_putc (cc + 55);
-+	else
-+		serial_putc (cc + 48);
-+	cc = i & 0xf;
-+	if (cc > 9)
-+		serial_putc (cc + 55);
-+	else
-+		serial_putc (cc + 48);
-+}
 +
 +#define NOT_POP		0x0
 +#define PINS_TAKEN	0x0
@@ -235,7 +219,7 @@ index 812c5ca16b..db05282d44 100644
 +
 +	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
 +		if (i2c_probe(addr)) {
-+			puts("BeagleBone: cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++			printf("BeagleBone: cape eeprom: i2c_probe: 0x%x:\n", addr);
 +		} else {
 +			/* read the eeprom using i2c */
 +			if (i2c_read(addr, 0, 2, (uchar *)cape_header,
@@ -270,7 +254,7 @@ index 812c5ca16b..db05282d44 100644
 +						end_part_number=i;
 +						i=17;
 +					} else {
-+						write_hex(process_cape_part_number[i]);
++						printf("%x", process_cape_part_number[i]);
 +					}
 +				}
 +				puts("]\n");
@@ -289,9 +273,7 @@ index 812c5ca16b..db05282d44 100644
 +
 +				unsigned long cape_overlay_hash = hash_string(cape_overlay);
 +
-+				puts("BeagleBone: cape eeprom: i2c_probe: 0x");
-+				write_hex(addr);
-+				printf(": %s [0x%lx]\n", cape_overlay, cape_overlay_hash);
++				printf("BeagleBone: cape eeprom: i2c_probe: 0x%x: %s [0x%lx]\n", addr, cape_overlay, cape_overlay_hash);
 +
 +				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
 +				strncat(cape_overlay_pass_to_kernel, ",", 1);
@@ -393,7 +375,7 @@ index 812c5ca16b..db05282d44 100644
 +				}
 +				env_set("uboot_detected_capes", "1");
 +			} else {
-+				puts("BeagleBone: found invalid cape eeprom: i2c_probe: 0x");  write_hex(addr); puts(":\n");
++				printf("BeagleBone: found invalid cape eeprom: i2c_probe: 0x%x:\n", addr);
 +			}
 +		}
 +	}//for
@@ -502,14 +484,16 @@ index 812c5ca16b..db05282d44 100644
 +{
 +	struct am335x_cape_eeprom_id cape_header;
 +
++#ifndef CONFIG_DM_I2C
 +	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
++#endif
 +	probe_cape_eeprom(&cape_header);
 +}
 +
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -946,6 +1406,14 @@ int board_late_init(void)
+@@ -950,6 +1395,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -525,7 +509,7 @@ index 812c5ca16b..db05282d44 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 873174f433..c90034617f 100644
+index a4e0e04f8f..c90034617f 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -10,6 +10,22 @@
@@ -551,13 +535,6 @@ index 873174f433..c90034617f 100644
  /**
   * AM335X (EMIF_4D) EMIF REG_COS_COUNT_1, REG_COS_COUNT_2, and
   * REG_PR_OLD_COUNT values to avoid LCDC DMA FIFO underflows and Frame
-@@ -124,5 +140,6 @@ void enable_uart3_pin_mux(void);
- void enable_uart4_pin_mux(void);
- void enable_uart5_pin_mux(void);
- void enable_i2c0_pin_mux(void);
-+void enable_i2c2_pin_mux(void);
- void enable_board_pin_mux(void);
- #endif
 diff --git a/board/ti/am335x/hash-string.h b/board/ti/am335x/hash-string.h
 new file mode 100644
 index 0000000000..b267a87788
@@ -623,53 +600,6 @@ index 0000000000..b267a87788
 +    }
 +  return hval;
 +}
-diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 5a709e42b7..9e5244b351 100644
---- a/board/ti/am335x/mux.c
-+++ b/board/ti/am335x/mux.c
-@@ -119,6 +119,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
- 	{-1},
- };
- 
-+static struct module_pin_mux i2c2_pin_mux[] = {
-+	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
-+			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
-+	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
-+			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
-+	{-1},
-+};
-+
- static struct module_pin_mux spi0_pin_mux[] = {
- 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
- 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
-@@ -303,6 +311,11 @@ void enable_i2c0_pin_mux(void)
- 	configure_module_pin_mux(i2c0_pin_mux);
- }
- 
-+void enable_i2c2_pin_mux(void)
-+{
-+	configure_module_pin_mux(i2c2_pin_mux);
-+}
-+
- /*
-  * The AM335x GP EVM, if daughter card(s) are connected, can have 8
-  * different profiles.  These profiles determine what peripherals are
-@@ -366,6 +379,7 @@ void enable_board_pin_mux(void)
- #else
- 		configure_module_pin_mux(mmc1_pin_mux);
- #endif
-+		configure_module_pin_mux(i2c2_pin_mux);
- 	} else if (board_is_gp_evm()) {
- 		/* General Purpose EVM */
- 		unsigned short profile = detect_daughter_board_profile();
-@@ -409,6 +423,7 @@ void enable_board_pin_mux(void)
- #else
- 		configure_module_pin_mux(mmc1_pin_mux);
- #endif
-+		configure_module_pin_mux(i2c2_pin_mux);
- 	} else if (board_is_pb()) {
- 		configure_module_pin_mux(mii1_pin_mux);
- 		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 4e921bbba6..b4b6706203 100644
 --- a/include/configs/ti_armv7_common.h

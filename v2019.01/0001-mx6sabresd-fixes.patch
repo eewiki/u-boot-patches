@@ -1,7 +1,7 @@
-From 8844eae3f540faf688d9d380dde23cea99dc718b Mon Sep 17 00:00:00 2001
+From 016010f6462d7d607692db00ebcfe0f3f310225d Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 20 Jun 2018 15:13:40 -0500
-Subject: [PATCH] mx6sabresd fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] mx6sabresd-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -10,10 +10,10 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  2 files changed, 154 insertions(+), 72 deletions(-)
 
 diff --git a/configs/mx6sabresd_defconfig b/configs/mx6sabresd_defconfig
-index 3e9bdb921f..d6d8a6766a 100644
+index 1857c189e3..d7f2729fbb 100644
 --- a/configs/mx6sabresd_defconfig
 +++ b/configs/mx6sabresd_defconfig
-@@ -22,6 +22,10 @@ CONFIG_SPL_USB_GADGET_SUPPORT=y
+@@ -23,6 +23,10 @@ CONFIG_SPL_USB_GADGET=y
  CONFIG_SPL_USB_SDP_SUPPORT=y
  CONFIG_SPL_WATCHDOG_SUPPORT=y
  CONFIG_HUSH_PARSER=y
@@ -25,10 +25,10 @@ index 3e9bdb921f..d6d8a6766a 100644
  CONFIG_CMD_SPL=y
  CONFIG_CMD_SPL_WRITE_SIZE=0x20000
 diff --git a/include/configs/mx6sabre_common.h b/include/configs/mx6sabre_common.h
-index 99ecc412a6..e017172876 100644
+index 711aa82f9c..a2c0dd1a8c 100644
 --- a/include/configs/mx6sabre_common.h
 +++ b/include/configs/mx6sabre_common.h
-@@ -63,16 +63,25 @@
+@@ -62,16 +62,25 @@
  	"fdt_addr=0x18000000\0" \
  	"boot_fdt=try\0" \
  	"ip_dyn=yes\0" \
@@ -57,7 +57,7 @@ index 99ecc412a6..e017172876 100644
  	"update_sd_firmware=" \
  		"if test ${ip_dyn} = yes; then " \
  			"setenv get_cmd dhcp; " \
-@@ -87,85 +96,154 @@
+@@ -86,85 +95,154 @@
  			"fi; "	\
  		"fi\0" \
  	EMMC_ENV	  \
@@ -280,7 +280,7 @@ index 99ecc412a6..e017172876 100644
  
  #define CONFIG_ARP_TIMEOUT     200UL
  
-@@ -187,7 +265,7 @@
+@@ -185,7 +263,7 @@
  	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
  
  /* Environment organization */
@@ -290,5 +290,5 @@ index 99ecc412a6..e017172876 100644
  #if defined(CONFIG_ENV_IS_IN_MMC)
  #define CONFIG_ENV_OFFSET		(768 * 1024)
 -- 
-2.17.1
+2.20.1
 

@@ -1,7 +1,7 @@
-From 1c58a3472d1c54511952a71eb946866c08a6be91 Mon Sep 17 00:00:00 2001
+From 7653069e0796032cbad9a50a0876ce1d72245e63 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 8 Jan 2019 09:05:43 -0600
-Subject: [PATCH] am335x_evm: uEnv.txt, bootz, n fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH 1/3] am335x_evm-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -9,16 +9,16 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/include/asm/arch-am33xx/sys_proto.h  |   1 +
  arch/arm/mach-omap2/am33xx/board.c            |  22 +-
  arch/arm/mach-omap2/hwinit-common.c           |  10 +
- board/ti/am335x/board.c                       |  99 +++++-
- board/ti/am335x/board.h                       |  33 +-
- board/ti/am335x/mux.c                         |  11 +-
- configs/am335x_boneblack_defconfig            |  14 +-
- configs/am335x_evm_defconfig                  |  50 ++-
+ board/ti/am335x/board.c                       | 103 +++++-
+ board/ti/am335x/board.h                       |  34 +-
+ board/ti/am335x/mux.c                         |  26 +-
+ configs/am335x_boneblack_defconfig            |  11 +-
+ configs/am335x_evm_defconfig                  |  47 +--
  env/common.c                                  |   2 +
  include/configs/am335x_evm.h                  |  95 +++++-
  include/configs/ti_armv7_common.h             | 311 ++++++++++++++++++
  include/environment/ti/mmc.h                  |  67 +++-
- 13 files changed, 642 insertions(+), 74 deletions(-)
+ 13 files changed, 656 insertions(+), 74 deletions(-)
 
 diff --git a/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h b/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h
 index 878ef3e5d2..b42c7e67e9 100644
@@ -97,7 +97,7 @@ index 772b4c4db5..4e5ec79e96 100644
   * vcores_init() - Assign omap_vcores based on board
   *
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index d67f94ad47..8e2eb43056 100644
+index d67f94ad47..3e8183059a 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -28,6 +28,7 @@
@@ -166,7 +166,18 @@ index d67f94ad47..8e2eb43056 100644
  		config_ddr(400, &ioregs_bonelt,
  			   &ddr3_beagleblack_data,
  			   &ddr3_beagleblack_cmd_ctrl_data,
-@@ -699,11 +706,60 @@ done:
+@@ -641,6 +648,10 @@ int ft_board_setup(void *fdt, bd_t *bd)
+ 	if (!board_is_beaglebonex())
+ 		goto done;
+ 
++	/* This needs more testing, (on old kernels/etc..) */
++	if (board_is_beaglebonex())
++		goto done;
++
+ 	for (i = 0; i < MAX_CPSW_SLAVES; i++) {
+ 		sprintf(alias, "ethernet%d", i);
+ 
+@@ -699,11 +710,60 @@ done:
  }
  #endif
  
@@ -227,7 +238,7 @@ index d67f94ad47..8e2eb43056 100644
  #if defined(CONFIG_HW_WATCHDOG)
  	hw_watchdog_init();
  #endif
-@@ -800,6 +856,8 @@ int board_late_init(void)
+@@ -800,6 +860,8 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -236,7 +247,7 @@ index d67f94ad47..8e2eb43056 100644
  		/* BeagleBoard.org BeagleBone Black Wireless: */
  		if (!strncmp(board_ti_get_rev(), "BWA", 3)) {
  			name = "BBBW";
-@@ -812,12 +870,29 @@ int board_late_init(void)
+@@ -812,12 +874,29 @@ int board_late_init(void)
  		if (!strncmp(board_ti_get_rev(), "BLA", 3)) {
  			name = "BBBL";
  		}
@@ -267,7 +278,7 @@ index d67f94ad47..8e2eb43056 100644
  	set_board_info_env(name);
  
  	/*
-@@ -963,18 +1038,22 @@ int board_eth_init(bd_t *bis)
+@@ -963,18 +1042,22 @@ int board_eth_init(bd_t *bis)
  	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
  
  #ifdef CONFIG_DRIVER_TI_CPSW
@@ -292,7 +303,7 @@ index d67f94ad47..8e2eb43056 100644
  		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
  				PHY_INTERFACE_MODE_RGMII;
-@@ -985,6 +1064,7 @@ int board_eth_init(bd_t *bis)
+@@ -985,6 +1068,7 @@ int board_eth_init(bd_t *bis)
  		printf("Error %d registering CPSW switch\n", rv);
  	else
  		n += rv;
@@ -300,7 +311,7 @@ index d67f94ad47..8e2eb43056 100644
  #endif
  
  	/*
-@@ -999,7 +1079,7 @@ int board_eth_init(bd_t *bis)
+@@ -999,7 +1083,7 @@ int board_eth_init(bd_t *bis)
  #define AR8051_DEBUG_RGMII_CLK_DLY_REG	0x5
  #define AR8051_RGMII_TX_CLK_DLY		0x100
  
@@ -309,7 +320,7 @@ index d67f94ad47..8e2eb43056 100644
  		const char *devname;
  		devname = miiphy_get_current_dev();
  
-@@ -1029,6 +1109,7 @@ int board_eth_init(bd_t *bis)
+@@ -1029,6 +1113,7 @@ int board_eth_init(bd_t *bis)
  #ifdef CONFIG_SPL_LOAD_FIT
  int board_fit_config_name_match(const char *name)
  {
@@ -318,7 +329,7 @@ index d67f94ad47..8e2eb43056 100644
  		return 0;
  	else if (board_is_bone() && !strcmp(name, "am335x-bone"))
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 48df914af9..873174f433 100644
+index 48df914af9..a4e0e04f8f 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -23,6 +23,11 @@
@@ -378,8 +389,15 @@ index 48df914af9..873174f433 100644
  }
  
  static inline int board_is_evm_sk(void)
+@@ -93,5 +124,6 @@ void enable_uart3_pin_mux(void);
+ void enable_uart4_pin_mux(void);
+ void enable_uart5_pin_mux(void);
+ void enable_i2c0_pin_mux(void);
++void enable_i2c2_pin_mux(void);
+ void enable_board_pin_mux(void);
+ #endif
 diff --git a/board/ti/am335x/mux.c b/board/ti/am335x/mux.c
-index 04f4b8e693..5a709e42b7 100644
+index 04f4b8e693..9e5244b351 100644
 --- a/board/ti/am335x/mux.c
 +++ b/board/ti/am335x/mux.c
 @@ -65,7 +65,6 @@ static struct module_pin_mux mmc0_pin_mux[] = {
@@ -390,7 +408,34 @@ index 04f4b8e693..5a709e42b7 100644
  	{OFFSET(spi0_cs1), (MODE(7) | RXACTIVE | PULLUP_EN)},	/* GPIO0_6 */
  	{-1},
  };
-@@ -352,7 +351,11 @@ static unsigned short detect_daughter_board_profile(void)
+@@ -120,6 +119,14 @@ static struct module_pin_mux i2c1_pin_mux[] = {
+ 	{-1},
+ };
+ 
++static struct module_pin_mux i2c2_pin_mux[] = {
++	{OFFSET(uart1_ctsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_DATA */
++	{OFFSET(uart1_rtsn), (MODE(3) | RXACTIVE |
++			PULLUP_EN | PULLUDEN | SLEWCTRL)},	/* I2C_SCLK */
++	{-1},
++};
++
+ static struct module_pin_mux spi0_pin_mux[] = {
+ 	{OFFSET(spi0_sclk), (MODE(0) | RXACTIVE | PULLUDEN)},	/* SPI0_SCLK */
+ 	{OFFSET(spi0_d0), (MODE(0) | RXACTIVE |
+@@ -304,6 +311,11 @@ void enable_i2c0_pin_mux(void)
+ 	configure_module_pin_mux(i2c0_pin_mux);
+ }
+ 
++void enable_i2c2_pin_mux(void)
++{
++	configure_module_pin_mux(i2c2_pin_mux);
++}
++
+ /*
+  * The AM335x GP EVM, if daughter card(s) are connected, can have 8
+  * different profiles.  These profiles determine what peripherals are
+@@ -352,7 +364,11 @@ static unsigned short detect_daughter_board_profile(void)
  void enable_board_pin_mux(void)
  {
  	/* Do board-specific muxes. */
@@ -403,7 +448,15 @@ index 04f4b8e693..5a709e42b7 100644
  		/* Beaglebone pinmux */
  		configure_module_pin_mux(mii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux);
-@@ -391,15 +394,13 @@ void enable_board_pin_mux(void)
+@@ -363,6 +379,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_gp_evm()) {
+ 		/* General Purpose EVM */
+ 		unsigned short profile = detect_daughter_board_profile();
+@@ -391,15 +408,13 @@ void enable_board_pin_mux(void)
  		configure_module_pin_mux(rgmii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux_sk_evm);
  	} else if (board_is_bone_lt()) {
@@ -420,8 +473,16 @@ index 04f4b8e693..5a709e42b7 100644
  		configure_module_pin_mux(mmc0_pin_mux);
  #if defined(CONFIG_NAND) && defined(CONFIG_EMMC_BOOT)
  		configure_module_pin_mux(nand_pin_mux);
+@@ -408,6 +423,7 @@ void enable_board_pin_mux(void)
+ #else
+ 		configure_module_pin_mux(mmc1_pin_mux);
+ #endif
++		configure_module_pin_mux(i2c2_pin_mux);
+ 	} else if (board_is_pb()) {
+ 		configure_module_pin_mux(mii1_pin_mux);
+ 		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/configs/am335x_boneblack_defconfig b/configs/am335x_boneblack_defconfig
-index 439d0cba05..4659a15a64 100644
+index 439d0cba05..7d91dc0ceb 100644
 --- a/configs/am335x_boneblack_defconfig
 +++ b/configs/am335x_boneblack_defconfig
 @@ -4,7 +4,6 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
@@ -432,46 +493,40 @@ index 439d0cba05..4659a15a64 100644
  CONFIG_BOOTCOMMAND="if test ${boot_fit} -eq 1; then run update_to_fit; fi; run findfdt; run init_console; run envboot; run distro_bootcmd"
  CONFIG_SYS_CONSOLE_INFO_QUIET=y
  CONFIG_VERSION_VARIABLE=y
-@@ -18,9 +17,14 @@ CONFIG_AUTOBOOT_DELAY_STR="d"
+@@ -18,8 +17,12 @@ CONFIG_AUTOBOOT_DELAY_STR="d"
  CONFIG_AUTOBOOT_STOP_STR=" "
  CONFIG_CMD_SPL=y
  # CONFIG_CMD_FLASH is not set
 -# CONFIG_CMD_SETEXPR is not set
 -CONFIG_ENV_IS_IN_MMC=y
-+CONFIG_CMD_SETEXPR=y
 +CONFIG_CMD_BTRFS=y
 +# CONFIG_ENV_IS_IN_FAT is not set
 +CONFIG_ENV_IS_IN_EXT4=y
- CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
 +CONFIG_ENV_EXT4_INTERFACE="mmc"
 +CONFIG_ENV_EXT4_DEVICE_AND_PART="0:1"
 +CONFIG_ENV_EXT4_FILE="/boot/uboot.env"
+ CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
  CONFIG_BOOTCOUNT_LIMIT=y
  CONFIG_DFU_TFTP=y
- CONFIG_DFU_MMC=y
-@@ -32,8 +36,9 @@ CONFIG_FASTBOOT_CMD_OEM_FORMAT=y
+@@ -32,6 +35,7 @@ CONFIG_FASTBOOT_CMD_OEM_FORMAT=y
  CONFIG_MMC_OMAP_HS=y
  CONFIG_SPI_FLASH=y
  CONFIG_SPI_FLASH_WINBOND=y
--CONFIG_MII=y
- CONFIG_DRIVER_TI_CPSW=y
-+CONFIG_MII=y
 +CONFIG_PHY_MSCC=y
+ CONFIG_MII=y
+ CONFIG_DRIVER_TI_CPSW=y
  CONFIG_SPI=y
- CONFIG_OMAP3_SPI=y
- CONFIG_USB=y
-@@ -46,5 +51,6 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
+@@ -46,5 +50,4 @@ CONFIG_USB_GADGET_VENDOR_NUM=0x0451
  CONFIG_USB_GADGET_PRODUCT_NUM=0xd022
  CONFIG_USB_ETHER=y
  CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
-+CONFIG_FS_BTRFS=y
- CONFIG_LZO=y
+-CONFIG_LZO=y
  CONFIG_OF_LIBFDT=y
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index 0931c1e97f..4659a15a64 100644
+index 0931c1e97f..7d91dc0ceb 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -4,61 +4,53 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
+@@ -4,61 +4,50 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
  CONFIG_AM33XX=y
  CONFIG_SPL=y
  CONFIG_DISTRO_DEFAULTS=y
@@ -501,15 +556,14 @@ index 0931c1e97f..4659a15a64 100644
 -CONFIG_OF_CONTROL=y
 -CONFIG_DEFAULT_DEVICE_TREE="am335x-evm"
 -CONFIG_OF_LIST="am335x-evm am335x-bone am335x-boneblack am335x-evmsk am335x-bonegreen am335x-icev2"
-+CONFIG_CMD_SETEXPR=y
 +CONFIG_CMD_BTRFS=y
 +# CONFIG_ENV_IS_IN_FAT is not set
 +CONFIG_ENV_IS_IN_EXT4=y
- CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
--# CONFIG_BLK is not set
 +CONFIG_ENV_EXT4_INTERFACE="mmc"
 +CONFIG_ENV_EXT4_DEVICE_AND_PART="0:1"
 +CONFIG_ENV_EXT4_FILE="/boot/uboot.env"
+ CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
+-# CONFIG_BLK is not set
  CONFIG_BOOTCOUNT_LIMIT=y
 +CONFIG_DFU_TFTP=y
  CONFIG_DFU_MMC=y
@@ -528,10 +582,9 @@ index 0931c1e97f..4659a15a64 100644
  CONFIG_SPI_FLASH_WINBOND=y
 -CONFIG_DM_ETH=y
 -CONFIG_PHY_GIGE=y
--CONFIG_MII=y
- CONFIG_DRIVER_TI_CPSW=y
-+CONFIG_MII=y
 +CONFIG_PHY_MSCC=y
+ CONFIG_MII=y
+ CONFIG_DRIVER_TI_CPSW=y
  CONFIG_SPI=y
  CONFIG_OMAP3_SPI=y
 -CONFIG_TIMER=y
@@ -550,9 +603,8 @@ index 0931c1e97f..4659a15a64 100644
  CONFIG_USB_ETHER=y
 -CONFIG_DYNAMIC_CRC_TABLE=y
 -CONFIG_RSA=y
+-CONFIG_LZO=y
 +CONFIG_USBNET_HOST_ADDR="de:ad:be:af:00:00"
-+CONFIG_FS_BTRFS=y
- CONFIG_LZO=y
 +CONFIG_OF_LIBFDT=y
 diff --git a/env/common.c b/env/common.c
 index 3317cef355..8f76def865 100644

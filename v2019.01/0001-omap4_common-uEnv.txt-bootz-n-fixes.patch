@@ -1,7 +1,7 @@
-From 819452b196a751464b997658f663bf4c02a09975 Mon Sep 17 00:00:00 2001
+From d7d5a89078a5d30c6b1a3661bfa14779ffc8c4bf Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 26 Sep 2018 16:35:09 -0500
-Subject: [PATCH] ti_omap4_common: uEnv.txt, bootz, n fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] omap4_common-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -12,7 +12,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  4 files changed, 164 insertions(+), 8 deletions(-)
 
 diff --git a/configs/omap4_panda_defconfig b/configs/omap4_panda_defconfig
-index 41df480be3..6561e05ccd 100644
+index 7ee9eea06a..4393330a7e 100644
 --- a/configs/omap4_panda_defconfig
 +++ b/configs/omap4_panda_defconfig
 @@ -12,6 +12,10 @@ CONFIG_VERSION_VARIABLE=y
@@ -35,10 +35,10 @@ index 41df480be3..6561e05ccd 100644
  CONFIG_ENV_FAT_INTERFACE="mmc"
  CONFIG_ENV_FAT_DEVICE_AND_PART="0:1"
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 55b9b45eec..9a1f5ab856 100644
+index 1e2a62dd6f..063a8f4c66 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -116,6 +116,132 @@
+@@ -102,6 +102,132 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -259,5 +259,5 @@ index 785fc15345..9fdc703da0 100644
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
 -- 
-2.19.0
+2.20.1
 

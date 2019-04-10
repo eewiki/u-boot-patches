@@ -1,18 +1,18 @@
-From 43e5581d1339b9143f1d8ca5d4445379d64942b1 Mon Sep 17 00:00:00 2001
+From 15041d54438b7071a54b65e75de793246e7a86ca Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 17 Jun 2016 11:54:48 -0500
-Subject: [PATCH] mx6ul_14x14_evk fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] mx6ul_14x14_evk-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- include/configs/mx6ul_14x14_evk.h | 134 +++++++++++++++++++++++++++++++++-----
+ include/configs/mx6ul_14x14_evk.h | 134 ++++++++++++++++++++++++++----
  1 file changed, 116 insertions(+), 18 deletions(-)
 
 diff --git a/include/configs/mx6ul_14x14_evk.h b/include/configs/mx6ul_14x14_evk.h
-index b2ba773..f27d9a4 100644
+index c8c088e665..6e29baa713 100644
 --- a/include/configs/mx6ul_14x14_evk.h
 +++ b/include/configs/mx6ul_14x14_evk.h
-@@ -72,22 +72,66 @@
+@@ -58,22 +58,66 @@
  	"initrd_high=0xffffffff\0" \
  	"fdt_file=undefined\0" \
  	"fdt_addr=0x83000000\0" \
@@ -85,7 +85,7 @@ index b2ba773..f27d9a4 100644
  		"run mmcargs; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
-@@ -126,6 +170,70 @@
+@@ -112,6 +156,70 @@
  		"else " \
  			"bootz; " \
  		"fi;\0" \
@@ -156,7 +156,7 @@ index b2ba773..f27d9a4 100644
  		"findfdt="\
  			"if test $fdt_file = undefined; then " \
  				"if test $board_name = EVK && test $board_rev = 9X9; then " \
-@@ -137,18 +245,8 @@
+@@ -123,18 +231,8 @@
  			"fi;\0" \
  
  #define CONFIG_BOOTCOMMAND \
@@ -178,5 +178,5 @@ index b2ba773..f27d9a4 100644
  /* Miscellaneous configurable options */
  #define CONFIG_SYS_MEMTEST_START	0x80000000
 -- 
-2.8.1
+2.20.1
 

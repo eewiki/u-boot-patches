@@ -1,7 +1,7 @@
-From ce7616a0f85806f7b761793aa65d11e981cae7f7 Mon Sep 17 00:00:00 2001
+From fbe1c6e64732e6e13c5cb948b98585538511b12b Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Thu, 3 Jan 2019 11:21:25 -0600
-Subject: [PATCH] de0_nano fixes
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] de0_nano-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
@@ -9,7 +9,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/configs/socfpga_de0_nano_soc_defconfig b/configs/socfpga_de0_nano_soc_defconfig
-index 1a9f2b6038..881824fa53 100644
+index 9a89bb5d68..f080af9ce0 100644
 --- a/configs/socfpga_de0_nano_soc_defconfig
 +++ b/configs/socfpga_de0_nano_soc_defconfig
 @@ -12,7 +12,7 @@ CONFIG_FIT=y
