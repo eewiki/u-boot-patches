@@ -1,4 +1,4 @@
-From 7653069e0796032cbad9a50a0876ce1d72245e63 Mon Sep 17 00:00:00 2001
+From f189b1f21a225a0d2118311acc5a4a3a2116a5cb Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 1/3] am335x_evm-uEnv.txt-bootz-n-fixes
@@ -627,7 +627,7 @@ index 3317cef355..8f76def865 100644
  
  	return 0;
 diff --git a/include/configs/am335x_evm.h b/include/configs/am335x_evm.h
-index 3bd96b921b..f7d5a8548d 100644
+index 3bd96b921b..972a7f93f8 100644
 --- a/include/configs/am335x_evm.h
 +++ b/include/configs/am335x_evm.h
 @@ -58,9 +58,14 @@
@@ -746,7 +746,7 @@ index 3bd96b921b..f7d5a8548d 100644
 -			"echo WARNING: Could not determine device tree to use; fi; \0" \
 +			"setenv board_name A335BNLT; " \
 +			"setenv board_rev EMMC; " \
-+			"setenv fdtfile am335x-boneblack-emmc-overlay.dtb; " \
++			"setenv fdtfile am335x-bonegreen.dtb; " \
 +		"fi; \0" \
  	"init_console=" \
  		"if test $board_name = A335_ICE; then "\
