@@ -1,4 +1,4 @@
-From d3e446244a4d241683f550ae5abdb23aafd11c6d Mon Sep 17 00:00:00 2001
+From b26ee80c6abb5d8c72fd6faae6393604ba2de5dc Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH] omap5_common-uEnv.txt-bootz-n-fixes
@@ -13,11 +13,11 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  5 files changed, 167 insertions(+), 14 deletions(-)
 
 diff --git a/configs/omap5_uevm_defconfig b/configs/omap5_uevm_defconfig
-index 84d4e2b37c..fc4dded166 100644
+index 719ab8dde8..7fed5e6d8e 100644
 --- a/configs/omap5_uevm_defconfig
 +++ b/configs/omap5_uevm_defconfig
-@@ -11,6 +11,10 @@ CONFIG_SYS_CONSOLE_INFO_QUIET=y
- CONFIG_VERSION_VARIABLE=y
+@@ -12,6 +12,10 @@ CONFIG_VERSION_VARIABLE=y
+ CONFIG_SPL_TEXT_BASE=0x40300000
  # CONFIG_SPL_NAND_SUPPORT is not set
  CONFIG_SPL_OS_BOOT=y
 +CONFIG_AUTOBOOT_KEYED=y
@@ -27,7 +27,7 @@ index 84d4e2b37c..fc4dded166 100644
  CONFIG_CMD_SPL=y
  CONFIG_CMD_ASKENV=y
  CONFIG_CMD_DFU=y
-@@ -22,7 +26,7 @@ CONFIG_CMD_MMC=y
+@@ -23,7 +27,7 @@ CONFIG_CMD_MMC=y
  CONFIG_CMD_SPI=y
  CONFIG_CMD_USB=y
  # CONFIG_CMD_SETEXPR is not set
@@ -174,10 +174,10 @@ index 828fb1b2a5..72c954fa69 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/configs/ti_omap5_common.h b/include/configs/ti_omap5_common.h
-index ba57c40182..e26d469416 100644
+index de0a6af2fd..0a950faa55 100644
 --- a/include/configs/ti_omap5_common.h
 +++ b/include/configs/ti_omap5_common.h
-@@ -63,6 +63,8 @@
+@@ -64,6 +64,8 @@
  	DEFAULT_FIT_TI_ARGS \
  	DEFAULT_COMMON_BOOT_TI_ARGS \
  	DEFAULT_FDT_TI_ARGS \
@@ -185,7 +185,7 @@ index ba57c40182..e26d469416 100644
 +	EEWIKI_UNAME_BOOT \
  	DFUARGS \
  	NETARGS \
- 
+ 	NANDARGS \
 diff --git a/include/environment/ti/boot.h b/include/environment/ti/boot.h
 index 05bdbbc23e..f3dba4d4ed 100644
 --- a/include/environment/ti/boot.h

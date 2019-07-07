@@ -1,4 +1,4 @@
-From feb99914d158347c0e25072849a34dbc55f588a6 Mon Sep 17 00:00:00 2001
+From 514c0fb9edfd0e7e35bb69ab7cd3bf77f9eb818f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
@@ -15,7 +15,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 4cefacf1a4..169c851116 100644
+index 541c998cfa..b49d98ae96 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
