@@ -1,0 +1,26 @@
+From ca53b0ae1b9ca86a00310ef4a775e63a837a3032 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Tue, 9 Apr 2019 09:38:02 -0500
+Subject: [PATCH] de0_nano-fixes
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/socfpga_de0_nano_soc_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/socfpga_de0_nano_soc_defconfig b/configs/socfpga_de0_nano_soc_defconfig
+index ebaf24761f..6dc63d0e01 100644
+--- a/configs/socfpga_de0_nano_soc_defconfig
++++ b/configs/socfpga_de0_nano_soc_defconfig
+@@ -7,7 +7,7 @@ CONFIG_FIT=y
+ CONFIG_SYS_CONSOLE_IS_IN_ENV=y
+ CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE=y
+ CONFIG_SYS_CONSOLE_ENV_OVERWRITE=y
+-CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_de0_nano_soc.dtb"
++CONFIG_DEFAULT_FDT_FILE="socfpga_cyclone5_de0_sockit.dtb"
+ CONFIG_VERSION_VARIABLE=y
+ # CONFIG_DISPLAY_BOARDINFO is not set
+ CONFIG_DISPLAY_BOARDINFO_LATE=y
+-- 
+2.20.1
+
