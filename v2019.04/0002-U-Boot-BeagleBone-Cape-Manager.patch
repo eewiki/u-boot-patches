@@ -1,21 +1,21 @@
-From feb99914d158347c0e25072849a34dbc55f588a6 Mon Sep 17 00:00:00 2001
+From 81582d4b831d8d9bdc189727cfb22770cabb0dd3 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           | 453 ++++++++++++++++++++++++++++++
- board/ti/am335x/board.h           |  16 ++
+ board/ti/am335x/board.c           | 474 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.h           |  16 +
  board/ti/am335x/hash-string.h     |  59 ++++
- include/configs/ti_armv7_common.h | 211 ++++++++++++++
+ include/configs/ti_armv7_common.h | 215 ++++++++++++++
  include/configs/ti_armv7_omap.h   |   3 +
  include/environment/ti/mmc.h      |  15 +
- 6 files changed, 757 insertions(+)
+ 6 files changed, 782 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index 4cefacf1a4..169c851116 100644
+index dbe864c3ff..e99b020fcc 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -26,7 +26,7 @@ index 4cefacf1a4..169c851116 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,453 @@ void do_board_detect(void)
+@@ -77,9 +78,474 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -53,6 +53,7 @@ index 4cefacf1a4..169c851116 100644
 +#define BBGW_BASE_DTB	0x3
 +#define BBBL_BASE_DTB	0x4
 +#define BBE_BASE_DTB	0x5
++#define BBGG_BASE_DTB	0x6
 +
 +#define BBB_EMMC	0x1
 +
@@ -65,6 +66,7 @@ index 4cefacf1a4..169c851116 100644
 +
 +#define BBBW_WL1835	0x1
 +#define BBGW_WL1835	0x2
++#define BBGG_WL1837	0x3
 +
 +#define CAPE_UNIVERSAL	0x0
 +#define CAPE_UNIVERSAL_BBB	0x01
@@ -140,6 +142,14 @@ index 4cefacf1a4..169c851116 100644
 +			virtual_audio=NOT_POP;
 +			virtual_wireless=BBGW_WL1835;
 +			cape_universal=CAPE_UNIVERSAL_BBGW;
++		}
++		if (!strncmp(board_ti_get_rev(), "GG1", 3)) {
++			puts("Model: SeeedStudio BeagleBone Green Gateway:\n");
++			base_dtb=BBGG_BASE_DTB;
++			virtual_video=NOT_POP;
++			virtual_audio=NOT_POP;
++			virtual_wireless=BBGG_WL1837;
++			cape_universal=NOT_POP;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
 +			puts("Model: Arrow BeagleBone Black Industrial:\n");
@@ -340,6 +350,10 @@ index 4cefacf1a4..169c851116 100644
 +						virtual_video=PINS_TAKEN;
 +						virtual_adc=PINS_TAKEN;
 +						break;
++					case 0xfe93c2f: /* /lib/firmware/BB-BONE-LCD5-01-00A1.dtbo */
++						virtual_video=PINS_TAKEN;
++						virtual_adc=PINS_TAKEN;
++						break;
 +				}
 +
 +				switch(addr) {
@@ -392,6 +406,10 @@ index 4cefacf1a4..169c851116 100644
 +		case BBBL_BASE_DTB:
 +			env_set("uboot_base_dtb_univ", "am335x-boneblue.dtb");
 +			break;
++		case BBGG_BASE_DTB:
++			env_set("uboot_base_dtb_univ", "am335x-bonegreen-gateway-uboot-univ.dtb");
++			env_set("uboot_base_dtb", "am335x-bonegreen-gateway-uboot.dtb");
++			break;
 +	}
 +
 +	if (virtual_emmc == BBB_EMMC) {
@@ -433,6 +451,9 @@ index 4cefacf1a4..169c851116 100644
 +			break;
 +		case BBGW_WL1835:
 +			env_set("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
++			break;
++		case BBGG_WL1837:
++			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL1837-00A0.dtbo");
 +			break;
 +	}
 +
@@ -480,7 +501,7 @@ index 4cefacf1a4..169c851116 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -951,6 +1396,14 @@ int board_late_init(void)
+@@ -955,6 +1421,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -496,7 +517,7 @@ index 4cefacf1a4..169c851116 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index a4e0e04f8f..c90034617f 100644
+index 777b0f9236..61cfc44f57 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -10,6 +10,22 @@
@@ -588,10 +609,10 @@ index 0000000000..b267a87788
 +  return hval;
 +}
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 74a51dcd2a..f0a58c358b 100644
+index 6e7553332e..5b9bddd8db 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -333,6 +333,43 @@
+@@ -339,6 +339,43 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -635,7 +656,7 @@ index 74a51dcd2a..f0a58c358b 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -373,6 +410,180 @@
+@@ -379,6 +416,184 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -741,6 +762,10 @@ index 74a51dcd2a..f0a58c358b 100644
 +				"fi;" \
 +				"if test -n ${uboot_overlay_pru}; then " \
 +					"setenv uboot_overlay ${uboot_overlay_pru}; " \
++					"run virtualloadoverlay;" \
++				"fi;" \
++				"if test -n ${uboot_overlay_pru_add}; then " \
++					"setenv uboot_overlay ${uboot_overlay_pru_add}; " \
 +					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${dtb_overlay}; then " \
@@ -857,5 +882,5 @@ index 110c426058..d6bbe3ea8e 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.20.1
+2.23.0
 
