@@ -1,4 +1,4 @@
-From 81582d4b831d8d9bdc189727cfb22770cabb0dd3 Mon Sep 17 00:00:00 2001
+From 11f327c8fc1e34ed9b99c6c1554dbe3514339640 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
@@ -15,7 +15,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index dbe864c3ff..e99b020fcc 100644
+index dbe864c3ff..5c5c2885cf 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -66,7 +66,7 @@ index dbe864c3ff..e99b020fcc 100644
 +
 +#define BBBW_WL1835	0x1
 +#define BBGW_WL1835	0x2
-+#define BBGG_WL1837	0x3
++#define BBGG_WL183X	0x3
 +
 +#define CAPE_UNIVERSAL	0x0
 +#define CAPE_UNIVERSAL_BBB	0x01
@@ -148,7 +148,7 @@ index dbe864c3ff..e99b020fcc 100644
 +			base_dtb=BBGG_BASE_DTB;
 +			virtual_video=NOT_POP;
 +			virtual_audio=NOT_POP;
-+			virtual_wireless=BBGG_WL1837;
++			virtual_wireless=BBGG_WL183X;
 +			cape_universal=NOT_POP;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
@@ -452,8 +452,8 @@ index dbe864c3ff..e99b020fcc 100644
 +		case BBGW_WL1835:
 +			env_set("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
 +			break;
-+		case BBGG_WL1837:
-+			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL1837-00A0.dtbo");
++		case BBGG_WL183X:
++			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL183X-00A0.dtbo");
 +			break;
 +	}
 +
