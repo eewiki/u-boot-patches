@@ -1,4 +1,4 @@
-From 39a793fe143b20e237989e68b2a6b317559744d6 Mon Sep 17 00:00:00 2001
+From ead9832dd9b8bd4729c3491b48b4b5022d80f410 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 1/3] am335x_evm-uEnv.txt-bootz-n-fixes
@@ -10,15 +10,15 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/mach-omap2/am33xx/board.c            |  22 +-
  arch/arm/mach-omap2/am33xx/clock_am33xx.c     |   1 +
  arch/arm/mach-omap2/hwinit-common.c           |  10 +
- board/ti/am335x/board.c                       | 106 +++++-
+ board/ti/am335x/board.c                       | 102 +++++-
  board/ti/am335x/board.h                       |  35 +-
  board/ti/am335x/mux.c                         |  28 +-
- configs/am335x_evm_defconfig                  |  55 +--
+ configs/am335x_evm_defconfig                  |  56 ++--
  env/common.c                                  |   2 +
  include/configs/am335x_evm.h                  |  81 ++++-
  include/configs/ti_armv7_common.h             | 317 ++++++++++++++++++
  include/environment/ti/mmc.h                  |  67 +++-
- 13 files changed, 651 insertions(+), 75 deletions(-)
+ 13 files changed, 648 insertions(+), 75 deletions(-)
 
 diff --git a/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h b/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h
 index 878ef3e5d2..b42c7e67e9 100644
@@ -109,7 +109,7 @@ index 772b4c4db5..4e5ec79e96 100644
   * vcores_init() - Assign omap_vcores based on board
   *
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index d67f94ad47..dbe864c3ff 100644
+index d67f94ad47..e7cd8faeed 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -28,6 +28,7 @@
@@ -178,18 +178,7 @@ index d67f94ad47..dbe864c3ff 100644
  		config_ddr(400, &ioregs_bonelt,
  			   &ddr3_beagleblack_data,
  			   &ddr3_beagleblack_cmd_ctrl_data,
-@@ -641,6 +648,10 @@ int ft_board_setup(void *fdt, bd_t *bd)
- 	if (!board_is_beaglebonex())
- 		goto done;
- 
-+	/* This needs more testing, (on old kernels/etc..) */
-+	if (board_is_beaglebonex())
-+		goto done;
-+
- 	for (i = 0; i < MAX_CPSW_SLAVES; i++) {
- 		sprintf(alias, "ethernet%d", i);
- 
-@@ -699,11 +710,60 @@ done:
+@@ -699,11 +706,60 @@ done:
  }
  #endif
  
@@ -250,7 +239,7 @@ index d67f94ad47..dbe864c3ff 100644
  #if defined(CONFIG_HW_WATCHDOG)
  	hw_watchdog_init();
  #endif
-@@ -800,6 +860,8 @@ int board_late_init(void)
+@@ -800,6 +856,8 @@ int board_late_init(void)
  	char *name = NULL;
  
  	if (board_is_bone_lt()) {
@@ -259,7 +248,7 @@ index d67f94ad47..dbe864c3ff 100644
  		/* BeagleBoard.org BeagleBone Black Wireless: */
  		if (!strncmp(board_ti_get_rev(), "BWA", 3)) {
  			name = "BBBW";
-@@ -808,16 +870,38 @@ int board_late_init(void)
+@@ -808,16 +866,38 @@ int board_late_init(void)
  		if (!strncmp(board_ti_get_rev(), "GW1", 3)) {
  			name = "BBGW";
  		}
@@ -299,7 +288,7 @@ index d67f94ad47..dbe864c3ff 100644
  	set_board_info_env(name);
  
  	/*
-@@ -963,18 +1047,22 @@ int board_eth_init(bd_t *bis)
+@@ -963,18 +1043,22 @@ int board_eth_init(bd_t *bis)
  	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
  
  #ifdef CONFIG_DRIVER_TI_CPSW
@@ -324,7 +313,7 @@ index d67f94ad47..dbe864c3ff 100644
  		writel((RGMII_MODE_ENABLE | RGMII_INT_DELAY), &cdev->miisel);
  		cpsw_slaves[0].phy_if = cpsw_slaves[1].phy_if =
  				PHY_INTERFACE_MODE_RGMII;
-@@ -985,6 +1073,7 @@ int board_eth_init(bd_t *bis)
+@@ -985,6 +1069,7 @@ int board_eth_init(bd_t *bis)
  		printf("Error %d registering CPSW switch\n", rv);
  	else
  		n += rv;
@@ -332,7 +321,7 @@ index d67f94ad47..dbe864c3ff 100644
  #endif
  
  	/*
-@@ -1029,6 +1118,7 @@ int board_eth_init(bd_t *bis)
+@@ -1029,6 +1114,7 @@ int board_eth_init(bd_t *bis)
  #ifdef CONFIG_SPL_LOAD_FIT
  int board_fit_config_name_match(const char *name)
  {
@@ -501,15 +490,16 @@ index 04f4b8e693..f8fbd9fb88 100644
  		configure_module_pin_mux(mii1_pin_mux);
  		configure_module_pin_mux(mmc0_pin_mux);
 diff --git a/configs/am335x_evm_defconfig b/configs/am335x_evm_defconfig
-index a6a237f783..7d91dc0ceb 100644
+index a6a237f783..41aa4f2b19 100644
 --- a/configs/am335x_evm_defconfig
 +++ b/configs/am335x_evm_defconfig
-@@ -4,69 +4,50 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
+@@ -4,69 +4,51 @@ CONFIG_TI_COMMON_CMD_OPTIONS=y
  CONFIG_AM33XX=y
  CONFIG_SPL=y
  CONFIG_DISTRO_DEFAULTS=y
 -CONFIG_SPL_LOAD_FIT=y
 -CONFIG_OF_BOARD_SETUP=y
++CONFIG_BOOTDELAY=0
  CONFIG_BOOTCOMMAND="if test ${boot_fit} -eq 1; then run update_to_fit; fi; run findfdt; run init_console; run envboot; run distro_bootcmd"
  CONFIG_SYS_CONSOLE_INFO_QUIET=y
  CONFIG_VERSION_VARIABLE=y
@@ -1177,5 +1167,5 @@ index 785fc15345..110c426058 100644
  				"if test ${boot_fdt} = try; then " \
  					"bootz; " \
 -- 
-2.23.0
+2.24.0.rc1
 

@@ -1,21 +1,21 @@
-From 11f327c8fc1e34ed9b99c6c1554dbe3514339640 Mon Sep 17 00:00:00 2001
+From ecd1e838cc7de8e73e2c2356ea9a6eb5eb683c34 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
 Date: Tue, 9 Apr 2019 09:38:02 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           | 474 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c           | 472 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h           |  16 +
  board/ti/am335x/hash-string.h     |  59 ++++
  include/configs/ti_armv7_common.h | 215 ++++++++++++++
  include/configs/ti_armv7_omap.h   |   3 +
  include/environment/ti/mmc.h      |  15 +
- 6 files changed, 782 insertions(+)
+ 6 files changed, 780 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index dbe864c3ff..5c5c2885cf 100644
+index e7cd8faeed..ae9089a755 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -26,7 +26,7 @@ index dbe864c3ff..5c5c2885cf 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,474 @@ void do_board_detect(void)
+@@ -77,9 +78,472 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -53,7 +53,6 @@ index dbe864c3ff..5c5c2885cf 100644
 +#define BBGW_BASE_DTB	0x3
 +#define BBBL_BASE_DTB	0x4
 +#define BBE_BASE_DTB	0x5
-+#define BBGG_BASE_DTB	0x6
 +
 +#define BBB_EMMC	0x1
 +
@@ -66,7 +65,7 @@ index dbe864c3ff..5c5c2885cf 100644
 +
 +#define BBBW_WL1835	0x1
 +#define BBGW_WL1835	0x2
-+#define BBGG_WL183X	0x3
++#define BBGG_WL1835	0x3
 +
 +#define CAPE_UNIVERSAL	0x0
 +#define CAPE_UNIVERSAL_BBB	0x01
@@ -75,6 +74,7 @@ index dbe864c3ff..5c5c2885cf 100644
 +
 +#define M_BBG1	0x01
 +#define M_OS00	0x02
++#define M_BBGG	0x03
 +
 +static int probe_cape_eeprom(struct am335x_cape_eeprom_id *cape_header)
 +{
@@ -145,11 +145,10 @@ index dbe864c3ff..5c5c2885cf 100644
 +		}
 +		if (!strncmp(board_ti_get_rev(), "GG1", 3)) {
 +			puts("Model: SeeedStudio BeagleBone Green Gateway:\n");
-+			base_dtb=BBGG_BASE_DTB;
 +			virtual_video=NOT_POP;
 +			virtual_audio=NOT_POP;
-+			virtual_wireless=BBGG_WL183X;
-+			cape_universal=NOT_POP;
++			virtual_wireless=BBGG_WL1835;
++			model=M_BBGG;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "AIA", 3)) {
 +			puts("Model: Arrow BeagleBone Black Industrial:\n");
@@ -406,10 +405,6 @@ index dbe864c3ff..5c5c2885cf 100644
 +		case BBBL_BASE_DTB:
 +			env_set("uboot_base_dtb_univ", "am335x-boneblue.dtb");
 +			break;
-+		case BBGG_BASE_DTB:
-+			env_set("uboot_base_dtb_univ", "am335x-bonegreen-gateway-uboot-univ.dtb");
-+			env_set("uboot_base_dtb", "am335x-bonegreen-gateway-uboot.dtb");
-+			break;
 +	}
 +
 +	if (virtual_emmc == BBB_EMMC) {
@@ -452,8 +447,8 @@ index dbe864c3ff..5c5c2885cf 100644
 +		case BBGW_WL1835:
 +			env_set("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
 +			break;
-+		case BBGG_WL183X:
-+			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL183X-00A0.dtbo");
++		case BBGG_WL1835:
++			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL1835-00A0.dtbo");
 +			break;
 +	}
 +
@@ -469,6 +464,9 @@ index dbe864c3ff..5c5c2885cf 100644
 +			break;
 +		case M_OS00:
 +			env_set("uboot_model", "/lib/firmware/M-BB-OSD3358-SM-RED-00A0.dtbo");
++			break;
++		case M_BBGG:
++			env_set("uboot_model", "/lib/firmware/M-BB-BBGG-00A0.dtbo");
 +			break;
 +	}
 +
@@ -501,7 +499,7 @@ index dbe864c3ff..5c5c2885cf 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -955,6 +1421,14 @@ int board_late_init(void)
+@@ -951,6 +1415,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -882,5 +880,5 @@ index 110c426058..d6bbe3ea8e 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.23.0
+2.24.0.rc1
 
