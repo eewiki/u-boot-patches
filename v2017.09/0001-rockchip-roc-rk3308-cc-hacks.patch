@@ -1,0 +1,26 @@
+From 759fbfd1a1df7454ad00bcc8cc5db2543b6f0d42 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Thu, 23 Jan 2020 16:56:12 -0600
+Subject: [PATCH] rockchip: roc-rk3308-cc hacks
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ make.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/make.sh b/make.sh
+index 09ae08a0a2..055f596263 100755
+--- a/make.sh
++++ b/make.sh
+@@ -38,7 +38,7 @@ OBJ_ARM64=aarch64-linux-gnu-objdump
+ GCC_ARM32=arm-linux-gnueabihf-
+ GCC_ARM64=aarch64-linux-gnu-
+ TOOLCHAIN_ARM32=../prebuilts/gcc/linux-x86/arm/gcc-linaro-6.3.1-2017.05-x86_64_arm-linux-gnueabihf/bin
+-TOOLCHAIN_ARM64=../prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin
++TOOLCHAIN_ARM64=$(dirname ${CC})
+ 
+ ########################################### User not touch #############################################
+ BIN_PATH_FIXUP="--replace tools/rk_tools/ ./"
+-- 
+2.24.1
+
