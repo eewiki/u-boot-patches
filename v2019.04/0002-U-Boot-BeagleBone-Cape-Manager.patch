@@ -1,21 +1,21 @@
-From ecd1e838cc7de8e73e2c2356ea9a6eb5eb683c34 Mon Sep 17 00:00:00 2001
+From bba1a51ef92210928a29c5aee522b4923706fdb4 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 9 Apr 2019 09:38:02 -0500
+Date: Fri, 6 Mar 2020 10:46:34 -0600
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           | 472 ++++++++++++++++++++++++++++++
- board/ti/am335x/board.h           |  16 +
+ board/ti/am335x/board.c           | 456 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.h           |  16 ++
  board/ti/am335x/hash-string.h     |  59 ++++
- include/configs/ti_armv7_common.h | 215 ++++++++++++++
+ include/configs/ti_armv7_common.h | 213 ++++++++++++++
  include/configs/ti_armv7_omap.h   |   3 +
  include/environment/ti/mmc.h      |  15 +
- 6 files changed, 780 insertions(+)
+ 6 files changed, 762 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e7cd8faeed..ae9089a755 100644
+index e7cd8faeed..f0f82d609a 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -26,7 +26,7 @@ index e7cd8faeed..ae9089a755 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,472 @@ void do_board_detect(void)
+@@ -77,8 +78,455 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -36,9 +36,9 @@ index e7cd8faeed..ae9089a755 100644
 +#ifndef CONFIG_DM_I2C
 +	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
 +#endif
- }
- #endif
- 
++}
++#endif
++
 +#define CAPE_EEPROM_ADDR0	0x54
 +#define CAPE_EEPROM_ADDR1	0x55
 +#define CAPE_EEPROM_ADDR2	0x56
@@ -60,8 +60,6 @@ index e7cd8faeed..ae9089a755 100644
 +#define BBB_TDA998X_NAUDIO	0x2
 +#define BBB_ADV7511_AUDIO	0x3
 +#define BBB_ADV7511_NAUDIO	0x4
-+
-+#define BBB_ADC		0x1
 +
 +#define BBBW_WL1835	0x1
 +#define BBGW_WL1835	0x2
@@ -93,7 +91,6 @@ index e7cd8faeed..ae9089a755 100644
 +	char virtual_audio=NOT_POP;
 +	char virtual_wireless=NOT_POP;
 +	char cape_universal=CAPE_UNIVERSAL;
-+	char virtual_adc=NOT_POP;
 +	char model=NOT_POP;
 +
 +	char *name = NULL;
@@ -105,7 +102,6 @@ index e7cd8faeed..ae9089a755 100644
 +		virtual_video=BBB_TDA998X_AUDIO;
 +		virtual_audio=BBB_TDA998X_AUDIO;
 +		virtual_wireless=NOT_POP;
-+		virtual_adc=BBB_ADC;
 +		cape_universal=CAPE_UNIVERSAL_BBB;
 +		name = "A335BNLT";
 +
@@ -117,7 +113,6 @@ index e7cd8faeed..ae9089a755 100644
 +			virtual_video=NOT_POP;
 +			virtual_audio=NOT_POP;
 +			virtual_wireless=NOT_POP;
-+			virtual_adc=BBB_ADC;
 +			cape_universal=CAPE_UNIVERSAL;
 +			name = "BBBL";
 +		}
@@ -190,7 +185,6 @@ index e7cd8faeed..ae9089a755 100644
 +		virtual_video=NOT_POP;
 +		virtual_audio=NOT_POP;
 +		virtual_wireless=NOT_POP;
-+		virtual_adc=BBB_ADC;
 +		cape_universal=CAPE_UNIVERSAL_BBB;
 +		name = "A335BONE";
 +	}
@@ -202,7 +196,6 @@ index e7cd8faeed..ae9089a755 100644
 +		virtual_video=NOT_POP;
 +		virtual_audio=NOT_POP;
 +		virtual_wireless=NOT_POP;
-+		virtual_adc=BBB_ADC;
 +		cape_universal=CAPE_UNIVERSAL_BBG;
 +		name = "BBG1";
 +		model=M_BBG1;
@@ -311,7 +304,6 @@ index e7cd8faeed..ae9089a755 100644
 +						break;
 +					case 0xfc93c8f: /* /lib/firmware/BB-BONE-LCD7-01-00A3.dtbo */
 +						virtual_video=PINS_TAKEN;
-+						virtual_adc=PINS_TAKEN;
 +						break;
 +					//fe131
 +					case 0xfe1313f: /* /lib/firmware/BB-BONE-4D5R-01-00A1.dtbo */
@@ -347,11 +339,9 @@ index e7cd8faeed..ae9089a755 100644
 +						break;
 +					case 0xfe93c1f: /* /lib/firmware/BB-BONE-LCD4-01-00A1.dtbo */
 +						virtual_video=PINS_TAKEN;
-+						virtual_adc=PINS_TAKEN;
 +						break;
 +					case 0xfe93c2f: /* /lib/firmware/BB-BONE-LCD5-01-00A1.dtbo */
 +						virtual_video=PINS_TAKEN;
-+						virtual_adc=PINS_TAKEN;
 +						break;
 +				}
 +
@@ -452,12 +442,6 @@ index e7cd8faeed..ae9089a755 100644
 +			break;
 +	}
 +
-+	switch(virtual_adc) {
-+		case BBB_ADC:
-+			env_set("uboot_adc", "/lib/firmware/BB-ADC-00A0.dtbo");
-+			break;
-+	}
-+
 +	switch(model) {
 +		case M_BBG1:
 +			env_set("uboot_model", "/lib/firmware/M-BB-BBG-00A0.dtbo");
@@ -484,7 +468,7 @@ index e7cd8faeed..ae9089a755 100644
 +
 +	i2c_set_bus_num(0);
 +	return 0;
-+}
+ }
 +
 +void do_cape_detect(void)
 +{
@@ -492,14 +476,13 @@ index e7cd8faeed..ae9089a755 100644
 +
 +#ifndef CONFIG_DM_I2C
 +	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED2, CONFIG_SYS_OMAP24_I2C_SLAVE2);
-+#endif
+ #endif
 +	probe_cape_eeprom(&cape_header);
 +}
-+
+ 
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
- {
-@@ -951,6 +1415,14 @@ int board_late_init(void)
+@@ -951,6 +1399,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -607,7 +590,7 @@ index 0000000000..b267a87788
 +  return hval;
 +}
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6e7553332e..5b9bddd8db 100644
+index 6e7553332e..f5eb91e8ab 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
 @@ -339,6 +339,43 @@
@@ -654,7 +637,7 @@ index 6e7553332e..5b9bddd8db 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -379,6 +416,184 @@
+@@ -379,6 +416,182 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -670,6 +653,12 @@ index 6e7553332e..5b9bddd8db 100644
 +				"fi;" \
 +				"if test -n ${uboot_model}; then " \
 +					"setenv uboot_overlay ${uboot_model}; " \
++					"run virtualloadoverlay;" \
++				"fi;" \
++				"if test -n ${disable_uboot_overlay_adc}; then " \
++					"echo uboot_overlays: uboot loading of [/lib/firmware/BB-ADC-00A0.dtbo] disabled by /boot/uEnv.txt [disable_uboot_overlay_adc=1]...;" \
++				"else " \
++					"setenv uboot_overlay /lib/firmware/BB-ADC-00A0.dtbo; " \
 +					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr0}; then " \
@@ -747,14 +736,6 @@ index 6e7553332e..5b9bddd8db 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_wireless}] disabled by /boot/uEnv.txt [disable_uboot_overlay_wireless=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_wireless}; " \
-+						"run virtualloadoverlay;" \
-+					"fi;" \
-+				"fi;" \
-+				"if test -n ${uboot_adc}; then " \
-+					"if test -n ${disable_uboot_overlay_adc}; then " \
-+						"echo uboot_overlays: uboot loading of [${uboot_adc}] disabled by /boot/uEnv.txt [disable_uboot_overlay_adc=1]...;" \
-+					"else " \
-+						"setenv uboot_overlay ${uboot_adc}; " \
 +						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
@@ -880,5 +861,5 @@ index 110c426058..d6bbe3ea8e 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.24.0.rc1
+2.25.1
 
