@@ -1,0 +1,26 @@
+From 51fa949ec95935b2416b244e7217db6cd3a55176 Mon Sep 17 00:00:00 2001
+From: Robert Nelson <robertcnelson@gmail.com>
+Date: Wed, 8 Apr 2020 09:10:48 -0500
+Subject: [PATCH] stm32mp15_basic: disable CONFIG_STM32MP_WATCHDOG
+
+Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
+---
+ configs/stm32mp15_basic_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/stm32mp15_basic_defconfig b/configs/stm32mp15_basic_defconfig
+index bfeff25..34ac06e 100644
+--- a/configs/stm32mp15_basic_defconfig
++++ b/configs/stm32mp15_basic_defconfig
+@@ -113,7 +113,7 @@ CONFIG_VIDEO_STM32=y
+ CONFIG_VIDEO_STM32_DSI=y
+ CONFIG_VIDEO_STM32_MAX_XRES=1280
+ CONFIG_VIDEO_STM32_MAX_YRES=800
+-CONFIG_STM32MP_WATCHDOG=y
++# CONFIG_STM32MP_WATCHDOG is not set
+ CONFIG_FDT_FIXUP_PARTITIONS=y
+ # CONFIG_EFI_LOADER is not set
+ CONFIG_BOOTDELAY=1
+-- 
+2.25.1
+
