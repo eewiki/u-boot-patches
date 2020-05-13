@@ -1,6 +1,6 @@
-From 2626fb1dc673a84c2ab582e6b2023952c6cde080 Mon Sep 17 00:00:00 2001
+From 9555fa519a210e555540524dc2b8e1a09759334f Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Mon, 11 May 2020 11:55:20 -0500
+Date: Wed, 13 May 2020 09:22:24 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -15,7 +15,7 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e7cd8faeed..63dc2404a4 100644
+index e7cd8faeed..ada54671c8 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -141,7 +141,7 @@ index e7cd8faeed..63dc2404a4 100644
 +			virtual_audio=BBB_ADV7511_AUDIO;
 +		}
 +		if (!strncmp(board_ti_get_rev(), "EIA", 3)) {
-+			puts("Model: Element14 BeagleBone Black Industrial:\n");
++			puts("Model: BeagleBone Black Industrial:\n");
 +		}
 +		if (!strncmp(board_ti_get_rev(), "SE", 2)) {
 +			puts("Model: SanCloud BeagleBone Enhanced:\n");
@@ -466,7 +466,7 @@ index e7cd8faeed..63dc2404a4 100644
  }
  #endif
 diff --git a/board/ti/am335x/board.h b/board/ti/am335x/board.h
-index 777b0f9236..61cfc44f57 100644
+index 8774fa9b40..ba8286d629 100644
 --- a/board/ti/am335x/board.h
 +++ b/board/ti/am335x/board.h
 @@ -10,6 +10,22 @@
