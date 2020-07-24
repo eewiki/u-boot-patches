@@ -1,21 +1,21 @@
-From 9555fa519a210e555540524dc2b8e1a09759334f Mon Sep 17 00:00:00 2001
+From 7f0624a58e70f708c1bbaed28277700b5eb60821 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 13 May 2020 09:22:24 -0500
+Date: Fri, 24 Jul 2020 16:32:28 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           | 423 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c           | 429 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h           |  16 ++
- board/ti/am335x/hash-string.h     |  59 +++++
+ board/ti/am335x/hash-string.h     |  59 ++++
  include/configs/ti_armv7_common.h | 152 +++++++++++
  include/configs/ti_armv7_omap.h   |   3 +
- include/environment/ti/mmc.h      |  15 ++
- 6 files changed, 668 insertions(+)
+ include/environment/ti/mmc.h      |  20 ++
+ 6 files changed, 679 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e7cd8faeed..ada54671c8 100644
+index e7cd8faeed..a36753e8cc 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -26,7 +26,7 @@ index e7cd8faeed..ada54671c8 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,423 @@ void do_board_detect(void)
+@@ -77,9 +78,429 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -74,7 +74,8 @@ index e7cd8faeed..ada54671c8 100644
 +	unsigned char addr;
 +	/* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
 +	/* 14 + 16 + 1 + 4 + 5 = 40 */
-+	char cape_overlay[40];
++	char hash_cape_overlay[40];
++	char cape_overlay[26];
 +	char process_cape_part_number[16];
 +	char end_part_number;
 +	char cape_overlay_pass_to_kernel[18];
@@ -202,7 +203,8 @@ index e7cd8faeed..ada54671c8 100644
 +			}
 +
 +			if (cape_header->header == 0xEE3355AA) {
-+				strlcpy(cape_overlay, "/lib/firmware/", 14 + 1);
++				strlcpy(hash_cape_overlay, "/lib/firmware/", 14 + 1);
++				strlcpy(cape_overlay, "", 2);
 +				strlcpy(cape_overlay_pass_to_kernel, "", 2);
 +				strlcpy(process_cape_part_number, "...............", 16 + 1);
 +
@@ -231,19 +233,23 @@ index e7cd8faeed..ada54671c8 100644
 +				}
 +				puts("]\n");
 +
++				strncat(hash_cape_overlay, process_cape_part_number, end_part_number);
 +				strncat(cape_overlay, process_cape_part_number, end_part_number);
-+				//printf("debug: %s\n", cape_overlay);
++				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
++				strncat(hash_cape_overlay, "-", 1);
 +				strncat(cape_overlay, "-", 1);
-+				//printf("debug: %s\n", cape_overlay);
++				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
++				strncat(hash_cape_overlay, cape_header->version, 4);
 +				strncat(cape_overlay, cape_header->version, 4);
-+				//printf("debug: %s\n", cape_overlay);
++				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
++				strncat(hash_cape_overlay, ".dtbo", 5);
 +				strncat(cape_overlay, ".dtbo", 5);
-+				//printf("debug: %s\n", cape_overlay);
++				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
-+				unsigned long cape_overlay_hash = hash_string(cape_overlay);
++				unsigned long cape_overlay_hash = hash_string(hash_cape_overlay);
 +
 +				printf("BeagleBone: cape eeprom: i2c_probe: 0x%x: %s [0x%lx]\n", addr, cape_overlay, cape_overlay_hash);
 +
@@ -377,59 +383,59 @@ index e7cd8faeed..ada54671c8 100644
 +	}
 +
 +	if (virtual_emmc == BBB_EMMC) {
-+		env_set("uboot_emmc", "/lib/firmware/BB-BONE-eMMC1-01-00A0.dtbo");
++		env_set("uboot_emmc", "BB-BONE-eMMC1-01-00A0.dtbo");
 +	}
 +
 +	switch(virtual_video) {
 +		case BBB_TDA998X_AUDIO:
 +			if (virtual_audio == PINS_TAKEN) {
-+				env_set("uboot_video", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
-+				env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
++				env_set("uboot_video", "BB-NHDMI-TDA998x-00A0.dtbo");
++				env_set("uboot_video_naudio", "BB-NHDMI-TDA998x-00A0.dtbo");
 +			} else {
-+				env_set("uboot_video", "/lib/firmware/BB-HDMI-TDA998x-00A0.dtbo");
-+				env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
++				env_set("uboot_video", "BB-HDMI-TDA998x-00A0.dtbo");
++				env_set("uboot_video_naudio", "BB-NHDMI-TDA998x-00A0.dtbo");
 +			}
 +			break;
 +		case BBB_TDA998X_NAUDIO:
-+			env_set("uboot_video", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
-+			env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-TDA998x-00A0.dtbo");
++			env_set("uboot_video", "BB-NHDMI-TDA998x-00A0.dtbo");
++			env_set("uboot_video_naudio", "BB-NHDMI-TDA998x-00A0.dtbo");
 +			break;
 +		case BBB_ADV7511_AUDIO:
 +			if (virtual_audio == PINS_TAKEN) {
-+				env_set("uboot_video", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
-+				env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
++				env_set("uboot_video", "BB-NHDMI-ADV7511-00A0.dtbo");
++				env_set("uboot_video_naudio", "BB-NHDMI-ADV7511-00A0.dtbo");
 +			} else {
-+				env_set("uboot_video", "/lib/firmware/BB-HDMI-ADV7511-00A0.dtbo");
-+				env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
++				env_set("uboot_video", "BB-HDMI-ADV7511-00A0.dtbo");
++				env_set("uboot_video_naudio", "BB-NHDMI-ADV7511-00A0.dtbo");
 +			}
 +			break;
 +		case BBB_ADV7511_NAUDIO:
-+			env_set("uboot_video", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
-+			env_set("uboot_video_naudio", "/lib/firmware/BB-NHDMI-ADV7511-00A0.dtbo");
++			env_set("uboot_video", "BB-NHDMI-ADV7511-00A0.dtbo");
++			env_set("uboot_video_naudio", "BB-NHDMI-ADV7511-00A0.dtbo");
 +			break;
 +	}
 +
 +	switch(virtual_wireless) {
 +		case BBBW_WL1835:
-+			env_set("uboot_wireless", "/lib/firmware/BB-BBBW-WL1835-00A0.dtbo");
++			env_set("uboot_wireless", "BB-BBBW-WL1835-00A0.dtbo");
 +			break;
 +		case BBGW_WL1835:
-+			env_set("uboot_wireless", "/lib/firmware/BB-BBGW-WL1835-00A0.dtbo");
++			env_set("uboot_wireless", "BB-BBGW-WL1835-00A0.dtbo");
 +			break;
 +		case BBGG_WL1835:
-+			env_set("uboot_wireless", "/lib/firmware/BB-BBGG-WL1835-00A0.dtbo");
++			env_set("uboot_wireless", "BB-BBGG-WL1835-00A0.dtbo");
 +			break;
 +	}
 +
 +	switch(model) {
 +		case M_BBG1:
-+			env_set("uboot_model", "/lib/firmware/M-BB-BBG-00A0.dtbo");
++			env_set("uboot_model", "M-BB-BBG-00A0.dtbo");
 +			break;
 +		case M_OS00:
-+			env_set("uboot_model", "/lib/firmware/M-BB-OSD3358-SM-RED-00A0.dtbo");
++			env_set("uboot_model", "M-BB-OSD3358-SM-RED-00A0.dtbo");
 +			break;
 +		case M_BBGG:
-+			env_set("uboot_model", "/lib/firmware/M-BB-BBGG-00A0.dtbo");
++			env_set("uboot_model", "M-BB-BBGG-00A0.dtbo");
 +			break;
 +	}
 +
@@ -450,7 +456,7 @@ index e7cd8faeed..ada54671c8 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -951,6 +1366,14 @@ int board_late_init(void)
+@@ -951,6 +1372,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -558,10 +564,10 @@ index 0000000000..b267a87788
 +  return hval;
 +}
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 6e7553332e..2745670256 100644
+index 877420ae59..7de6619e8e 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -339,6 +339,40 @@
+@@ -337,6 +337,40 @@
  			"echo loading ${bootdir}/${bootfile} ...; "\
  			"run loadimage;" \
  			"setenv fdtdir /boot/dtbs/${uname_r}; " \
@@ -602,7 +608,7 @@ index 6e7553332e..2745670256 100644
  			"if test -e ${devtype} ${bootpart} ${fdtdir}/${fdtfile}; then " \
  				"run loadfdt;" \
  			"else " \
-@@ -379,6 +413,124 @@
+@@ -377,6 +411,124 @@
  					"fi;" \
  				"fi;" \
  			"fi; " \
@@ -621,9 +627,9 @@ index 6e7553332e..2745670256 100644
 +					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${disable_uboot_overlay_adc}; then " \
-+					"echo uboot_overlays: uboot loading of [/lib/firmware/BB-ADC-00A0.dtbo] disabled by /boot/uEnv.txt [disable_uboot_overlay_adc=1]...;" \
++					"echo uboot_overlays: uboot loading of [BB-ADC-00A0.dtbo] disabled by /boot/uEnv.txt [disable_uboot_overlay_adc=1]...;" \
 +				"else " \
-+					"setenv uboot_overlay /lib/firmware/BB-ADC-00A0.dtbo; " \
++					"setenv uboot_overlay BB-ADC-00A0.dtbo; " \
 +					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr0}; then " \
@@ -631,7 +637,7 @@ index 6e7553332e..2745670256 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_overlay_addr0}] disabled by /boot/uEnv.txt [disable_uboot_overlay_addr0=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_overlay_addr0}; " \
-+						"run capeloadoverlay;" \
++						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr1}; then " \
@@ -639,7 +645,7 @@ index 6e7553332e..2745670256 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_overlay_addr1}] disabled by /boot/uEnv.txt [disable_uboot_overlay_addr1=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_overlay_addr1}; " \
-+						"run capeloadoverlay;" \
++						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr2}; then " \
@@ -647,7 +653,7 @@ index 6e7553332e..2745670256 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_overlay_addr2}] disabled by /boot/uEnv.txt [disable_uboot_overlay_addr2=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_overlay_addr2}; " \
-+						"run capeloadoverlay;" \
++						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr3}; then " \
@@ -655,24 +661,24 @@ index 6e7553332e..2745670256 100644
 +						"echo uboot_overlays: uboot loading of [${uboot_overlay_addr3}] disabled by /boot/uEnv.txt [disable_uboot_overlay_addr3=1]...;" \
 +					"else " \
 +						"setenv uboot_overlay ${uboot_overlay_addr3}; " \
-+						"run capeloadoverlay;" \
++						"run virtualloadoverlay;" \
 +					"fi;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr4}; then " \
 +					"setenv uboot_overlay ${uboot_overlay_addr4}; " \
-+					"run capeloadoverlay;" \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr5}; then " \
 +					"setenv uboot_overlay ${uboot_overlay_addr5}; " \
-+					"run capeloadoverlay;" \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr6}; then " \
 +					"setenv uboot_overlay ${uboot_overlay_addr6}; " \
-+					"run capeloadoverlay;" \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_overlay_addr7}; then " \
 +					"setenv uboot_overlay ${uboot_overlay_addr7}; " \
-+					"run capeloadoverlay;" \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_emmc}; then " \
 +					"if test -n ${disable_uboot_overlay_emmc}; then " \
@@ -715,7 +721,7 @@ index 6e7553332e..2745670256 100644
 +				"if test -n ${dtb_overlay}; then " \
 +					"setenv uboot_overlay ${dtb_overlay}; " \
 +					"echo uboot_overlays: [dtb_overlay=${uboot_overlay}] ... ;" \
-+					"run capeloadoverlay;" \
++					"run virtualloadoverlay;" \
 +				"fi;" \
 +				"if test -n ${uboot_detected_capes}; then " \
 +					"echo uboot_overlays: [uboot_detected_capes=${uboot_detected_capes_addr0}${uboot_detected_capes_addr1}${uboot_detected_capes_addr2}${uboot_detected_capes_addr3}] ... ;" \
@@ -742,31 +748,36 @@ index 98b5839154..ce7927e89e 100644
   * GPMC NAND block.  We support 1 device and the physical address to
   * access CS0 at is 0x8000000.
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 110c426058..d6bbe3ea8e 100644
+index 2d9c7a3435..4f06f5bf2b 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -68,6 +68,21 @@
+@@ -58,6 +58,26 @@
  	"loadimage=load ${devtype} ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
  	"loadrd=load ${devtype} ${bootpart} ${rdaddr} ${bootdir}/${rdfile}; setenv rdsize ${filesize}\0" \
  	"loadfdt=echo loading ${fdtdir}/${fdtfile} ...; load ${devtype} ${bootpart} ${fdtaddr} ${fdtdir}/${fdtfile}\0" \
-+	"loadoverlay=echo uboot_overlays: loading ${uboot_overlay} ...; " \
-+		"load ${devtype} ${bootpart} ${rdaddr} ${uboot_overlay}; " \
++	"loadoverlay=echo uboot_overlays: loading ${actual_uboot_overlay} ...; " \
++		"load ${devtype} ${bootpart} ${rdaddr} ${actual_uboot_overlay}; " \
 +		"fdt addr ${fdtaddr}; fdt resize ${fdt_buffer}; " \
 +		"fdt apply ${rdaddr}; fdt resize ${fdt_buffer};\0" \
-+	"virtualloadoverlay=if test -e ${devtype} ${bootpart} ${uboot_overlay}; then " \
++	"virtualloadoverlay=if test -e ${devtype} ${bootpart} ${fdtdir}/overlays/${uboot_overlay}; then " \
++				"setenv actual_uboot_overlay ${fdtdir}/overlays/${uboot_overlay}; " \
 +				"run loadoverlay;" \
 +			"else " \
-+				"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay}]...;" \
-+			"fi;\0" \
-+	"capeloadoverlay=if test -e ${devtype} ${bootpart} ${uboot_overlay}; then " \
-+				"run loadoverlay;" \
-+				"setenv cape_uboot bone_capemgr.uboot_capemgr_enabled=1; " \
-+			"else " \
-+				"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay}]...;" \
++				"if test -e ${devtype} ${bootpart} /lib/firmware/${uboot_overlay}; then " \
++					"setenv actual_uboot_overlay /lib/firmware/${uboot_overlay}; " \
++					"run loadoverlay;" \
++				"else " \
++					"if test -e ${devtype} ${bootpart} ${uboot_overlay}; then " \
++						"setenv actual_uboot_overlay ${uboot_overlay}; " \
++						"run loadoverlay;" \
++					"else " \
++						"echo uboot_overlays: unable to find [${devtype} ${bootpart} ${uboot_overlay}]...;" \
++					"fi;" \
++				"fi;" \
 +			"fi;\0" \
  	"failumsboot=echo; echo FAILSAFE: U-Boot UMS (USB Mass Storage) enabled, media now available over the usb slave port ...; " \
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.26.2
+2.27.0
 

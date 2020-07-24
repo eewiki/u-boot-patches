@@ -1,6 +1,6 @@
-From 8ba454cdde5bfde7f5b5d2569df18dab5d2d2408 Mon Sep 17 00:00:00 2001
+From 74af6fe384a48663367be69c18001706578eaa04 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Wed, 13 May 2020 09:22:24 -0500
+Date: Fri, 24 Jul 2020 16:32:28 -0500
 Subject: [PATCH 1/3] am335x_evm-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -16,9 +16,9 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  configs/am335x_evm_defconfig                  |  56 ++--
  env/common.c                                  |   2 +
  include/configs/am335x_evm.h                  |  81 ++++-
- include/configs/ti_armv7_common.h             | 317 ++++++++++++++++++
- include/environment/ti/mmc.h                  |  67 +++-
- 13 files changed, 648 insertions(+), 75 deletions(-)
+ include/configs/ti_armv7_common.h             | 315 ++++++++++++++++++
+ include/environment/ti/mmc.h                  |  57 +++-
+ 13 files changed, 636 insertions(+), 75 deletions(-)
 
 diff --git a/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h b/arch/arm/include/asm/arch-am33xx/hardware_am33xx.h
 index 878ef3e5d2..b42c7e67e9 100644
@@ -748,10 +748,10 @@ index 0834ff5021..71d12dd1d3 100644
  	NETARGS \
  	DFUARGS \
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 828fb1b2a5..6e7553332e 100644
+index 828fb1b2a5..877420ae59 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -102,6 +102,323 @@
+@@ -102,6 +102,321 @@
  /* Boot Argument Buffer Size */
  #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
  
@@ -876,8 +876,6 @@ index 828fb1b2a5..6e7553332e 100644
 +	"nfsrootfstype=ext4 rootwait fixrtc\0" \
 +	"nfsargs=setenv bootargs console=${console} " \
 +		"${optargs} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=/dev/nfs rw " \
 +		"rootfstype=${nfsrootfstype} " \
@@ -1076,18 +1074,16 @@ index 828fb1b2a5..6e7553332e 100644
   * When we have SPI, NOR or NAND flash we expect to be making use of
   * mtdparts, both for ease of use in U-Boot and for passing information
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 785fc15345..110c426058 100644
+index 785fc15345..2d9c7a3435 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
-@@ -11,20 +11,65 @@
+@@ -11,20 +11,55 @@
  #define DEFAULT_MMC_TI_ARGS \
  	"mmcdev=0\0" \
  	"mmcrootfstype=ext4 rootwait\0" \
 -	"finduuid=part uuid mmc ${bootpart} uuid\0" \
 +	"finduuid=part uuid ${devtype} ${bootpart} uuid\0" \
  	"args_mmc=run finduuid;setenv bootargs console=${console} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=PARTUUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
@@ -1099,8 +1095,6 @@ index 785fc15345..110c426058 100644
 -		"rootfstype=${mmcrootfstype}\0" \
 -	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
 -	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=${oldroot} ro " \
 +		"rootfstype=${mmcrootfstype} " \
@@ -1108,8 +1102,6 @@ index 785fc15345..110c426058 100644
 +		"${cmdline}\0" \
 +	"args_mmc_uuid=setenv bootargs console=${console} " \
 +		"${optargs} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=UUID=${uuid} ro " \
 +		"rootfstype=${mmcrootfstype} " \
@@ -1117,8 +1109,6 @@ index 785fc15345..110c426058 100644
 +		"${cmdline}\0" \
 +	"args_uenv_root=setenv bootargs console=${console} " \
 +		"${optargs} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=${uenv_root} ro " \
 +		"rootfstype=${mmcrootfstype} " \
@@ -1126,8 +1116,6 @@ index 785fc15345..110c426058 100644
 +		"${cmdline}\0" \
 +	"args_netinstall=setenv bootargs ${netinstall_bootargs} " \
 +		"${optargs} " \
-+		"${cape_disable} " \
-+		"${cape_enable} " \
 +		"${cape_uboot} " \
 +		"root=/dev/ram rw " \
 +		"${uboot_detected_capes} " \
@@ -1153,7 +1141,7 @@ index 785fc15345..110c426058 100644
  	"envboot=mmc dev ${mmcdev}; " \
  		"if mmc rescan; then " \
  			"echo SD/MMC found on device ${mmcdev};" \
-@@ -44,7 +89,11 @@
+@@ -44,7 +79,11 @@
  	"mmcloados=run args_mmc; " \
  		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
  			"if run loadfdt; then " \
@@ -1167,5 +1155,5 @@ index 785fc15345..110c426058 100644
  				"if test ${boot_fdt} = try; then " \
  					"bootz; " \
 -- 
-2.26.2
+2.27.0
 
