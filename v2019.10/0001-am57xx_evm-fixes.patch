@@ -1,6 +1,6 @@
-From e40f684e54c499f0ab32724cccb77da450fe7f2d Mon Sep 17 00:00:00 2001
+From a41ab834392ec89532203f7b3fadb32ed2e87399 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Aug 2020 15:37:49 -0500
+Date: Tue, 11 Aug 2020 15:57:29 -0500
 Subject: [PATCH] am57xx_evm-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -14,16 +14,16 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  include/configs/am57xx_evm.h         |   2 +-
  include/configs/ti_armv7_common.h    | 373 ++++++++++++++++++++
  include/configs/ti_omap5_common.h    |   5 +
- include/environment/ti/boot.h        |  26 +-
+ include/environment/ti/boot.h        |  24 +-
  include/environment/ti/mmc.h         |  49 ++-
- 11 files changed, 1530 insertions(+), 19 deletions(-)
+ 11 files changed, 1529 insertions(+), 18 deletions(-)
  create mode 100644 arch/arm/dts/am5729-beagleboneai.dts
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index e0c54bfa76..6a42873cc7 100644
+index 62da168ef8..5b24b0c8b6 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -317,6 +317,7 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
+@@ -329,6 +329,7 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
  dtb-$(CONFIG_TARGET_AM57XX_EVM) += am57xx-beagle-x15.dtb \
  	am57xx-beagle-x15-revb1.dtb \
  	am57xx-beagle-x15-revc.dtb \
@@ -548,7 +548,7 @@ index c4a41db92a..d5192b1671 100644
  		(*prcm)->cm_gmac_gmac_clkctrl,
  #endif
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index 1a903f13a6..f0b9ed4617 100644
+index f78e6c2e1f..6823028a62 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
 @@ -30,6 +30,8 @@
@@ -1245,10 +1245,10 @@ index d4a15ae93d..33edf7972b 100644
  	{0x0114, 2199, 621},	/* CFG_GPMC_A0_IN */
  	{0x0120, 0, 0},	/* CFG_GPMC_A10_IN */
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index a3de7a4ec4..04694743b1 100644
+index 3b613e135c..9a3b2ff66a 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
-@@ -13,8 +13,8 @@ CONFIG_AHCI=y
+@@ -14,8 +14,8 @@ CONFIG_SPL_TEXT_BASE=0x40300000
  CONFIG_DISTRO_DEFAULTS=y
  CONFIG_SPL_LOAD_FIT=y
  CONFIG_OF_BOARD_SETUP=y
@@ -1258,15 +1258,17 @@ index a3de7a4ec4..04694743b1 100644
  # CONFIG_USE_BOOTCOMMAND is not set
  CONFIG_SYS_CONSOLE_INFO_QUIET=y
  # CONFIG_MISC_INIT_R is not set
-@@ -28,16 +28,22 @@ CONFIG_SPL_DMA_SUPPORT=y
- CONFIG_SPL_OS_BOOT=y
+@@ -29,18 +29,24 @@ CONFIG_SPL_OS_BOOT=y
  CONFIG_SPL_SPI_LOAD=y
+ CONFIG_SYS_SPI_U_BOOT_OFFS=0x40000
  CONFIG_SPL_YMODEM_SUPPORT=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
 +CONFIG_AUTOBOOT_DELAY_STR="d"
 +CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_DTIMG=y
  CONFIG_CMD_SPL=y
+ CONFIG_CMD_BCB=y
  # CONFIG_CMD_FLASH is not set
  # CONFIG_CMD_SETEXPR is not set
  # CONFIG_CMD_PMIC is not set
@@ -1285,23 +1287,23 @@ index a3de7a4ec4..04694743b1 100644
  CONFIG_SPL_DM=y
  CONFIG_SPL_DM_SEQ_ALIAS=y
 diff --git a/include/configs/am57xx_evm.h b/include/configs/am57xx_evm.h
-index 2c651aab17..4f55000451 100644
+index 531f79ee70..c28f181a81 100644
 --- a/include/configs/am57xx_evm.h
 +++ b/include/configs/am57xx_evm.h
 @@ -24,7 +24,7 @@
- #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
- #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
  
--#define CONSOLEDEV			"ttyO2"
-+//#define CONSOLEDEV			"ttyO2"
+ #define CONFIG_SYS_BOOTM_LEN		SZ_64M
+ 
+-#define CONSOLEDEV			"ttyS2"
++//#define CONSOLEDEV			"ttyS2"
  #define CONFIG_SYS_NS16550_COM1		UART1_BASE	/* Base EVM has UART0 */
  #define CONFIG_SYS_NS16550_COM2		UART2_BASE	/* UART2 */
  #define CONFIG_SYS_NS16550_COM3		UART3_BASE	/* UART3 */
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 828fb1b2a5..cb05f707fd 100644
+index 2de6bc2390..69e68a1a59 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -80,6 +80,379 @@
+@@ -86,6 +86,379 @@
  #define CONFIG_SYS_I2C
  #endif
  
@@ -1698,10 +1700,10 @@ index de0a6af2fd..0cd2ccea03 100644
  	NETARGS \
  	NANDARGS \
 diff --git a/include/environment/ti/boot.h b/include/environment/ti/boot.h
-index 05bdbbc23e..605b772281 100644
+index 684a744f31..93390a80d9 100644
 --- a/include/environment/ti/boot.h
 +++ b/include/environment/ti/boot.h
-@@ -64,6 +64,7 @@
+@@ -108,6 +108,7 @@
  	"bootpart=0:2\0" \
  	"bootdir=/boot\0" \
  	"bootfile=zImage\0" \
@@ -1709,12 +1711,12 @@ index 05bdbbc23e..605b772281 100644
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
  	AVB_VERIFY_CMD \
-@@ -89,7 +90,12 @@
- 		"part start mmc ${mmcdev} boot boot_start; " \
- 		"part size mmc ${mmcdev} boot boot_size; " \
- 		"mmc read ${loadaddr} ${boot_start} ${boot_size}; " \
--		"bootm ${loadaddr}#${fdtfile};\0 "
-+		"bootm ${loadaddr}#${fdtfile};\0 " \
+@@ -161,7 +162,12 @@
+ 			"bootm ${loadaddr}#${fdtfile}; " \
+ 		"else " \
+ 			"echo boot${slot_suffix} partition not found; " \
+-		"fi;\0"
++		"fi;\0 " \
 +	"read_board_eeprom=" \
 +		"if test $board_eeprom_header = beagle_x15_revb1_blank; then " \
 +			"run eeprom_dump; run eeprom_x15_b1; reset; fi; " \
@@ -1723,12 +1725,8 @@ index 05bdbbc23e..605b772281 100644
  
  #ifdef CONFIG_OMAP54XX
  
-@@ -120,9 +126,11 @@
- 		"if test $board_name = am57xx_evm; then " \
+@@ -195,6 +201,8 @@
  			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
- 		"if test $board_name = am57xx_evm_reva3; then " \
--			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
-+			"setenv fdtfile am57xx-evm-reva3.dtb; fi;" \
  		"if test $board_name = am571x_idk; then " \
  			"setenv fdtfile am571x-idk.dtb; fi;" \
 +		"if test $board_name = am5729_beagleboneai; then " \
@@ -1736,7 +1734,7 @@ index 05bdbbc23e..605b772281 100644
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0"
  
-@@ -136,11 +144,17 @@
+@@ -207,11 +215,17 @@
  	"if test ${boot_fit} -eq 1; then "	\
  		"run update_to_fit;"	\
  	"fi;"	\
@@ -1759,7 +1757,7 @@ index 05bdbbc23e..605b772281 100644
  
  #endif /* CONFIG_OMAP54XX */
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 785fc15345..4f563e6699 100644
+index bb4af0a3d5..aa704275c6 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
 @@ -11,11 +11,31 @@

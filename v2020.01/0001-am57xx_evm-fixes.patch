@@ -1,6 +1,6 @@
-From e40f684e54c499f0ab32724cccb77da450fe7f2d Mon Sep 17 00:00:00 2001
+From d44d9f15ed64729ba4073bbce8f1c0de5abcb46c Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Aug 2020 15:37:49 -0500
+Date: Tue, 11 Aug 2020 16:09:38 -0500
 Subject: [PATCH] am57xx_evm-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -8,22 +8,22 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  arch/arm/dts/Makefile                |   1 +
  arch/arm/dts/am5729-beagleboneai.dts | 495 +++++++++++++++++++++++++++
  arch/arm/mach-omap2/omap5/hw_data.c  |   2 +
- board/ti/am57xx/board.c              | 187 +++++++++-
+ board/ti/am57xx/board.c              | 178 +++++++++-
  board/ti/am57xx/mux_data.h           | 395 +++++++++++++++++++++
- configs/am57xx_evm_defconfig         |  14 +-
+ configs/am57xx_evm_defconfig         |  17 +-
  include/configs/am57xx_evm.h         |   2 +-
  include/configs/ti_armv7_common.h    | 373 ++++++++++++++++++++
  include/configs/ti_omap5_common.h    |   5 +
- include/environment/ti/boot.h        |  26 +-
+ include/environment/ti/boot.h        |  24 +-
  include/environment/ti/mmc.h         |  49 ++-
- 11 files changed, 1530 insertions(+), 19 deletions(-)
+ 11 files changed, 1522 insertions(+), 19 deletions(-)
  create mode 100644 arch/arm/dts/am5729-beagleboneai.dts
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index e0c54bfa76..6a42873cc7 100644
+index 0127a91a82..caf3c88005 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -317,6 +317,7 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
+@@ -349,6 +349,7 @@ dtb-$(CONFIG_TARGET_DRA7XX_EVM) += dra72-evm.dtb dra7-evm.dtb	\
  dtb-$(CONFIG_TARGET_AM57XX_EVM) += am57xx-beagle-x15.dtb \
  	am57xx-beagle-x15-revb1.dtb \
  	am57xx-beagle-x15-revc.dtb \
@@ -548,19 +548,18 @@ index c4a41db92a..d5192b1671 100644
  		(*prcm)->cm_gmac_gmac_clkctrl,
  #endif
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index 1a903f13a6..f0b9ed4617 100644
+index c755821b74..c5160b9201 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
-@@ -30,6 +30,8 @@
- #include <dwc3-omap-uboot.h>
+@@ -33,6 +33,7 @@
  #include <ti-usb-phy-uboot.h>
  #include <mmc.h>
-+#include <dm/uclass.h>
+ #include <dm/uclass.h>
 +#include <i2c.h>
  
  #include "../common/board_detect.h"
  #include "mux_data.h"
-@@ -46,6 +48,7 @@
+@@ -49,6 +50,7 @@
  #define board_is_am574x_idk()	board_ti_is("AM574IDK")
  #define board_is_am572x_idk()	board_ti_is("AM572IDK")
  #define board_is_am571x_idk()	board_ti_is("AM571IDK")
@@ -568,7 +567,7 @@ index 1a903f13a6..f0b9ed4617 100644
  
  #ifdef CONFIG_DRIVER_TI_CPSW
  #include <cpsw.h>
-@@ -84,6 +87,12 @@ static const struct dmm_lisa_map_regs beagle_x15_lisa_regs = {
+@@ -87,6 +89,12 @@ static const struct dmm_lisa_map_regs beagle_x15_lisa_regs = {
  	.is_ma_present  = 0x1
  };
  
@@ -581,7 +580,7 @@ index 1a903f13a6..f0b9ed4617 100644
  static const struct dmm_lisa_map_regs am571x_idk_lisa_regs = {
  	.dmm_lisa_map_3 = 0x80640100,
  	.is_ma_present  = 0x1
-@@ -101,6 +110,8 @@ void emif_get_dmm_regs(const struct dmm_lisa_map_regs **dmm_lisa_regs)
+@@ -104,6 +112,8 @@ void emif_get_dmm_regs(const struct dmm_lisa_map_regs **dmm_lisa_regs)
  		*dmm_lisa_regs = &am571x_idk_lisa_regs;
  	else if (board_is_am574x_idk())
  		*dmm_lisa_regs = &am574x_idk_lisa_regs;
@@ -590,7 +589,7 @@ index 1a903f13a6..f0b9ed4617 100644
  	else
  		*dmm_lisa_regs = &beagle_x15_lisa_regs;
  }
-@@ -502,8 +513,10 @@ void do_board_detect(void)
+@@ -505,8 +515,10 @@ void do_board_detect(void)
  
  	rc = ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				  CONFIG_EEPROM_CHIP_ADDRESS);
@@ -602,7 +601,7 @@ index 1a903f13a6..f0b9ed4617 100644
  }
  
  #else	/* CONFIG_SPL_BUILD */
-@@ -521,6 +534,8 @@ void do_board_detect(void)
+@@ -524,6 +536,8 @@ void do_board_detect(void)
  
  	if (board_is_x15())
  		bname = "BeagleBoard X15";
@@ -611,7 +610,7 @@ index 1a903f13a6..f0b9ed4617 100644
  	else if (board_is_am572x_evm())
  		bname = "AM572x EVM";
  	else if (board_is_am574x_idk())
-@@ -535,6 +550,142 @@ void do_board_detect(void)
+@@ -538,6 +552,142 @@ void do_board_detect(void)
  			 "Board: %s REV %s\n", bname, board_ti_get_rev());
  }
  
@@ -754,7 +753,7 @@ index 1a903f13a6..f0b9ed4617 100644
  static void setup_board_eeprom_env(void)
  {
  	char *name = "beagle_x15";
-@@ -557,6 +708,8 @@ static void setup_board_eeprom_env(void)
+@@ -560,6 +710,8 @@ static void setup_board_eeprom_env(void)
  			name = "am57xx_evm_reva3";
  		else
  			name = "am57xx_evm";
@@ -763,7 +762,7 @@ index 1a903f13a6..f0b9ed4617 100644
  	} else if (board_is_am574x_idk()) {
  		name = "am574x_idk";
  	} else if (board_is_am572x_idk()) {
-@@ -626,7 +779,7 @@ void am57x_idk_lcd_detect(void)
+@@ -629,7 +781,7 @@ void am57x_idk_lcd_detect(void)
  	struct udevice *dev;
  
  	/* Only valid for IDKs */
@@ -772,9 +771,9 @@ index 1a903f13a6..f0b9ed4617 100644
  		return;
  
  	/* Only AM571x IDK has gpio control detect.. so check that */
-@@ -720,6 +873,18 @@ int board_late_init(void)
- 
- 	am57x_idk_lcd_detect();
+@@ -727,6 +879,18 @@ int board_late_init(void)
+ 	/* Just probe the potentially supported cdce913 device */
+ 	uclass_get_device(UCLASS_CLK, 0, &dev);
  
 +	if (board_is_bbai()) {
 +		printf("I2C: CTRL_CORE_PAD_GPMC_A0:     0x%08x\n", readl(0x4A003440));
@@ -791,7 +790,7 @@ index 1a903f13a6..f0b9ed4617 100644
  #if !defined(CONFIG_SPL_BUILD)
  	board_ti_set_ethaddr(2);
  #endif
-@@ -762,6 +927,13 @@ void recalibrate_iodelay(void)
+@@ -769,6 +933,13 @@ void recalibrate_iodelay(void)
  		pconf_sz = ARRAY_SIZE(core_padconf_array_essential_am571x_idk);
  		iod = iodelay_cfg_array_am571x_idk;
  		iod_sz = ARRAY_SIZE(iodelay_cfg_array_am571x_idk);
@@ -805,25 +804,16 @@ index 1a903f13a6..f0b9ed4617 100644
  	} else {
  		/* Common for X15/GPEVM */
  		pconf = core_padconf_array_essential_x15;
-@@ -1081,9 +1253,16 @@ int board_fit_config_name_match(const char *name)
+@@ -1088,6 +1259,9 @@ int board_fit_config_name_match(const char *name)
  		} else if (!strcmp(name, "am57xx-beagle-x15")) {
  			return 0;
  		}
--	} else if (board_is_am572x_evm() &&
--		   !strcmp(name, "am57xx-beagle-x15")) {
 +	} else if (board_is_bbai() &&
 +		   !strcmp(name, "am5729-beagleboneai")) {
++		return 0;
+ 	} else if (board_is_am572x_evm() &&
+ 		   !strcmp(name, "am57xx-beagle-x15")) {
  		return 0;
-+	} else if (board_is_am572x_evm()) {
-+		if (board_is_am572x_evm_reva3()) {
-+			if (!strcmp(name, "am57xx-evm-reva3"))
-+			 return 0;
-+		} else if (!strcmp(name, "am57xx-beagle-x15")) {
-+			return 0;
-+		}
- 	} else if (board_is_am572x_idk() && !strcmp(name, "am572x-idk")) {
- 		return 0;
- 	} else if (board_is_am574x_idk() && !strcmp(name, "am574x-idk")) {
 diff --git a/board/ti/am57xx/mux_data.h b/board/ti/am57xx/mux_data.h
 index d4a15ae93d..33edf7972b 100644
 --- a/board/ti/am57xx/mux_data.h
@@ -1245,10 +1235,10 @@ index d4a15ae93d..33edf7972b 100644
  	{0x0114, 2199, 621},	/* CFG_GPMC_A0_IN */
  	{0x0120, 0, 0},	/* CFG_GPMC_A10_IN */
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index a3de7a4ec4..04694743b1 100644
+index ae183e9b56..285a2e0863 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
-@@ -13,8 +13,8 @@ CONFIG_AHCI=y
+@@ -14,8 +14,8 @@ CONFIG_SPL_TEXT_BASE=0x40300000
  CONFIG_DISTRO_DEFAULTS=y
  CONFIG_SPL_LOAD_FIT=y
  CONFIG_OF_BOARD_SETUP=y
@@ -1258,15 +1248,17 @@ index a3de7a4ec4..04694743b1 100644
  # CONFIG_USE_BOOTCOMMAND is not set
  CONFIG_SYS_CONSOLE_INFO_QUIET=y
  # CONFIG_MISC_INIT_R is not set
-@@ -28,16 +28,22 @@ CONFIG_SPL_DMA_SUPPORT=y
- CONFIG_SPL_OS_BOOT=y
+@@ -29,21 +29,24 @@ CONFIG_SPL_OS_BOOT=y
  CONFIG_SPL_SPI_LOAD=y
+ CONFIG_SYS_SPI_U_BOOT_OFFS=0x40000
  CONFIG_SPL_YMODEM_SUPPORT=y
 +CONFIG_AUTOBOOT_KEYED=y
 +CONFIG_AUTOBOOT_PROMPT="Press SPACE to abort autoboot in %d seconds\n"
 +CONFIG_AUTOBOOT_DELAY_STR="d"
 +CONFIG_AUTOBOOT_STOP_STR=" "
+ CONFIG_CMD_DTIMG=y
  CONFIG_CMD_SPL=y
+ CONFIG_CMD_BCB=y
  # CONFIG_CMD_FLASH is not set
  # CONFIG_CMD_SETEXPR is not set
  # CONFIG_CMD_PMIC is not set
@@ -1276,6 +1268,9 @@ index a3de7a4ec4..04694743b1 100644
 -CONFIG_DEFAULT_DEVICE_TREE="am572x-idk"
 -CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-beagle-x15-revc am572x-idk am571x-idk am574x-idk"
 -CONFIG_ENV_IS_IN_MMC=y
+-CONFIG_SYS_REDUNDAND_ENVIRONMENT=y
+-CONFIG_ENV_OFFSET_REDUND=0x280000
+-CONFIG_SYS_RELOC_GD_ENV_ADDR=y
 +CONFIG_DEFAULT_DEVICE_TREE="am57xx-beagle-x15-revc"
 +CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-beagle-x15-revc am5729-beagleboneai"
 +# CONFIG_ENV_IS_IN_FAT is not set
@@ -1285,23 +1280,23 @@ index a3de7a4ec4..04694743b1 100644
  CONFIG_SPL_DM=y
  CONFIG_SPL_DM_SEQ_ALIAS=y
 diff --git a/include/configs/am57xx_evm.h b/include/configs/am57xx_evm.h
-index 2c651aab17..4f55000451 100644
+index cdab9246f2..56858101bf 100644
 --- a/include/configs/am57xx_evm.h
 +++ b/include/configs/am57xx_evm.h
-@@ -24,7 +24,7 @@
- #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
- #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
+@@ -22,7 +22,7 @@
  
--#define CONSOLEDEV			"ttyO2"
-+//#define CONSOLEDEV			"ttyO2"
+ #define CONFIG_SYS_BOOTM_LEN		SZ_64M
+ 
+-#define CONSOLEDEV			"ttyS2"
++//#define CONSOLEDEV			"ttyS2"
  #define CONFIG_SYS_NS16550_COM1		UART1_BASE	/* Base EVM has UART0 */
  #define CONFIG_SYS_NS16550_COM2		UART2_BASE	/* UART2 */
  #define CONFIG_SYS_NS16550_COM3		UART3_BASE	/* UART3 */
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
-index 828fb1b2a5..cb05f707fd 100644
+index adc7861539..f7c0d22c7d 100644
 --- a/include/configs/ti_armv7_common.h
 +++ b/include/configs/ti_armv7_common.h
-@@ -80,6 +80,379 @@
+@@ -86,6 +86,379 @@
  #define CONFIG_SYS_I2C
  #endif
  
@@ -1698,10 +1693,10 @@ index de0a6af2fd..0cd2ccea03 100644
  	NETARGS \
  	NANDARGS \
 diff --git a/include/environment/ti/boot.h b/include/environment/ti/boot.h
-index 05bdbbc23e..605b772281 100644
+index 684a744f31..93390a80d9 100644
 --- a/include/environment/ti/boot.h
 +++ b/include/environment/ti/boot.h
-@@ -64,6 +64,7 @@
+@@ -108,6 +108,7 @@
  	"bootpart=0:2\0" \
  	"bootdir=/boot\0" \
  	"bootfile=zImage\0" \
@@ -1709,12 +1704,12 @@ index 05bdbbc23e..605b772281 100644
  	"usbtty=cdc_acm\0" \
  	"vram=16M\0" \
  	AVB_VERIFY_CMD \
-@@ -89,7 +90,12 @@
- 		"part start mmc ${mmcdev} boot boot_start; " \
- 		"part size mmc ${mmcdev} boot boot_size; " \
- 		"mmc read ${loadaddr} ${boot_start} ${boot_size}; " \
--		"bootm ${loadaddr}#${fdtfile};\0 "
-+		"bootm ${loadaddr}#${fdtfile};\0 " \
+@@ -161,7 +162,12 @@
+ 			"bootm ${loadaddr}#${fdtfile}; " \
+ 		"else " \
+ 			"echo boot${slot_suffix} partition not found; " \
+-		"fi;\0"
++		"fi;\0 " \
 +	"read_board_eeprom=" \
 +		"if test $board_eeprom_header = beagle_x15_revb1_blank; then " \
 +			"run eeprom_dump; run eeprom_x15_b1; reset; fi; " \
@@ -1723,12 +1718,8 @@ index 05bdbbc23e..605b772281 100644
  
  #ifdef CONFIG_OMAP54XX
  
-@@ -120,9 +126,11 @@
- 		"if test $board_name = am57xx_evm; then " \
+@@ -195,6 +201,8 @@
  			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
- 		"if test $board_name = am57xx_evm_reva3; then " \
--			"setenv fdtfile am57xx-beagle-x15.dtb; fi;" \
-+			"setenv fdtfile am57xx-evm-reva3.dtb; fi;" \
  		"if test $board_name = am571x_idk; then " \
  			"setenv fdtfile am571x-idk.dtb; fi;" \
 +		"if test $board_name = am5729_beagleboneai; then " \
@@ -1736,7 +1727,7 @@ index 05bdbbc23e..605b772281 100644
  		"if test $fdtfile = undefined; then " \
  			"echo WARNING: Could not determine device tree to use; fi; \0"
  
-@@ -136,11 +144,17 @@
+@@ -207,11 +215,17 @@
  	"if test ${boot_fit} -eq 1; then "	\
  		"run update_to_fit;"	\
  	"fi;"	\
@@ -1759,7 +1750,7 @@ index 05bdbbc23e..605b772281 100644
  
  #endif /* CONFIG_OMAP54XX */
 diff --git a/include/environment/ti/mmc.h b/include/environment/ti/mmc.h
-index 785fc15345..4f563e6699 100644
+index bb4af0a3d5..aa704275c6 100644
 --- a/include/environment/ti/mmc.h
 +++ b/include/environment/ti/mmc.h
 @@ -11,11 +11,31 @@
