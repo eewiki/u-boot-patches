@@ -1,18 +1,18 @@
-From c441868ade14df1b69d380c1299cd8f4907685a0 Mon Sep 17 00:00:00 2001
+From e86974b8bca81f3f3b21746f955518bce9375ab2 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Tue, 11 Aug 2020 16:38:49 -0500
+Date: Mon, 24 Aug 2020 16:37:36 -0500
 Subject: [PATCH] am57xx_evm-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
  arch/arm/mach-omap2/omap5/hw_data.c |   1 +
- board/ti/am57xx/board.c             | 150 ++++++++++-
- configs/am57xx_evm_defconfig        |  12 +-
+ board/ti/am57xx/board.c             | 168 ++++++++++++-
+ configs/am57xx_evm_defconfig        |  15 +-
  include/configs/ti_armv7_common.h   | 373 ++++++++++++++++++++++++++++
  include/configs/ti_omap5_common.h   |   5 +
  include/environment/ti/boot.h       |  22 +-
  include/environment/ti/mmc.h        |  49 +++-
- 7 files changed, 598 insertions(+), 14 deletions(-)
+ 7 files changed, 616 insertions(+), 17 deletions(-)
 
 diff --git a/arch/arm/mach-omap2/omap5/hw_data.c b/arch/arm/mach-omap2/omap5/hw_data.c
 index fa4e27063c..d5192b1671 100644
@@ -27,7 +27,7 @@ index fa4e27063c..d5192b1671 100644
  		(*prcm)->cm_gmac_gmac_clkctrl,
  #endif
 diff --git a/board/ti/am57xx/board.c b/board/ti/am57xx/board.c
-index 69dce70a60..a9be4037aa 100644
+index 69dce70a60..5b93b8b603 100644
 --- a/board/ti/am57xx/board.c
 +++ b/board/ti/am57xx/board.c
 @@ -39,6 +39,7 @@
@@ -51,7 +51,7 @@ index 69dce70a60..a9be4037aa 100644
  
  #ifdef CONFIG_SUPPORT_EMMC_BOOT
  	rc = board_bootmode_has_emmc();
-@@ -577,6 +581,142 @@ void do_board_detect(void)
+@@ -577,6 +581,164 @@ void do_board_detect(void)
  			 "Board: %s REV %s\n", bname, board_ti_get_rev());
  }
  
@@ -89,6 +89,7 @@ index 69dce70a60..a9be4037aa 100644
 +	char hash_cape_overlay[40];
 +	char cape_overlay[26];
 +	char process_cape_part_number[16];
++	char process_cape_version[4];
 +	char end_part_number;
 +	char cape_overlay_pass_to_kernel[18];
 +
@@ -100,6 +101,12 @@ index 69dce70a60..a9be4037aa 100644
 +			printf("BeagleBone Cape EEPROM: no EEPROM at address: 0x%x\n", addr);
 +		} else {
 +			printf("BeagleBone Cape EEPROM: found EEPROM at address: 0x%x\n", addr);
++
++			ret = i2c_set_chip_offset_len(dev, 2);
++			if (ret) {
++				printf("BeagleBone Cape EEPROM: i2c_set_chip_offset_len failure\n");
++			}
++
 +			ret = dm_i2c_read(dev, 0, (uchar *)cape_header, sizeof(struct am335x_cape_eeprom_id));
 +			if (ret) {
 +				printf("BeagleBone Cape EEPROM: Cannot read eeprom params\n");
@@ -110,9 +117,10 @@ index 69dce70a60..a9be4037aa 100644
 +				strlcpy(cape_overlay, "", 2);
 +				strlcpy(cape_overlay_pass_to_kernel, "", 2);
 +				strlcpy(process_cape_part_number, "...............", 16 + 1);
++				strlcpy(process_cape_version, "...", 4 + 1);
 +
 +				strlcpy(process_cape_part_number, cape_header->part_number, 16 + 1);
-+				printf("BeagleBone Cape EEPROM: debug process_cape_part_number:[%s]\n", process_cape_part_number);
++				printf("BeagleBone Cape EEPROM: debug part_number field:[%s]\n", process_cape_part_number);
 +
 +				//FIXME: some capes end with '.'
 +				if ( process_cape_part_number[15] == 0x2E ) {
@@ -123,11 +131,11 @@ index 69dce70a60..a9be4037aa 100644
 +					}
 +				}
 +
-+				//Find ending 0x00
-+				puts("BeagleBone Cape EEPROM: debug process_cape_part_number:[");
++				//Find ending 0x00 or 0xFF
++				puts("BeagleBone Cape EEPROM: debug part_number field HEX:[");
 +				end_part_number=16;
 +				for ( int i=0; i <= 16; i++ ) {
-+					if ( process_cape_part_number[i] == 0x00 ) {
++					if (( process_cape_part_number[i] == 0x00 ) || ( process_cape_part_number[i] == 0xFF )) {
 +						end_part_number=i;
 +						i=17;
 +					} else {
@@ -135,6 +143,10 @@ index 69dce70a60..a9be4037aa 100644
 +					}
 +				}
 +				puts("]\n");
++
++				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
++				strncat(cape_overlay_pass_to_kernel, ",", 1);
++				//printf("debug: %s\n", cape_overlay_pass_to_kernel);
 +
 +				strncat(hash_cape_overlay, process_cape_part_number, end_part_number);
 +				strncat(cape_overlay, process_cape_part_number, end_part_number);
@@ -144,8 +156,21 @@ index 69dce70a60..a9be4037aa 100644
 +				strncat(cape_overlay, "-", 1);
 +				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
-+				strncat(hash_cape_overlay, cape_header->version, 4);
-+				strncat(cape_overlay, cape_header->version, 4);
++				strlcpy(process_cape_version, cape_header->version, 4 + 1);
++				//printf("debug: version field:[%s]\n", process_cape_version);
++
++				//Find invalid 0xFF -> 0x30 BBAI FAN Cape...
++				puts("BeagleBone Cape EEPROM: debug version field HEX:[");
++				for ( int i=0; i <= 3; i++ ) {
++					printf("%x", process_cape_version[i]);
++					if ( process_cape_version[i] == 0xFF ) {
++						process_cape_version[i] = 0x30;
++					}
++				}
++				puts("]\n");
++
++				strncat(hash_cape_overlay, process_cape_version, 4);
++				strncat(cape_overlay, process_cape_version, 4);
 +				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
 +				strncat(hash_cape_overlay, ".dtbo", 5);
@@ -153,9 +178,6 @@ index 69dce70a60..a9be4037aa 100644
 +				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
 +				printf("BeagleBone Cape EEPROM: 0x%x %s\n", addr, cape_overlay);
-+
-+				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
-+				strncat(cape_overlay_pass_to_kernel, ",", 1);
 +
 +				switch(addr) {
 +					case CAPE_EEPROM_ADDR0:
@@ -194,27 +216,27 @@ index 69dce70a60..a9be4037aa 100644
  static void setup_board_eeprom_env(void)
  {
  	char *name = "beagle_x15";
-@@ -780,8 +920,14 @@ int board_late_init(void)
+@@ -780,8 +942,10 @@ int board_late_init(void)
  	/* Just probe the potentially supported cdce913 device */
  	uclass_get_device(UCLASS_CLK, 0, &dev);
  
 -	if (board_is_bbai())
 +	if (board_is_bbai()) {
  		env_set("console", "ttyS0,115200n8");
-+		printf("I2C: CTRL_CORE_PAD_GPMC_A0:     0x%08x\n", readl(0x4A003440));
-+		printf("I2C: CTRL_CORE_PAD_GPMC_A1:     0x%08x\n", readl(0x4A003444));
-+		printf("Shared: CTRL_CORE_PAD_VIN2A_D4:    0x%08x\n", readl(0x4A003578));
-+		printf("Shared: CTRL_CORE_PAD_VIN2A_D5:    0x%08x\n", readl(0x4A00357C));
 +		do_cape_detect();
 +	}
  
  #if !defined(CONFIG_SPL_BUILD)
  	board_ti_set_ethaddr(2);
 diff --git a/configs/am57xx_evm_defconfig b/configs/am57xx_evm_defconfig
-index 2e6787a906..6cfa99ef65 100644
+index 2e6787a906..5f8e3232d3 100644
 --- a/configs/am57xx_evm_defconfig
 +++ b/configs/am57xx_evm_defconfig
-@@ -14,12 +14,13 @@ CONFIG_ENV_OFFSET_REDUND=0x280000
+@@ -10,16 +10,16 @@ CONFIG_SPL_TEXT_BASE=0x40300000
+ CONFIG_OMAP54XX=y
+ CONFIG_TARGET_AM57XX_EVM=y
+ CONFIG_SPL=y
+-CONFIG_ENV_OFFSET_REDUND=0x280000
  CONFIG_SPL_SPI_FLASH_SUPPORT=y
  CONFIG_SPL_SPI_SUPPORT=y
  CONFIG_ARMV7_LPAE=y
@@ -229,7 +251,7 @@ index 2e6787a906..6cfa99ef65 100644
  CONFIG_USE_BOOTARGS=y
  CONFIG_BOOTARGS="androidboot.serialno=${serial#} console=ttyS2,115200 androidboot.console=ttyS2 androidboot.hardware=beagle_x15board"
  # CONFIG_USE_BOOTCOMMAND is not set
-@@ -37,6 +38,10 @@ CONFIG_SPL_DM_SPI_FLASH=y
+@@ -37,6 +37,10 @@ CONFIG_SPL_DM_SPI_FLASH=y
  CONFIG_SPL_OS_BOOT=y
  CONFIG_SPL_SPI_LOAD=y
  CONFIG_SPL_YMODEM_SUPPORT=y
@@ -240,19 +262,23 @@ index 2e6787a906..6cfa99ef65 100644
  CONFIG_CMD_ADTIMG=y
  CONFIG_CMD_ABOOTIMG=y
  CONFIG_CMD_SPL=y
-@@ -49,9 +54,10 @@ CONFIG_BOOTP_DNS2=y
+@@ -49,13 +53,12 @@ CONFIG_BOOTP_DNS2=y
  CONFIG_CMD_AVB=y
  CONFIG_OF_CONTROL=y
  CONFIG_SPL_OF_CONTROL=y
 -CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-beagle-x15-revc am5729-beagleboneai am572x-idk am571x-idk am574x-idk"
 +CONFIG_OF_LIST="am57xx-beagle-x15 am57xx-beagle-x15-revb1 am57xx-beagle-x15-revc am5729-beagleboneai"
-+# CONFIG_ENV_IS_IN_FAT is not set
  CONFIG_ENV_OVERWRITE=y
 -CONFIG_ENV_IS_IN_MMC=y
-+# CONFIG_SPL_ENV_IS_NOWHERE is not set
- CONFIG_SYS_REDUNDAND_ENVIRONMENT=y
+-CONFIG_SYS_REDUNDAND_ENVIRONMENT=y
++# CONFIG_ENV_IS_IN_FAT is not set
  CONFIG_SYS_RELOC_GD_ENV_ADDR=y
- CONFIG_SYS_MMC_ENV_DEV=1
+-CONFIG_SYS_MMC_ENV_DEV=1
+ CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG=y
++# CONFIG_SPL_ENV_IS_NOWHERE is not set
+ CONFIG_BOOTP_SEND_HOSTNAME=y
+ CONFIG_DM=y
+ CONFIG_SPL_DM=y
 diff --git a/include/configs/ti_armv7_common.h b/include/configs/ti_armv7_common.h
 index 0c9856a11a..80c1de151c 100644
 --- a/include/configs/ti_armv7_common.h

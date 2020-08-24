@@ -1,21 +1,21 @@
-From 7f0624a58e70f708c1bbaed28277700b5eb60821 Mon Sep 17 00:00:00 2001
+From d9f99a5cd9481dbfd4d452aaf64cab4d37509c85 Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 24 Jul 2020 16:32:28 -0500
+Date: Mon, 24 Aug 2020 13:02:44 -0500
 Subject: [PATCH 2/3] U-Boot-BeagleBone-Cape-Manager
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
 ---
- board/ti/am335x/board.c           | 429 ++++++++++++++++++++++++++++++
+ board/ti/am335x/board.c           | 446 ++++++++++++++++++++++++++++++
  board/ti/am335x/board.h           |  16 ++
  board/ti/am335x/hash-string.h     |  59 ++++
- include/configs/ti_armv7_common.h | 152 +++++++++++
+ include/configs/ti_armv7_common.h | 152 ++++++++++
  include/configs/ti_armv7_omap.h   |   3 +
  include/environment/ti/mmc.h      |  20 ++
- 6 files changed, 679 insertions(+)
+ 6 files changed, 696 insertions(+)
  create mode 100644 board/ti/am335x/hash-string.h
 
 diff --git a/board/ti/am335x/board.c b/board/ti/am335x/board.c
-index e7cd8faeed..a36753e8cc 100644
+index e7cd8faeed..876fc57434 100644
 --- a/board/ti/am335x/board.c
 +++ b/board/ti/am335x/board.c
 @@ -39,6 +39,7 @@
@@ -26,7 +26,7 @@ index e7cd8faeed..a36753e8cc 100644
  
  DECLARE_GLOBAL_DATA_PTR;
  
-@@ -77,9 +78,429 @@ void do_board_detect(void)
+@@ -77,9 +78,446 @@ void do_board_detect(void)
  	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
  				 CONFIG_EEPROM_CHIP_ADDRESS))
  		printf("ti_i2c_eeprom_init failed\n");
@@ -77,6 +77,7 @@ index e7cd8faeed..a36753e8cc 100644
 +	char hash_cape_overlay[40];
 +	char cape_overlay[26];
 +	char process_cape_part_number[16];
++	char process_cape_version[4];
 +	char end_part_number;
 +	char cape_overlay_pass_to_kernel[18];
 +
@@ -192,7 +193,7 @@ index e7cd8faeed..a36753e8cc 100644
 +
 +	for ( addr = CAPE_EEPROM_ADDR0; addr <= CAPE_EEPROM_ADDR3; addr++ ) {
 +		if (i2c_probe(addr)) {
-+			printf("BeagleBone: cape eeprom: i2c_probe: 0x%x:\n", addr);
++			printf("BeagleBone Cape EEPROM: no EEPROM at address: 0x%x\n", addr);
 +		} else {
 +			/* read the eeprom using i2c */
 +			if (i2c_read(addr, 0, 2, (uchar *)cape_header,
@@ -203,13 +204,15 @@ index e7cd8faeed..a36753e8cc 100644
 +			}
 +
 +			if (cape_header->header == 0xEE3355AA) {
++				printf("BeagleBone Cape EEPROM: found EEPROM at address: 0x%x\n", addr);
 +				strlcpy(hash_cape_overlay, "/lib/firmware/", 14 + 1);
 +				strlcpy(cape_overlay, "", 2);
 +				strlcpy(cape_overlay_pass_to_kernel, "", 2);
 +				strlcpy(process_cape_part_number, "...............", 16 + 1);
++				strlcpy(process_cape_version, "...", 4 + 1);
 +
 +				strlcpy(process_cape_part_number, cape_header->part_number, 16 + 1);
-+				printf("debug: process_cape_part_number:[%s]\n", process_cape_part_number);
++				printf("BeagleBone Cape EEPROM: debug part_number field:[%s]\n", process_cape_part_number);
 +
 +				//FIXME: some capes end with '.'
 +				if ( process_cape_part_number[15] == 0x2E ) {
@@ -220,11 +223,11 @@ index e7cd8faeed..a36753e8cc 100644
 +					}
 +				}
 +
-+				//Find ending 0x00
-+				puts("debug: process_cape_part_number:[");
++				//Find ending 0x00 or 0xFF
++				puts("BeagleBone Cape EEPROM: debug part_number field HEX:[");
 +				end_part_number=16;
 +				for ( int i=0; i <= 16; i++ ) {
-+					if ( process_cape_part_number[i] == 0x00 ) {
++					if (( process_cape_part_number[i] == 0x00 ) || ( process_cape_part_number[i] == 0xFF )) {
 +						end_part_number=i;
 +						i=17;
 +					} else {
@@ -232,6 +235,10 @@ index e7cd8faeed..a36753e8cc 100644
 +					}
 +				}
 +				puts("]\n");
++
++				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
++				strncat(cape_overlay_pass_to_kernel, ",", 1);
++				//printf("debug: %s\n", cape_overlay_pass_to_kernel);
 +
 +				strncat(hash_cape_overlay, process_cape_part_number, end_part_number);
 +				strncat(cape_overlay, process_cape_part_number, end_part_number);
@@ -241,8 +248,21 @@ index e7cd8faeed..a36753e8cc 100644
 +				strncat(cape_overlay, "-", 1);
 +				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
-+				strncat(hash_cape_overlay, cape_header->version, 4);
-+				strncat(cape_overlay, cape_header->version, 4);
++				strlcpy(process_cape_version, cape_header->version, 4 + 1);
++				//printf("debug: version field:[%s]\n", process_cape_version);
++
++				//Find invalid 0xFF -> 0x30 BBAI FAN Cape...
++				puts("BeagleBone Cape EEPROM: debug version field HEX:[");
++				for ( int i=0; i <= 3; i++ ) {
++					printf("%x", process_cape_version[i]);
++					if ( process_cape_version[i] == 0xFF ) {
++						process_cape_version[i] = 0x30;
++					}
++				}
++				puts("]\n");
++
++				strncat(hash_cape_overlay, process_cape_version, 4);
++				strncat(cape_overlay, process_cape_version, 4);
 +				//printf("debug: %s %s\n", hash_cape_overlay, cape_overlay);
 +
 +				strncat(hash_cape_overlay, ".dtbo", 5);
@@ -251,10 +271,7 @@ index e7cd8faeed..a36753e8cc 100644
 +
 +				unsigned long cape_overlay_hash = hash_string(hash_cape_overlay);
 +
-+				printf("BeagleBone: cape eeprom: i2c_probe: 0x%x: %s [0x%lx]\n", addr, cape_overlay, cape_overlay_hash);
-+
-+				strncat(cape_overlay_pass_to_kernel, process_cape_part_number, end_part_number);
-+				strncat(cape_overlay_pass_to_kernel, ",", 1);
++				printf("BeagleBone Cape EEPROM: 0x%x: %s [0x%lx]\n", addr, cape_overlay, cape_overlay_hash);
 +
 +				switch(cape_overlay_hash) {
 +					case 0x3c766f: /* /lib/firmware/BB-CAPE-DISP-CT4-00A0.dtbo */
@@ -354,7 +371,7 @@ index e7cd8faeed..a36753e8cc 100644
 +				}
 +				env_set("uboot_detected_capes", "1");
 +			} else {
-+				printf("BeagleBone: found invalid cape eeprom: i2c_probe: 0x%x:\n", addr);
++				printf("BeagleBone Cape EEPROM: EEPROM contents not valid (or blank) on address: 0x%x\n", addr);
 +			}
 +		}
 +	}//for
@@ -456,7 +473,7 @@ index e7cd8faeed..a36753e8cc 100644
  #ifndef CONFIG_DM_SERIAL
  struct serial_device *default_serial_console(void)
  {
-@@ -951,6 +1372,14 @@ int board_late_init(void)
+@@ -951,6 +1389,14 @@ int board_late_init(void)
  			env_set("serial#", board_serial);
  	}
  
@@ -779,5 +796,5 @@ index 2d9c7a3435..4f06f5bf2b 100644
  		"ums 0 ${devtype} 1;\0" \
  	"envboot=mmc dev ${mmcdev}; " \
 -- 
-2.27.0
+2.28.0
 
