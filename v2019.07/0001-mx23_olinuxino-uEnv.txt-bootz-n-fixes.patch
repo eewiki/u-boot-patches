@@ -1,6 +1,6 @@
-From 6747ef54dc30b7496ddee0b8e87b0fde938eb1e2 Mon Sep 17 00:00:00 2001
+From 311ee32541a3177239721b75c141e68c8c0b242a Mon Sep 17 00:00:00 2001
 From: Robert Nelson <robertcnelson@gmail.com>
-Date: Fri, 5 Aug 2022 22:42:43 -0500
+Date: Fri, 5 Aug 2022 22:45:32 -0500
 Subject: [PATCH] mx23_olinuxino-uEnv.txt-bootz-n-fixes
 
 Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
@@ -10,19 +10,19 @@ Signed-off-by: Robert Nelson <robertcnelson@gmail.com>
  2 files changed, 101 insertions(+), 16 deletions(-)
 
 diff --git a/configs/mx23_olinuxino_defconfig b/configs/mx23_olinuxino_defconfig
-index 0e552a6ac4..ce3ae33efa 100644
+index 3e4b7ab1c3..f1681e1d81 100644
 --- a/configs/mx23_olinuxino_defconfig
 +++ b/configs/mx23_olinuxino_defconfig
-@@ -14,7 +14,7 @@ CONFIG_VERSION_VARIABLE=y
- CONFIG_ARCH_MISC_INIT=y
+@@ -15,7 +15,7 @@ CONFIG_ARCH_MISC_INIT=y
  # CONFIG_SPL_FRAMEWORK is not set
+ CONFIG_SPL_TEXT_BASE=0x00001000
  CONFIG_HUSH_PARSER=y
 -# CONFIG_CMD_BOOTEFI is not set
 +CONFIG_CMD_BOOTZ=y
  # CONFIG_CMD_FLASH is not set
  CONFIG_CMD_GPIO=y
  CONFIG_CMD_MMC=y
-@@ -23,7 +23,9 @@ CONFIG_CMD_USB=y
+@@ -24,7 +24,9 @@ CONFIG_CMD_USB=y
  CONFIG_CMD_DHCP=y
  CONFIG_CMD_CACHE=y
  CONFIG_CMD_EXT2=y
@@ -32,7 +32,7 @@ index 0e552a6ac4..ce3ae33efa 100644
  CONFIG_ENV_IS_IN_MMC=y
  CONFIG_LED_STATUS=y
  CONFIG_LED_STATUS_GPIO=y
-@@ -41,3 +43,4 @@ CONFIG_USB_STORAGE=y
+@@ -42,3 +44,4 @@ CONFIG_USB_STORAGE=y
  CONFIG_USB_HOST_ETHER=y
  CONFIG_USB_ETHER_SMSC95XX=y
  CONFIG_OF_LIBFDT=y
